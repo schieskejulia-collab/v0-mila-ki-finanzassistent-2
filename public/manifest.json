@@ -1,0 +1,17 @@
+{
+  "name": "Mila – Deine Finanzbegleiterin",
+  "short_name": "Mila",
+  "description": "Empathische KI-Finanzassistentin für Freelancer und Selbstständige.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf7ff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/mila-avatar.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
