@@ -4,13 +4,6 @@
       "dom",
       "dom.iterable",
       "esnext"
-      "paths": {
-  "@/*": ["./*"],
-  "@/components/*": ["components/*"],
-  "@/lib/*": ["lib/*"],
-  "@/hooks/*": ["hooks/*"]
-}
-
     ],
     "allowJs": true,
     "target": "ES6",
@@ -30,9 +23,10 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@/components/*": ["components/*"],
+      "@/lib/*": ["lib/*"],
+      "@/hooks/*": ["hooks/*"]
     }
   },
   "include": [
