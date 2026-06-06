@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState } from 'react'
-// Direkter Weg: Eine Etage hoch, dann in den Ordner components
+// Eine Etage hoch, dann in den Ordner components
 import { TransactionForm } from '../components/transaction-form'
-// Direkter Weg: Eine Etage hoch, dann in den Ordner lib
-import { getTotals, USER } from '../lib/data'
+// Hier angepasst: Wir laden direkt aus deiner echten demo-data.ts!
+import { getTotals, USER } from '../lib/demo-data'
 
 export default function HomePage() {
   const initialTotals = getTotals()
