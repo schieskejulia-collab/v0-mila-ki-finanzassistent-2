@@ -1,5 +1,5 @@
-import { formatEUR } from './format'
-import {
+import { NextResponse } from "next/server";
+import { getMilaReplyLive } from "../../../lib/mila";
   type MonthSummary,
   financeMood,
   projectMonthProfit,
