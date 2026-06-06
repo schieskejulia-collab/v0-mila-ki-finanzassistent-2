@@ -1,5 +1,42 @@
 import type { Expense, Income, Goal, Budget } from './types'
 
+// ==========================================
+// AB HIER: DIE NEUEN CORE-FUNKTIONEN FÜR MILA UND DASHBOARD
+// ==========================================
+
+// Das Profil für deinen ersten Testnutzer (Standard: angestellt für deinen Onkel!)
+export const USER = {
+  name: "Onkel Michael",
+  status: "angestellt" // Hier steuern wir den Modus! (angestellt / selbstständig)
+}
+
+// Rechnet die rohen Arrays automatisch für das Dashboard zusammen
+export function getTotals() {
+  // Wir filtern nur die Einnahmen und Ausgaben für diesen Monat (iso(0, ...))
+  const currentIncomes = demoIncomes.filter(i => i.date.includes(new Date().toISOString().substring(0, 7)))
+  const currentExpenses = demoExpenses.filter(e => e.date.includes(new Date().toISOString().substring(0, 7)))
+
+  const incomeSum = currentIncomes.reduce((sum, item) => sum + item.amount, 0)
+  const expenseSum = currentExpenses.reduce((sum, item) => sum + item.amount, 0)
+  const profitSum = incomeSum - expenseSum
+
+  // Berechne offene Rechnungen
+  const openSum = currentIncomes
+    .filter(i => i.status === 'offen')
+    .reduce((sum, item) => sum + item.amount, 0)
+
+  return {
+    income: incomeSum || 6729.00, // Fallback auf deine Demowerte, falls Monat leer
+    expense: expenseSum || 1421.00,
+    profit: profitSum || 5308.00,
+    openInvoices: openSum || 2480.00
+  }
+}
+
+// ==========================================
+// AB HIER: DEINE BESTEHENDEN DEMO-DATEN (UNBERÜHRT)
+// ==========================================
+
 // Build ISO date strings relative to "today" so month logic always works.
 function iso(monthOffset: number, day: number): string {
   const now = new Date()
