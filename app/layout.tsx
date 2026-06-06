@@ -6,7 +6,6 @@ import { FinanceProvider } from '@/lib/store'
 import { BottomNav } from '@/components/bottom-nav'
 import { MilaChat } from '../components/mila-chat'
 
-
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
