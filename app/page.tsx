@@ -3,12 +3,16 @@
 import React, { useState } from 'react'
 import { TransactionForm } from '../components/transaction-form'
 import { getTotals, USER } from '../lib/data'
-import { formatEuro } from '../lib/utils'
 
 export default function HomePage() {
   const initialTotals = getTotals()
   const [totals, setTotals] = useState(initialTotals)
   const [successMessage, setSuccessMessage] = useState('')
+
+  // Einfache, absolut sichere Euro-Formatierung ohne externe Datei
+  const zeigeEuro = (betrag: number) => {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
+  }
 
   const handleAddTransaction = (newTransaction: any) => {
     setTotals((prev) => {
@@ -48,17 +52,17 @@ export default function HomePage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card p-4 rounded-xl border border-border">
           <p className="text-xs font-medium text-muted-foreground">Einnahmen</p>
-          <p className="text-lg font-bold text-emerald-600 mt-1">{formatEuro(totals.income)}</p>
+          <p className="text-lg font-bold text-emerald-600 mt-1">{zeigeEuro(totals.income)}</p>
         </div>
         <div className="bg-card p-4 rounded-xl border border-border">
           <p className="text-xs font-medium text-muted-foreground">Ausgaben</p>
-          <p className="text-lg font-bold text-rose-600 mt-1">{formatEuro(totals.expense)}</p>
+          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(totals.expense)}</p>
         </div>
         <div className="bg-card p-4 rounded-xl border border-border col-span-2">
           <p className="text-xs font-medium text-muted-foreground">
             {status === 'angestellt' ? 'Verfügbares Budget' : 'Aktueller Gewinn'}
           </p>
-          <p className="text-xl font-extrabold text-foreground mt-1">{formatEuro(totals.profit)}</p>
+          <p className="text-xl font-extrabold text-foreground mt-1">{zeigeEuro(totals.profit)}</p>
         </div>
       </div>
 
