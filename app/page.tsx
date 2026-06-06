@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { TransactionForm } from '../components/transaction-form'
+import { TransactionForm } from '../components/ui/transaction-form'
 import { getTotals, USER } from '../lib/demo-data'
 
 export default function HomePage() {
