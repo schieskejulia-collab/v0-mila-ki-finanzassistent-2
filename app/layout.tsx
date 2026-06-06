@@ -2,10 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-import { FinanceProvider } from '@/lib/store'
-import { BottomNav } from '@/components/bottom-nav'
-import { MilaChat } from '@/components/mila-chat'
-
+import { FinanceProvider } from '../lib/store'
+import { BottomNav } from '../components/bottom-nav'
+import { MilaChat } from '../components/mila-chat'
 
 const inter = Inter({
   subsets: ['latin'],
