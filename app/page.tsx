@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState } from 'react'
-import { TransactionForm } from '@/components/transaction-form'
-import { getTotals, USER } from '@/lib/data'
-import { formatEuro } from '@/lib/utils'
-
+import React, { useState } from 'react'
+import { TransactionForm } from '../components/transaction-form'
+import { getTotals, USER } from '../lib/data'
+import { formatEuro } from '../lib/utils'
 export default function HomePage() {
   // Wir holen uns die Startwerte aus deinen Daten
   const initialTotals = getTotals()
