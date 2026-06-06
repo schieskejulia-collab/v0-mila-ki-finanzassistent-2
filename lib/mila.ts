@@ -8,28 +8,29 @@ import {
   type SavingTip,
 } from './calculations'
 import type { Expense, Income, Goal } from './types'
-import OpenAI from "openai";
+import { getTotals, USER } from "./demo-data" // Absolut präzise korrigiert!
+import OpenAI from "openai"
 
 // 1. ECHTES KI-GEHIRN (Groq-Client initialisieren)
 const groq = new OpenAI({
   apiKey: process.env.GROQ_API_KEY || "", 
   baseURL: "https://groq.com",
-});
+})
 
 // 2. DEINE SAUBERE PERSÖNLICHKEIT (Mit Weiche für Angestellte/Selbstständige)
 export function getMilaPersonality(status: string = "selbstständig"): string {
-  let statusText = "";
+  let statusText = ""
   if (status === "angestellt") {
     statusText = `
 - Dein Fokus liegt auf Werbungskosten, Sonderausgaben und dem privaten Haushaltsbuch.
 - Erkläre dem Nutzer bei Belegen (Sprit, Arbeitsmittel, Fachbücher, Homeoffice), wie er sich das Geld am Jahresende über die Steuererklärung vom Finanzamt zurückholt.
 - Tracke Abos und Fixkosten. Erkenne Muster (z. B. "Du gibst diesen Monat auffällig viel für Streaming aus").
-- Wenn Ausgaben vom Chef erstattet werden können (Reisekosten), sag ihm, dass du es im Ordner "Geld vom Chef" parkst.`;
+- Wenn Ausgaben vom Chef erstattet werden können (Reisekosten), sag ihm, dass du es im Ordner "Geld vom Chef" parkst.`
   } else {
     statusText = `
 - Dein Fokus liegt auf Betriebsausgaben, Umsatzsteuer und Business-Wachstum.
 - Erkläre sofort im Chat, was voll absetzbar ist, was nur anteilig (z. B. Bewirtung zu 70 %) und was gar nicht.
-- Achte auf die spezifische Nische des Nutzers, erkenne Umsatzmuster und erinnere proaktiv an fehlende geschäftliche Rechnungen.`;
+- Achte auf die spezifische Nische des Nutzers, erkenne Umsatzmuster und erinnere proaktiv an fehlende geschäftliche Rechnungen.`
   }
 
   return `
@@ -46,7 +47,7 @@ Dein Stil:
 ${statusText}
 
 WICHTIG: Antworte immer direkt als Mila. Nutze keine Einleitungen wie "Als KI-Assistent..." oder Ähnliches. Antworte warmherzig und halte dich kurz.
-`;
+`
 }
 
 /**
@@ -59,7 +60,7 @@ Aktuelle Finanzdaten des Nutzers (${userName}):
 - Einnahmen gesamt: ${formatEUR(ctx.summary?.income || 0)}
 - Ausgaben gesamt: ${formatEUR(ctx.summary?.expenses || 0)}
 - Aktueller Gewinn/Überschuss: ${formatEUR(ctx.summary?.profit || 0)}
-`;
+`
 
   try {
     const response = await groq.chat.completions.create({
@@ -70,13 +71,12 @@ Aktuelle Finanzdaten des Nutzers (${userName}):
         { role: "user", content: message }
       ],
       temperature: 0.6,
-    });
+    })
 
-    return response.choices?.message?.content || "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da.";
+    return response.choices?.message?.content || "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da."
   } catch (error) {
-    console.error("Groq-API Fehler, weiche auf lokalen Fallback aus:", error);
-    // Wenn Groq offline ist, nutzen wir deine bewährte Wenn-Dann-Logik von unten!
-    return generateMilaReply(message, ctx);
+    console.error("Groq-API Fehler, weiche auf lokalen Fallback aus:", error)
+    return generateMilaReply(message, ctx)
   }
 }
 
@@ -102,7 +102,7 @@ const moodLine: Record<string, string> = {
 }
 
 function pick<T>(arr: T[]): T {
-  if (!arr || arr.length === 0) return '' as unknown as T;
+  if (!arr || arr.length === 0) return '' as unknown as T
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
@@ -120,7 +120,7 @@ export const milaSuggestions = [
   'Wie viel sollte ich für Steuern zurücklegen?',
   'Mila, schau mal voraus',
   'Wie läuft es mit meinen Zielen?',
-  'Ich brauche kurz Motivation',
+  'Ich braくちゃ kurz Motivation',
 ]
 
 export function generateMilaReply(message: string, ctx: MilaContext): string {
@@ -136,7 +136,7 @@ export function generateMilaReply(message: string, ctx: MilaContext): string {
 
   if (/spar|sparen|spartipp|sparpotenzial|günstiger|kosten senken|weniger ausgeben/.test(m)) {
     if (!tips || tips.length === 0) return 'Ich habe gerade keine offensichtlichen Sparpotenziale gefunden.'
-    const top = tips[0]
+    const top = tips
     const total = tips.reduce((a, t) => a + (t.potential || 0), 0)
     return `Klar, lass uns das ohne Druck anschauen. ${top.detail} Insgesamt sehe ich rund ${formatEUR(total)} an möglichem Spielraum.`
   }
