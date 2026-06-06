@@ -1,84 +1,121 @@
-"use client";
+"use client"
 
-import { useState } from "react";
+import React, { useState, useRef, useEffect } from 'react'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+}
 
 export function MilaChat() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hallo Julia, ich bin bereit. Woran denkst du gerade?" }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', role: 'assistant', content: 'Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?' }
+  ])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
-  async function sendMessage() {
-    if (!input.trim()) return;
+  // Automatisches Scrollen nach unten bei neuen Nachrichten
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
 
-    try {
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
-      });
-
-      const data = await res.json();
-
-      const aiMessage = {
-        role: "assistant",
-        content: data.reply || "Ich konnte nichts antworten."
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Da ging etwas schief – versuch es gleich nochmal." }
-      ]);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input
     }
 
-    setLoading(false);
+    setMessages((prev) => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      // Hier feuern wir die Frage live an deine Groq-Route!
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage.content })
+      })
+
+      const data = await response.json()
+
+      const milaMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.reply || 'Ich habe dich leider nicht verstanden. Kannst du das nochmal sagen?'
+      }
+
+      setMessages((prev) => [...prev, milaMessage])
+    } catch (error) {
+      console.error('Fehler beim Chatten:', error)
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString(), role: 'assistant', content: 'Upps, mein Gehirn hat gerade Schluckauf. Prüf mal deine Internetverbindung!' }
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="border-t bg-background p-4">
-      <div className="mb-3 max-h-64 overflow-y-auto space-y-2">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`p-2 rounded-lg text-sm ${
-              m.role === "assistant"
-                ? "bg-purple-100 text-purple-900"
-                : "bg-gray-200 text-gray-900"
-            }`}
-          >
-            {m.content}
-          </div>
-        ))}
-        {loading && (
-          <div className="p-2 rounded-lg bg-purple-100 text-purple-900 text-sm">
-            Mila schreibt …
-          </div>
-        )}
+    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden h-[400px]">
+      {/* Header */}
+      <div className="bg-primary p-3 text-primary-foreground font-semibold text-sm flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        Mila — Deine Finanzbegleiterin
       </div>
 
-      <div className="flex gap-2">
+      {/* Nachrichten-Verlauf */}
+      <div className="flex-1 p-3 overflow-y-auto space-y-3 text-sm">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[85%] px-3 py-2 rounded-xl leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-primary text-primary-foreground rounded-br-none'
+                  : 'bg-muted text-foreground rounded-bl-none'
+              }`}
+            >
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-muted text-muted-foreground px-3 py-2 rounded-xl rounded-bl-none animate-pulse">
+              Mila überlegt...
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Eingabefeld */}
+      <form onSubmit={handleSend} className="p-2 border-t border-border flex gap-2 bg-background">
         <input
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
-          placeholder="Schreib Mila etwas…"
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Frag Mila etwas..."
+          className="flex-1 px-3 py-1.5 bg-muted border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
         />
         <button
-          onClick={sendMessage}
-          className="rounded-lg bg-purple-600 px-4 py-2 text-white text-sm"
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
         >
           Senden
         </button>
-      </div>
+      </form>
     </div>
-  );
+  )
 }
