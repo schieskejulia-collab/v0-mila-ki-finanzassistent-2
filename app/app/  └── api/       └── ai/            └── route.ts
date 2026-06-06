@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
 import { getMilaPersonality } from "@/lib/mila";
 import { getTotals } from "@/lib/data";
+import OpenAI from "openai";
+
+// Groq-Client initialisieren (Biegt OpenAI auf die kostenlose Groq-API um)
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY || "",
+  baseURL: "https://groq.com",
+});
 
 export async function POST(req: Request) {
-  const { message } = await req.json();
+  try {
+    const { message } = await req.json();
 
-  if (!message) {
-    return NextResponse.json({ error: "Message missing" }, { status: 400 });
-  }
+    if (!message) {
+      return NextResponse.json({ error: "Message missing" }, { status: 400 });
+    }
 
-  const personality = getMilaPersonality();
-  const totals = getTotals();
+    const personality = getMilaPersonality();
+    const totals = getTotals();
 
-  const systemPrompt = `
+    const systemPrompt = `
 ${personality}
 
 Hier sind die aktuellen Finanzdaten des Nutzers:
@@ -27,12 +35,27 @@ Antwortstil:
 - kein Druck
 - kleine Schritte
 - konkrete Hinweise
+- Antworte IMMER direkt als Mila, niemals als unpersönlicher KI-Assistent.
 `;
 
-  const userPrompt = `Nutzer sagt: "${message}"`;
+    // Jetzt feuern wir die Frage live zu Groq!
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile", // Das beste, kostenlose Modell auf Groq
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message }
+      ],
+      temperature: 0.6,
+    });
 
-  // Fake‑Antwort (wird in Schritt 2 durch echtes LLM ersetzt)
-  return NextResponse.json({
-    reply: "Mila ist bereit für echte KI‑Antworten. Schritt 2 aktiviert das LLM.",
-  });
+    const reply = response.choices?[0]?.message?.content || "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da.";
+
+    return NextResponse.json({ reply });
+
+  } catch (error) {
+    console.error("Fehler bei Groq-Anfrage:", error);
+    return NextResponse.json({
+      reply: "Entschuldige, ich habe gerade ein kleines Verbindungsproblem. Frag mich gleich noch mal, ich bin bei dir.",
+    }, { status: 500 });
+  }
 }
