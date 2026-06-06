@@ -1,7 +1,9 @@
 "use client"
 
 import React, { useState } from 'react'
+// Direkter Weg: Eine Etage hoch, dann in den Ordner components
 import { TransactionForm } from '../components/transaction-form'
+// Direkter Weg: Eine Etage hoch, dann in den Ordner lib
 import { getTotals, USER } from '../lib/data'
 
 export default function HomePage() {
@@ -9,7 +11,7 @@ export default function HomePage() {
   const [totals, setTotals] = useState(initialTotals)
   const [successMessage, setSuccessMessage] = useState('')
 
-  // Einfache, absolut sichere Euro-Formatierung ohne externe Datei
+  // Absolut sichere Euro-Formatierung ohne externe Datei
   const zeigeEuro = (betrag: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
   }
