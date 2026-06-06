@@ -1,15 +1,8 @@
 "use client"
 
 import React, { useState } from 'react'
-// Eine Etage hoch, dann in den Ordner components
-"use client"
-
-import React, { useState } from 'react'
-// Absolut präziser Weg aus dem app-Ordner heraus in den components-Ordner
-import { TransactionForm } from './../components/transaction-form'
-// Absolut präziser Weg aus dem app-Ordner heraus in den lib-Ordner
-import { getTotals, USER } from './../lib/demo-data'
-
+import { TransactionForm } from '../components/transaction-form'
+import { getTotals, USER } from '../lib/demo-data'
 
 export default function HomePage() {
   const initialTotals = getTotals()
