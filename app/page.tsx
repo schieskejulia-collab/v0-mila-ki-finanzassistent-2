@@ -2,9 +2,14 @@
 
 import React, { useState } from 'react'
 // Eine Etage hoch, dann in den Ordner components
-import { TransactionForm } from '../components/transaction-form'
-// Hier angepasst: Wir laden direkt aus deiner echten demo-data.ts!
-import { getTotals, USER } from '../lib/demo-data'
+"use client"
+
+import React, { useState } from 'react'
+// Absolut präziser Weg aus dem app-Ordner heraus in den components-Ordner
+import { TransactionForm } from './../components/transaction-form'
+// Absolut präziser Weg aus dem app-Ordner heraus in den lib-Ordner
+import { getTotals, USER } from './../lib/demo-data'
+
 
 export default function HomePage() {
   const initialTotals = getTotals()
