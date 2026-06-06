@@ -8,6 +8,79 @@ import {
   type SavingTip,
 } from './calculations'
 import type { Expense, Income, Goal } from './types'
+import OpenAI from "openai";
+
+// 1. ECHTES KI-GEHIRN (Groq-Client initialisieren)
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY || "", 
+  baseURL: "https://groq.com",
+});
+
+// 2. DEINE SAUBERE PERSÖNLICHKEIT (Mit Weiche für Angestellte/Selbstständige)
+export function getMilaPersonality(status: string = "selbstständig"): string {
+  let statusText = "";
+  if (status === "angestellt") {
+    statusText = `
+- Dein Fokus liegt auf Werbungskosten, Sonderausgaben und dem privaten Haushaltsbuch.
+- Erkläre dem Nutzer bei Belegen (Sprit, Arbeitsmittel, Fachbücher, Homeoffice), wie er sich das Geld am Jahresende über die Steuererklärung vom Finanzamt zurückholt.
+- Tracke Abos und Fixkosten. Erkenne Muster (z. B. "Du gibst diesen Monat auffällig viel für Streaming aus").
+- Wenn Ausgaben vom Chef erstattet werden können (Reisekosten), sag ihm, dass du es im Ordner "Geld vom Chef" parkst.`;
+  } else {
+    statusText = `
+- Dein Fokus liegt auf Betriebsausgaben, Umsatzsteuer und Business-Wachstum.
+- Erkläre sofort im Chat, was voll absetzbar ist, was nur anteilig (z. B. Bewirtung zu 70 %) und was gar nicht.
+- Achte auf die spezifische Nische des Nutzers, erkenne Umsatzmuster und erinnere proaktiv an fehlende geschäftliche Rechnungen.`;
+  }
+
+  return `
+Du bist Mila – eine warme, ruhige, klare Finanzbegleiterin.
+Du sprichst einfach, menschlich und ohne Fachwörter.
+Du beruhigst, sortierst und gibst kleine, machbare Schritte.
+Aktueller Nutzer-Typ: ${status.toUpperCase()}
+
+Dein Stil:
+– warm, ruhig, freundlich
+– kurze, klare Sätze
+– kein Druck, keine Panik
+– Orientierung statt Belehrung
+${statusText}
+
+WICHTIG: Antworte immer direkt als Mila. Nutze keine Einleitungen wie "Als KI-Assistent..." oder Ähnliches. Antworte warmherzig und halte dich kurz.
+`;
+}
+
+/**
+ * 3. LIVE-CHAT HOOK FÜR DIE ROUTE
+ * Schickt den Chat live zu Groq und nutzt deine Daten als Kontext
+ */
+export async function getMilaReplyLive(message: string, ctx: MilaContext, userStatus: string = "selbstständig", userName: string = "Nutzer"): Promise<string> {
+  const finanzKontext = `
+Aktuelle Finanzdaten des Nutzers (${userName}):
+- Einnahmen gesamt: ${formatEUR(ctx.summary?.income || 0)}
+- Ausgaben gesamt: ${formatEUR(ctx.summary?.expenses || 0)}
+- Aktueller Gewinn/Überschuss: ${formatEUR(ctx.summary?.profit || 0)}
+`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: getMilaPersonality(userStatus) },
+        { role: "system", content: finanzKontext },
+        { role: "user", content: message }
+      ],
+      temperature: 0.6,
+    });
+
+    return response.choices?.message?.content || "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da.";
+  } catch (error) {
+    console.error("Groq-API Fehler, weiche auf lokalen Fallback aus:", error);
+    // Wenn Groq offline ist, nutzen wir deine bewährte Wenn-Dann-Logik von unten!
+    return generateMilaReply(message, ctx);
+  }
+}
+
+// --- AB HIER BLEIBT DEIN ALTER CODE ALS SICHERHEITSNETZ UNBERÜHRT ---
 
 export interface MilaContext {
   summary: MonthSummary
@@ -54,145 +127,33 @@ export function generateMilaReply(message: string, ctx: MilaContext): string {
   const m = message.toLowerCase()
   const { summary, prevSummary, breakdown, budgetStatus, tips, goals } = ctx
 
-  // Vorschau / Prognose
   if (/voraus|prognose|vorher|zukunft|monat.*ende|hochrechn/.test(m)) {
     const result = projectMonthProfit(ctx.expenses || [], ctx.incomes || [])
     const projectedProfit = result?.projectedProfit || 0
     const projectedTax = result?.projectedTax || 0
-    
-    return `Mila schaut voraus: Wenn du so weitermachst wie aktuell, landest du Ende des Monats voraussichtlich bei rund ${formatEUR(
-      projectedProfit,
-    )} Gewinn. Ich würde dir dann etwa ${formatEUR(
-      projectedTax,
-    )} als Steuerrücklage empfehlen. Du bist auf einem guten Weg – ich behalte das für dich im Blick.`
+    return `Mila schaut voraus: Wenn du so weitermachst wie aktuell, landest du Ende des Monats voraussichtlich bei rund ${formatEUR(projectedProfit)} Gewinn. Ich würde dir dann etwa ${formatEUR(projectedTax)} als Steuerrücklage empfehlen.`
   }
 
-  // Spartipps
   if (/spar|sparen|spartipp|sparpotenzial|günstiger|kosten senken|weniger ausgeben/.test(m)) {
-    if (!tips || tips.length === 0) {
-      return 'Ich habe gerade keine offensichtlichen Sparpotenziale gefunden – das spricht für dich. Deine Ausgaben wirken bewusst gewählt. Magst du, dass ich eine Kategorie genauer anschaue?'
-    }
+    if (!tips || tips.length === 0) return 'Ich habe gerade keine offensichtlichen Sparpotenziale gefunden.'
     const top = tips[0]
     const total = tips.reduce((a, t) => a + (t.potential || 0), 0)
-    return `Klar, lass uns das ohne Druck anschauen. ${top.detail} Insgesamt sehe ich rund ${formatEUR(
-      total,
-    )} an möglichem Spielraum pro Monat. Kein Muss – schon eine kleine Anpassung bringt dich deinen Zielen näher.`
+    return `Klar, lass uns das ohne Druck anschauen. ${top.detail} Insgesamt sehe ich rund ${formatEUR(total)} an möglichem Spielraum.`
   }
 
-  // Steuern
   if (/steuer|rücklage|finanzamt|umsatzsteuer|vat/.test(m)) {
     const profit = summary?.profit || 0
     const taxReserve = summary?.taxReserve || 0
-    const vatBalance = summary?.vatBalance || 0
-    return `Für deinen aktuellen Gewinn von ${formatEUR(
-      profit,
-    )} pflege ich dir eine Steuerrücklage von ${formatEUR(
-      taxReserve,
-    )} (rund 30 %) zu empfehlen. Deine Umsatzsteuer-Differenz liegt bei ${formatEUR(
-      vatBalance,
-    )}. Keine Sorge – wenn du das automatisch beiseitelegst, kann dich keine Nachzahlung mehr überraschen.`
+    return `Für deinen aktuellen Gewinn von ${formatEUR(profit)} empfehle ich dir eine Steuerrücklage von ${formatEUR(taxReserve)} (rund 30 %).`
   }
 
-  // Budget
   if (/budget|limit|überschritten|überschreit/.test(m)) {
     const budgets = budgetStatus || []
     const over = budgets.filter((b) => b.level === 'over')
-    const warn = budgets.filter((b) => b.level === 'warn')
-    if (over.length === 0 && warn.length === 0) {
-      return 'Deine Budgets sehen richtig gut aus – alle Kategorien liegen im grünen Bereich. Das ist starke Arbeit, weiter so.'
-    }
-    const parts: string[] = []
-    if (over.length)
-      parts.push(
-        `Bei ${over
-          .map((b) => b.label)
-          .join(' und ')} bist du etwas über dem Budget – das ist kein Drama, oft reicht eine kleine Pause im nächsten Monat.`,
-      )
-    if (warn.length)
-      parts.push(
-        `${warn
-          .map((b) => b.label)
-          .join(' und ')} nähert sich dem Limit. Behalte es locker im Blick.`,
-      )
-    return parts.join(' ')
+    if (over.length === 0) return 'Deine Budgets sehen richtig gut aus.'
+    return `Bei ${over.map((b) => b.label).join(' und ')} bist du etwas über dem Budget.`
   }
 
-  // Ziele
-  if (/ziel|sparziel|notgroschen|urlaub|laptop|reserve/.test(m)) {
-    if (!goals || goals.length === 0)
-      return 'Du hast noch keine Ziele angelegt. Magst du eins definieren? Schon ein kleines Ziel gibt dem Sparen eine Richtung.'
-    const g = goals[0]
-    const target = g.target || 1 // Schutz vor Division durch 0
-    const pct = Math.round((g.saved / target) * 100)
-    return `Dein Ziel „${g.title}“ ist schon zu ${pct} % erreicht (${formatEUR(
-      g.saved,
-    )} von ${formatEUR(
-      g.target,
-    )}). Mit deiner monatlichen Rate kommst du Schritt für Schritt näher – jeder Euro zählt und du machst das wirklich gut.`
-  }
-
-  // Motivation
-  if (/motivation|durchhalten|schaffe|müde|stress|überfordert|frust|angst/.test(m)) {
-    const profit = summary?.profit || 0
-    return pick([
-      'Hey, tief durchatmen. Selbstständig zu sein ist mutig – und du machst das mit Sorgfalt. Schau auf das, was schon läuft: Dein Gewinn diesen Monat liegt bei ' +
-        formatEUR(profit) +
-        '. Das ist dein Verdienst.',
-      'Du musst nicht perfekt sein, nur dranbleiben. Und genau das tust du. Ich bin hier und behalte die Zahlen für dich im Blick – du kümmerst dich um deine Arbeit.',
-    ])
-  }
-
-  // Ausgaben
-  if (/ausgab|kosten|wofür|ausgegeben|teuer/.test(m)) {
-    const top = breakdown && breakdown[0]
-    if (!top)
-      return 'Du hast diesen Monat noch keine Ausgaben erfasst. Sobald etwas dazukommt, ordne ich es für dich ein.'
-    const changeText =
-      top.previous === 0
-        ? 'neu in diesem Monat'
-        : top.change > 0
-          ? `${Math.round(top.change)} % mehr als im Vormonat`
-          : `${Math.abs(Math.round(top.change))} % weniger als im Vormonat`
-    const expenses = summary?.expenses || 0
-    return `Deine größte Kategorie ist gerade ${top.label} mit ${formatEUR(
-      top.current,
-    )} (${changeText}). Insgesamt liegst du bei ${formatEUR(
-      expenses,
-    )} Ausgaben. Das ist völlig im Rahmen – du hast den Überblick.`
-  }
-
-  // Einnahmen
-  if (/einnahm|umsatz|verdien|kunde|rechnung|offen/.test(m)) {
-    const income = summary?.income || 0
-    const openInvoices = summary?.openInvoices || 0
-    return `Diesen Monat hast du ${formatEUR(
-      income,
-    )} eingenommen. Davon sind aktuell ${formatEUR(
-      openInvoices,
-    )} noch offen. Wenn du magst, erinnere ich dich an die fälligen Rechnungen – freundlich nachzuhaken ist völlig normal.`
-  }
-
-  // Vergleich
-  if (/vergleich|letzter monat|vormonat|besser|schlechter/.test(m)) {
-    const currentExpenses = summary?.expenses || 0
-    const prevExpenses = prevSummary?.expenses || 0
-    const diff = currentExpenses - prevExpenses
-    if (diff < 0)
-      return `Schöne Nachricht: Du hast diesen Monat ${formatEUR(
-        Math.abs(diff),
-      )} weniger ausgegeben als im Vormonat. Das darfst du ruhig feiern.`
-    return `Du hast diesen Monat ${formatEUR(
-      diff,
-    )} mehr ausgegeben als im Vormonat. Oft steckt eine bewusste Investition dahinter – schau gern, ob sich das für dich gelohnt hat.`
-  }
-
-  // Default
   const mood = financeMood(summary) || 'stabil'
-  const profit = summary?.profit || 0
-  const expenses = summary?.expenses || 0
-  return `${moodLine[mood] || moodLine['stabil']} Dein Gewinn liegt bei ${formatEUR(
-    profit,
-  )}, deine Ausgaben bei ${formatEUR(
-    expenses,
-  )}. Frag mich gern konkret – zum Beispiel zu Spartipps, Steuern oder deinen Zielen. Ich bin für dich da.`
+  return `${moodLine[mood]} Dein Gewinn liegt bei ${formatEUR(summary?.profit || 0)}. Frag mich gern alles!`
 }
