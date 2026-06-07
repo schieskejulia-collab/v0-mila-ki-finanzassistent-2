@@ -4,7 +4,6 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { FinanceProvider } from '../lib/store'
 import { BottomNav } from '../components/bottom-nav'
-import { MilaChat } from '../components/ui/mila-chat'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -43,11 +42,14 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <FinanceProvider>
           <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background">
-            <div className="flex-1 pb-24">{children}</div>
-            <MilaChat />
+            <div className="flex-1 pb-24">
+              {children}
+            </div>
+
             <BottomNav />
           </div>
         </FinanceProvider>
+
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
