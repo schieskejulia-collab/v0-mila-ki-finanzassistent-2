@@ -13,8 +13,8 @@ import OpenAI from "openai"
 
 // 1. ECHTES KI-GEHIRN (Groq-Client initialisieren)
 const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || "", 
-  baseURL: "https://groq.com",
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
 })
 
 // 2. DEINE SAUBERE PERSÖNLICHKEIT (Mit Weiche für Angestellte/Selbstständige)
@@ -73,7 +73,10 @@ Aktuelle Finanzdaten des Nutzers (${userName}):
       temperature: 0.6,
     })
 
-    return response.choices?.message?.content || "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da."
+    return (
+  response.choices[0]?.message?.content ||
+  "Ich habe kurz den Faden verloren. Frag mich einfach nochmal, ich bin da."
+)
   } catch (error) {
     console.error("Groq-API Fehler, weiche auf lokalen Fallback aus:", error)
     return generateMilaReply(message, ctx)
