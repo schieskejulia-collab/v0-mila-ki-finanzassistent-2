@@ -1,5 +1,6 @@
 "use client"
 
+import { MorningBriefing } from "../components/morning-briefing"
 import React, { useState } from 'react'
 import { TransactionForm } from '../components/ui/transaction-form'
 import { getTotals, USER } from '../lib/demo-data'
@@ -41,6 +42,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
+<MorningBriefing />
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Hallo, {USER.name || 'Macher'} 👋
         </h1>
