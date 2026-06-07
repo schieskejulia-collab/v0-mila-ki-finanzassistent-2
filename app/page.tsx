@@ -1,6 +1,6 @@
 "use client"
 
-import { MorningBriefing } from "../components/morning-briefing"
+import { MorningBriefing } from "../components/ui/morning-briefing"
 import React, { useState } from 'react'
 import { TransactionForm } from '../components/ui/transaction-form'
 import { getTotals, USER } from '../lib/demo-data'
