@@ -66,10 +66,25 @@ Aktuelle Finanzdaten des Nutzers (${userName}):
     const response = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
-        { role: "system", content: getMilaPersonality(userStatus) },
-        { role: "system", content: finanzKontext },
-        { role: "user", content: message }
-      ],
+  { role: "system", content: getMilaPersonality(userStatus) },
+
+  {
+    role: "system",
+    content: `
+Der Nutzer heißt ${userName}.
+
+WICHTIG:
+- Der Nutzer heißt ${userName}.
+- Sprich ihn mit seinem Namen an.
+- Wenn nach seinem Namen gefragt wird, antworte mit "${userName}".
+- Erfinde keinen anderen Namen.
+`
+  },
+
+  { role: "system", content: finanzKontext },
+
+  { role: "user", content: message }
+],
       temperature: 0.6,
     })
 
