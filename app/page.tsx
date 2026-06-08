@@ -41,14 +41,14 @@ const {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
-  const status = USER.status || 'selbstständig'
+  const status = userStatus
 
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
 <MorningBriefing />
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Hallo, {USER.name || 'Macher'} 👋
+         Hallo, {userName || 'Macher'} 👋
         </h1>
         <p className="text-sm text-muted-foreground">
           Schön, dass du da bist. Hier ist deine Finanz-Übersicht als <span className="font-semibold text-primary">{status}</span>.
