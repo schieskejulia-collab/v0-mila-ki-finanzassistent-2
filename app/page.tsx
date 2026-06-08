@@ -4,7 +4,7 @@ import { MorningBriefing } from "../components/ui/morning-briefing"
 import React, { useState } from 'react'
 import { TransactionForm } from '../components/ui/transaction-form'
 import { getTotals, USER } from '../lib/demo-data'
-import { useFinance } from '../lib/store'
+import { getTotals } from '../lib/demo-data'
 
 export default function HomePage() {
   const initialTotals = getTotals()
