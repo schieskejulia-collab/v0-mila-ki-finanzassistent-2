@@ -1,19 +1,18 @@
 "use client"
 
 import { useFinance } from "@/lib/store"
-// Tipp: Falls du Lucide-Icons nutzt (Standard bei shadcn), importiere das Trash-Icon:
-// import { Trash2 } from "lucide-react" 
 
 export default function BuchungenPage() {
-  // Wir holen uns die Lösch-Funktionen aus deinem Store
   const { incomes, expenses, deleteIncome, deleteExpense } = useFinance()
 
+  // Kombinieren und Sortieren der Buchungen
   const alleBuchungen = [
     ...incomes.map((i) => ({
       id: i.id,
       title: i.client,
       amount: i.amount,
       date: i.date,
+      category: "Einnahme", // Einnahmen haben oft keine Unterkategorie im einfachen Modell
       type: "income",
     })),
     ...expenses.map((e) => ({
@@ -21,12 +20,11 @@ export default function BuchungenPage() {
       title: e.vendor,
       amount: e.amount,
       date: e.date,
+      category: e.category || "Sonstiges",
       type: "expense",
     })),
   ].sort(
-    (a, b) =>
-      new Date(b.date).getTime() -
-      new Date(a.date).getTime()
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 
   const handleLöschen = (id: string, type: string, title: string) => {
@@ -40,58 +38,60 @@ export default function BuchungenPage() {
   }
 
   return (
-    <div className="p-4 space-y-6 pb-20"> {/* pb-20 damit Mila unten nichts verdeckt */}
+    <div className="p-4 space-y-6 pb-24">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">📒 Buchungen</h1>
-        <p className="text-sm text-muted-foreground">{alleBuchungen.length} Einträge</p>
+        <p className="text-sm text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+          {alleBuchungen.length} Einträge
+        </p>
       </div>
 
       {alleBuchungen.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
-          <p>Noch keine Buchungen vorhanden.</p>
+        <div className="text-center py-20 bg-muted/30 rounded-3xl border-2 border-dashed border-border">
+          <p className="text-muted-foreground">Noch keine Buchungen vorhanden.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {alleBuchungen.map((buchung) => (
             <div
               key={buchung.id}
-              className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-card border border-border rounded-2xl p-4 shadow-sm relative group"
             >
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${buchung.type === "income" ? "bg-emerald-500" : "bg-rose-500"}`} />
-                    <p className="font-semibold text-lg leading-none">
-                      {buchung.title}
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-lg leading-tight">
+                    {buchung.title}
+                  </h3>
+                  
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium text-foreground/70">Kategorie:</span> {buchung.category}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(buchung.date).toLocaleDateString('de-DE', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
                     </p>
                   </div>
-
-                  <p className="text-xs text-muted-foreground mt-1 ml-4">
-                    {new Date(buchung.date).toLocaleDateString('de-DE', { 
-                      day: '2-digit', 
-                      month: 'long', 
-                      year: 'numeric' 
-                    })}
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-end gap-2">
                   <p
-                    className={
+                    className={`text-lg font-black ${
                       buchung.type === "income"
-                        ? "text-emerald-600 font-bold text-lg"
-                        : "text-rose-600 font-bold text-lg"
-                    }
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }`}
                   >
                     {buchung.type === "income" ? "+" : "-"}
                     {buchung.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
                   </p>
-
-                  {/* DER LÖSCH-BUTTON */}
+                  
                   <button
                     onClick={() => handleLöschen(buchung.id, buchung.type, buchung.title)}
-                    className="p-2 hover:bg-rose-100 hover:text-rose-600 rounded-lg text-muted-foreground transition-colors"
-                    title="Löschen"
+                    className="p-2 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
                   >
                     🗑️
                   </button>
@@ -101,6 +101,20 @@ export default function BuchungenPage() {
           ))}
         </div>
       )}
+
+      {/* Info-Sektion für Kategorien (optional, zur Übersicht) */}
+      <div className="mt-8 p-4 bg-secondary/50 rounded-2xl">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+          Wichtige Kategorien für Mila
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          {["Software", "Reisen", "Marketing", "Büro", "Hardware", "Versicherung", "Bewirtung", "Weiterbildung"].map((cat) => (
+            <div key={cat} className="text-xs bg-background border border-border px-2 py-1.5 rounded-lg">
+              {cat}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
