@@ -18,11 +18,6 @@ const {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
   }
 
-
-    setSuccessMessage('Erfolgreich gebucht!')
-    setTimeout(() => setSuccessMessage(''), 3000)
-  }
-
   const status = userStatus
 
   return (
