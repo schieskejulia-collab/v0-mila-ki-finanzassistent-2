@@ -10,49 +10,49 @@ export interface SteuerTipp {
 export const STEUER_TIPPS: SteuerTipp[] = [
   {
     kategorie: "🏠 Home-Office",
-    titel: "Die Homeoffice-Pauschale",
-    beschreibung: "Auch ohne eigenes Arbeitszimmer kannst du 6 € pro Tag absetzen.",
-    nische: "Gilt auch für die Arbeit am Küchentisch oder auf der Couch! Maximal 1.260 € im Jahr.",
+    titel: "Deine Wohlfühl-Zone",
+    beschreibung: "Auch ohne echtes Arbeitszimmer kannst du 6 € pro Tag absetzen.",
+    nische: "Egal ob Küchentisch oder Couch – Hauptsache du warst produktiv! Schnapp dir die 6 €, bis zu 1.260 € im Jahr gehören dir.",
     status: "Voll absetzbar",
     keywords: ["homeoffice", "miete", "wohnen", "arbeitszimmer"]
   },
   {
     kategorie: "🍽️ Bewirtung",
-    titel: "Geschäftsessen",
+    titel: "Networking & Genuss",
     beschreibung: "Essen mit Kunden oder Partnern zur Akquise oder Projektabsprache.",
-    nische: "Vergiss das Trinkgeld nicht! Wenn es auf dem Beleg steht, zählen die 70% auch darauf.",
+    nische: "Kleiner Insider: Vergiss das Trinkgeld nicht! Wenn es auf dem Beleg steht, holen wir uns die 70% auch darauf zurück. Lass es dir schmecken!",
     status: "70% absetzbar",
     keywords: ["bewirtung", "essen", "restaurant", "kunden"]
   },
   {
     kategorie: "💻 Arbeitsmittel",
-    titel: "Technik & Software",
+    titel: "Dein Tech-Upgrade",
     beschreibung: "Laptops, Monitore, Apps und Abos (wie Notion, Adobe).",
-    nische: "Gegenstände bis 800 € (netto) sind 'GWG' und können sofort im selben Jahr voll abgesetzt werden.",
+    nische: "Alles unter 800 € (netto) ist ein 'GWG' – das setzen wir sofort im Ganzen ab. Dein Setup muss schließlich glänzen!",
     status: "Voll absetzbar",
     keywords: ["software", "tools", "hardware", "laptop", "technik", "abo", "arbeitsmittel"]
   },
   {
     kategorie: "✈️ Reisekosten",
-    titel: "Fahrtkosten-Pauschale",
+    titel: "Mila on Tour",
     beschreibung: "Jeder Kilometer zum Kunden oder zu Fortbildungen zählt.",
-    nische: "Auch das Fahrrad zählt mit 0,30 € pro KM! Mila kann dein Fahrtenbuch führen.",
+    nische: "Sogar dein Drahtesel zählt mit 0,30 € pro KM! Ich halte dein Fahrtenbuch sauber, während du die Welt eroberst.",
     status: "Pauschale",
     keywords: ["reisekosten", "fahrtkosten", "pendeln", "zug", "auto", "reisen"]
   },
   {
     kategorie: "🧼 Reinigung",
-    titel: "Berufskleidung",
+    titel: "Frisch & Professionell",
     beschreibung: "Reinigung von Kleidung, die du fast nur beruflich nutzt.",
-    nische: "Sogar die Reinigung deines Anzugs für ein wichtiges Event kann durchgehen, wenn es rein beruflich war.",
+    nische: "Dein Anzug für das wichtige Event? Wenn's rein beruflich war, geht die Reinigung auf's Haus (bzw. die Steuer). Bleib glänzend!",
     status: "Voll absetzbar",
     keywords: ["reinigung", "kleidung", "wäsche"]
   },
   {
     kategorie: "📦 Kleinkram",
-    titel: "Kontoführung & Co.",
+    titel: "Der Kleinkram-Held",
     beschreibung: "Gebühren für dein Geschäftskonto.",
-    nische: "Pauschal 16 € im Jahr kannst du ohne jeden Beleg angeben. Mila merkt sich das!",
+    nische: "Pauschal 16 € im Jahr gehen immer – ganz ohne Beleg-Stress. Ich merke mir das für dich, Julia!",
     status: "Pauschale",
     keywords: ["kontoführung", "bank", "gebühren", "bürobedarf", "marketing"]
   }
