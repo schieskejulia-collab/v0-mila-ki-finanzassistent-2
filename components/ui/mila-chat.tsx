@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-
+import { useFinance } from '../../lib/store'
 interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -9,6 +9,11 @@ interface Message {
 }
 
 export function MilaChat() {
+const {
+  summary,
+  userName,
+  userStatus,
+} = useFinance()
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?' }
   ])
@@ -40,7 +45,14 @@ export function MilaChat() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.content })
+        body: JSON.stringify({
+  message: userMessage.content,
+  context: {
+    summary,
+  },
+  userName,
+  userStatus,
+})
       })
 
       const data = await response.json()
