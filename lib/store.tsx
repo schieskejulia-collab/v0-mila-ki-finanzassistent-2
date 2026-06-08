@@ -55,8 +55,21 @@ let uid = 1000
 const newId = (p: string) => `${p}-${++uid}`
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [expenses, setExpenses] = useState<Expense[]>(demoExpenses)
-  const [incomes, setIncomes] = useState<Income[]>(demoIncomes)
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+  if (typeof window === 'undefined') return demoExpenses
+
+  const saved = localStorage.getItem('mila_expenses')
+
+  return saved ? JSON.parse(saved) : demoExpenses
+})
+
+const [incomes, setIncomes] = useState<Income[]>(() => {
+  if (typeof window === 'undefined') return demoIncomes
+
+  const saved = localStorage.getItem('mila_incomes')
+
+  return saved ? JSON.parse(saved) : demoIncomes
+})
   const [goals, setGoals] = useState<Goal[]>(demoGoals)
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
@@ -95,6 +108,19 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem('mila_tax', String(taxRate))
 }, [taxRate])
+useEffect(() => {
+  localStorage.setItem(
+    'mila_expenses',
+    JSON.stringify(expenses)
+  )
+}, [expenses])
+
+useEffect(() => {
+  localStorage.setItem(
+    'mila_incomes',
+    JSON.stringify(incomes)
+  )
+}, [incomes])
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
   }, [])
