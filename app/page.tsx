@@ -54,11 +54,6 @@ const {
         </div>
       )}
 
-      <TransactionForm 
-        onAddTransaction={handleAddTransaction} 
-        userStatus={status} 
-      />
-
       <div className="bg-muted p-4 rounded-xl text-xs text-muted-foreground leading-relaxed">
         <p className="font-semibold text-foreground mb-1">💡 Beta-Test-Hinweis:</p>
         Deine Eingaben werden aktuell live im Zwischenspeicher deiner App verrechnet.
