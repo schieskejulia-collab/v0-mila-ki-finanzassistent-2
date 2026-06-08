@@ -18,7 +18,18 @@ import {
   savingTips,
   type MonthSummary,
 } from './calculations'
-import { getMilaTipForUser, type UserStatus } from './mila-knowledge'
+
+// --- MILAS WISSENS-DATENBANK ---
+function getMilaTip(category: string, status: string) {
+  const cat = category.toLowerCase();
+  if (cat.includes("software")) return "💻 Voll absetzbar! Da Software meist unter 800€ kostet, ziehen wir das sofort im selben Jahr ab.";
+  if (cat.includes("bewirtung")) return "🍽️ Geschäftsessen! Ich buche 70% für dich ab. Schreib mir kurz die Namen der Gäste in die Notizen.";
+  if (cat.includes("reisen")) return "✈️ Auf Achse? Denk an die Verpflegungspauschale! Ab 8 Std. Abwesenheit gibt es extra Geld.";
+  if (cat.includes("weiterbildung")) return "🎓 Investment in dich! Das setzen wir voll ab. Sogar die Fahrt zum Kurs zählt.";
+  if (cat.includes("buero") || cat.includes("bedarf")) return "📎 Bürobedarf ist immer gut. Kleinkram bis 800€ setzen wir sofort ab.";
+  if (cat.includes("einnahme")) return "💰 Yay, Geld kommt rein! Ich behalte deine Steuerlast im Auge.";
+  return "📦 Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
+}
 
 const DEFAULT_CATEGORIES = [
   'Reisen', 'Weiterbildung', 'Software', 'Marketing', 'Bürobedarf', 'Bewirtung', 'Versicherung', 'Hardware', 'Sonstiges'
@@ -36,9 +47,11 @@ interface FinanceContextValue {
   budgetStatus: ReturnType<typeof budgetStatuses>
   tips: ReturnType<typeof savingTips>
   
+  // Mila Feedback System
   milaFeedback: string
   triggerMilaFeedback: (category: string) => void
 
+  // Aktionen
   addExpense: (e: Omit<Expense, 'id'>) => void
   deleteExpense: (id: string) => void
   addIncome: (i: Omit<Income, 'id'>) => void
@@ -46,11 +59,13 @@ interface FinanceContextValue {
   markInvoicePaid: (id: string) => void
   contributeToGoal: (id: string, amount: number) => void
   
+  // Kategorien & System
   addCategory: (name: string) => void
   deleteCategory: (name: string) => void
   resetToDemo: () => void
   clearAllData: () => void
 
+  // Mila Chat
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
   pendingPrompt: string | null
@@ -59,8 +74,8 @@ interface FinanceContextValue {
   
   userName: string
   setUserName: (name: string) => void
-  userStatus: UserStatus
-  setUserStatus: (status: UserStatus) => void
+  userStatus: 'angestellt' | 'selbstständig'
+  setUserStatus: (status: 'angestellt' | 'selbstständig') => void
   taxRate: number
   setTaxRate: (rate: number) => void
 }
@@ -71,6 +86,7 @@ let uid = Date.now()
 const newId = (p: string) => `${p}-${++uid}`
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
+  // --- States ---
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window === 'undefined') return demoExpenses
     const saved = localStorage.getItem('mila_expenses')
@@ -89,28 +105,27 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
   })
 
-  const [userName, setUserName] = useState(() => {
-    if (typeof window === 'undefined') return 'Julia'
-    return localStorage.getItem('mila_name') || 'Julia'
-  })
-
-  const [userStatus, setUserStatus] = useState<UserStatus>(() => {
-    if (typeof window === 'undefined') return 'selbstständig'
-    const saved = localStorage.getItem('mila_status') as UserStatus
-    return ['angestellt', 'selbstständig', 'kleinunternehmer', 'freelancer'].includes(saved) ? saved : 'selbstständig'
-  })
-
-  const [milaFeedback, setMilaFeedback] = useState(`Hi ${userName}, ich bin Mila! Bereit für deine Belege?`)
+  const [milaFeedback, setMilaFeedback] = useState("Hi, ich bin Mila! Bereit für deine Belege?")
   const [goals, setGoals] = useState<Goal[]>(demoGoals)
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
+  const [userName, setUserName] = useState(() => {
+    if (typeof window === 'undefined') return 'Julia'
+    return localStorage.getItem('mila_name') || 'Julia'
+  })
+  const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>(() => {
+    if (typeof window === 'undefined') return 'selbstständig'
+    const saved = localStorage.getItem('mila_status')
+    return saved === 'angestellt' ? 'angestellt' : 'selbstständig'
+  })
   const [taxRate, setTaxRate] = useState(() => {
     if (typeof window === 'undefined') return 30
     const saved = localStorage.getItem('mila_tax')
     return saved ? Number(saved) : 30
   })
 
+  // --- Persistence ---
   useEffect(() => {
     localStorage.setItem('mila_name', userName)
     localStorage.setItem('mila_status', userStatus)
@@ -120,10 +135,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mila_categories', JSON.stringify(categories))
   }, [userName, userStatus, taxRate, expenses, incomes, categories])
 
+  // --- Callbacks ---
   const triggerMilaFeedback = useCallback((category: string) => {
-    const tip = getMilaTipForUser(category, userStatus)
-    setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
-  }, [userStatus, userName])
+    const tip = getMilaTip(category, userStatus)
+    setMilaFeedback(tip)
+  }, [userStatus])
 
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
@@ -136,8 +152,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addIncome = useCallback((i: Omit<Income, 'id'>) => {
     setIncomes((prev) => [{ ...i, id: newId('i') }, ...prev])
-    setMilaFeedback(`💰 Yay ${userName}, Zahltag! Das Geld steht dir gut.`)
-  }, [userName])
+    triggerMilaFeedback("einnahme")
+  }, [triggerMilaFeedback])
 
   const deleteIncome = useCallback((id: string) => {
     setIncomes((prev) => prev.filter(i => i.id !== id))
@@ -152,13 +168,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resetToDemo = useCallback(() => {
-    setExpenses(demoExpenses); setIncomes(demoIncomes); setCategories(DEFAULT_CATEGORIES);
-    setMilaFeedback("Alles auf Anfang! Demo-Daten sind geladen.")
+    setExpenses(demoExpenses)
+    setIncomes(demoIncomes)
+    setCategories(DEFAULT_CATEGORIES)
+    setMilaFeedback("Ich habe alles auf die Demo-Daten zurückgesetzt!")
   }, [])
 
   const clearAllData = useCallback(() => {
-    setExpenses([]); setIncomes([]);
-    setMilaFeedback("Blitzblank! Alles gelöscht.")
+    setExpenses([])
+    setIncomes([])
+    setMilaFeedback("Alles blitzblank! Dein Frühjahrsputz war erfolgreich.")
   }, [])
 
   const markInvoicePaid = useCallback((id: string) => {
@@ -170,11 +189,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const askMila = useCallback((prompt: string) => {
-    setPendingPrompt(prompt); setChatOpen(true);
+    setPendingPrompt(prompt)
+    setChatOpen(true)
   }, [])
 
   const clearPending = useCallback(() => setPendingPrompt(null), [])
 
+  // --- Memos ---
   const summary = useMemo(() => monthSummary(expenses, incomes, 0), [expenses, incomes])
   const prevSummary = useMemo(() => monthSummary(expenses, incomes, -1), [expenses, incomes])
   const breakdown = useMemo(() => categoryBreakdown(expenses), [expenses])
