@@ -44,7 +44,7 @@ export default function BuchungenPage() {
               </p>
 
               <p className="text-sm text-muted-foreground">
-                {buchung.date}
+                {new Date(buchung.date).toLocaleDateString('de-DE')}
               </p>
             </div>
 
