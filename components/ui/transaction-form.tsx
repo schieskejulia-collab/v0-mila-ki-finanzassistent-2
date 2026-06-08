@@ -9,6 +9,10 @@ export function TransactionForm({ onAddTransaction, userStatus = 'selbstständig
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [title, setTitle] = useState('')
+const {
+  addExpense,
+  addIncome,
+} = useFinance()
 
   // Dynamische Kategorien je nachdem, ob der User angestellt oder selbstständig ist
   const categories = userStatus === 'angestellt' 
