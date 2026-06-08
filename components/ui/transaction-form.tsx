@@ -33,17 +33,27 @@ const {
     e.preventDefault()
     if (!amount || !category || !title) return
 
-    const newTransaction = {
-      id: Date.now().toString(),
-      title,
-      amount: parseFloat(amount) * (type === 'expense' ? -1 : 1),
-      category,
-      date: new Date().toISOString().split('T')[0],
-      type
-    }
+    const value = parseFloat(amount)
 
-    onAddTransaction(newTransaction)
-    
+if (type === 'expense') {
+  addExpense({
+    amount: value,
+    category: 'sonstiges',
+    date: new Date().toISOString(),
+    vendor: title,
+    vat: 19,
+    hasReceipt: false,
+  })
+} else {
+  addIncome({
+    amount: value,
+    date: new Date().toISOString(),
+    client: title,
+    vat: 19,
+    status: 'bezahlt',
+    source: 'sonstiges',
+  })
+}
     // Formular zurücksetzen
     setAmount('')
     setTitle('')
