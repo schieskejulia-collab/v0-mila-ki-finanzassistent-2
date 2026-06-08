@@ -77,6 +77,13 @@ const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>(()
 })
 
 const [taxRate, setTaxRate] = useState(() => {
+  if (typeof window === 'undefined') return 30
+
+  const saved = localStorage.getItem('mila_tax')
+
+  return saved ? Number(saved) : 30
+})
+
 useEffect(() => {
   localStorage.setItem('mila_name', userName)
 }, [userName])
@@ -88,12 +95,6 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem('mila_tax', String(taxRate))
 }, [taxRate])
-  if (typeof window === 'undefined') return 30
-
-  const saved = localStorage.getItem('mila_tax')
-
-  return saved ? Number(saved) : 30
-})
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
   }, [])
