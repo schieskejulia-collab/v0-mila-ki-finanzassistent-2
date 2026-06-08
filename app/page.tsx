@@ -13,6 +13,7 @@ export default function HomePage() {
 const {
   userName,
   userStatus,
+  summary,
 } = useFinance()
   // Absolut sichere Euro-Formatierung ohne externe Datei
   const zeigeEuro = (betrag: number) => {
