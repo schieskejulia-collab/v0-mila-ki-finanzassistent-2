@@ -17,6 +17,14 @@ export function BottomNav() {
         <span className="text-[10px] font-medium">Übersicht</span>
       </button>
 
+<button
+  onClick={() => router.push('/buchungen')}
+  className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-all"
+>
+  <span className="text-xl">📒</span>
+  <span className="text-[10px] font-medium">Buchungen</span>
+</button>
+
       <button
         onClick={() => router.push('/chat')}
         className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-all"
