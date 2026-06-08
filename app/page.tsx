@@ -38,7 +38,7 @@ const {
         </div>
         <div className="bg-card p-4 rounded-xl border border-border">
           <p className="text-xs font-medium text-muted-foreground">Ausgaben</p>
-          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(summary.expense)}</p>
+          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(summary.expenses)}</p>
         </div>
         <div className="bg-card p-4 rounded-xl border border-border col-span-2">
           <p className="text-xs font-medium text-muted-foreground">
