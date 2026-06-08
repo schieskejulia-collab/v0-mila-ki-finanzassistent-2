@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { formatEuro } from '@/lib/utils'
+import { useFinance } from '@/lib/store'
 
 export function TransactionForm({ onAddTransaction, userStatus = 'selbstständig' }: { onAddTransaction: (t: any) => void, userStatus?: string }) {
   const [type, setType] = useState<'income' | 'expense'>('expense')
