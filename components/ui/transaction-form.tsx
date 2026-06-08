@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { useFinance } from '@/lib/store'
-import { getMilaTip } from '@/lib/mila-knowledge'
+import { getMilaTip } from '@/lib/mila-tips'
 
 export function TransactionForm({
   userStatus = 'selbstständig'
