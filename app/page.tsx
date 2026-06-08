@@ -34,17 +34,17 @@ const {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card p-4 rounded-xl border border-border">
           <p className="text-xs font-medium text-muted-foreground">Einnahmen</p>
-          <p className="text-lg font-bold text-emerald-600 mt-1">{zeigeEuro(totals.income)}</p>
+          <p className="text-lg font-bold text-emerald-600 mt-1">{zeigeEuro(summary.income)}</p>
         </div>
         <div className="bg-card p-4 rounded-xl border border-border">
           <p className="text-xs font-medium text-muted-foreground">Ausgaben</p>
-          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(totals.expense)}</p>
+          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(summary.expense)}</p>
         </div>
         <div className="bg-card p-4 rounded-xl border border-border col-span-2">
           <p className="text-xs font-medium text-muted-foreground">
             {status === 'angestellt' ? 'Verfügbares Budget' : 'Aktueller Gewinn'}
           </p>
-          <p className="text-xl font-extrabold text-foreground mt-1">{zeigeEuro(totals.profit)}</p>
+          <p className="text-xl font-extrabold text-foreground mt-1">{zeigeEuro(summary.profit)}</p>
         </div>
       </div>
 
