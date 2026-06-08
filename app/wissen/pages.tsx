@@ -1,51 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-const STEUER_TIPPS = [
-  {
-    kategorie: "🏠 Home-Office",
-    titel: "Die Homeoffice-Pauschale",
-    beschreibung: "Auch ohne eigenes Arbeitszimmer kannst du 6 € pro Tag absetzen.",
-    nische: "Gilt auch für die Arbeit am Küchentisch oder auf der Couch! Maximal 1.260 € im Jahr.",
-    status: "Voll absetzbar"
-  },
-  {
-    kategorie: "🍽️ Bewirtung",
-    titel: "Geschäftsessen",
-    beschreibung: "Essen mit Kunden oder Partnern zur Akquise oder Projektabsprache.",
-    nische: "Vergiss das Trinkgeld nicht! Wenn es auf dem Beleg steht, zählen die 70% auch darauf.",
-    status: "70% absetzbar"
-  },
-  {
-    kategorie: "💻 Arbeitsmittel",
-    titel: "Technik & Software",
-    beschreibung: "Laptops, Monitore, Apps und Abos (wie Notion, Adobe).",
-    nische: "Gegenstände bis 800 € (netto) sind 'GWG' und können sofort im selben Jahr voll abgesetzt werden.",
-    status: "Voll absetzbar"
-  },
-  {
-    kategorie: "✈️ Reisekosten",
-    titel: "Fahrtkosten-Pauschale",
-    beschreibung: "Jeder Kilometer zum Kunden oder zu Fortbildungen zählt.",
-    nische: "Auch das Fahrrad zählt mit 0,30 € pro KM! Mila kann dein Fahrtenbuch führen.",
-    status: "Pauschale"
-  },
-  {
-    kategorie: "🧼 Reinigung",
-    titel: "Berufskleidung",
-    beschreibung: "Reinigung von Kleidung, die du fast nur beruflich nutzt.",
-    nische: "Sogar die Reinigung deines Anzugs für ein wichtiges Event kann durchgehen, wenn es rein beruflich war.",
-    status: "Voll absetzbar"
-  },
-  {
-    kategorie: "📦 Kleinkram",
-    titel: "Kontoführung & Co.",
-    beschreibung: "Gebühren für dein Geschäftskonto.",
-    nische: "Pauschal 16 € im Jahr kannst du ohne jeden Beleg angeben. Mila merkt sich das!",
-    status: "Pauschale"
-  }
-];
+import { STEUER_TIPPS } from "@/lib/mila-knowledge"
 
 export default function WissenPage() {
   const [searchTerm, setSearchTerm] = useState("");
