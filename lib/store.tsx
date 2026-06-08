@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
   useCallback,
+useEffect,
   type ReactNode,
 } from 'react'
 import type { Expense, Income, Goal, Budget } from './types'
@@ -60,9 +61,39 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
-const [userName, setUserName] = useState('Julia')
-const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>('selbstständig')
-const [taxRate, setTaxRate] = useState(30)
+const [userName, setUserName] = useState(() => {
+  if (typeof window === 'undefined') return 'Julia'
+  return localStorage.getItem('mila_name') || 'Julia'
+})
+
+const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>(() => {
+  if (typeof window === 'undefined') return 'selbstständig'
+
+  const saved = localStorage.getItem('mila_status')
+
+  return saved === 'angestellt'
+    ? 'angestellt'
+    : 'selbstständig'
+})
+
+const [taxRate, setTaxRate] = useState(() => {
+useEffect(() => {
+  localStorage.setItem('mila_name', userName)
+}, [userName])
+
+useEffect(() => {
+  localStorage.setItem('mila_status', userStatus)
+}, [userStatus])
+
+useEffect(() => {
+  localStorage.setItem('mila_tax', String(taxRate))
+}, [taxRate])
+  if (typeof window === 'undefined') return 30
+
+  const saved = localStorage.getItem('mila_tax')
+
+  return saved ? Number(saved) : 30
+})
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
   }, [])
