@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { useFinance } from '@/lib/store'
-import { findMilaTip } from '@/lib/mila-knowledge'
+import { getMilaTip } from '@/lib/mila-knowledge'
 
 export function TransactionForm({
   userStatus = 'selbstständig'
@@ -30,7 +30,7 @@ export function TransactionForm({
       }
 
   // Mila Tipp finden, sobald Kategorie gewählt wird
-  const activeTip = type === 'expense' ? findMilaTip(category) : null
+  const activeTip = type === 'expense' ? getMilaTip(category) : null
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -175,3 +175,4 @@ export function TransactionForm({
     </form>
   )
 }
+
