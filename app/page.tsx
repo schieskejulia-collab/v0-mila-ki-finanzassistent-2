@@ -11,6 +11,8 @@ const {
   userName,
   userStatus,
   summary,
+  incomes,
+  expenses,
 } = useFinance()
   // Absolut sichere Euro-Formatierung ohne externe Datei
   const zeigeEuro = (betrag: number) => {
@@ -53,7 +55,35 @@ const {
           ✨ {successMessage}
         </div>
       )}
+<div className="bg-card p-4 rounded-xl border border-border">
+  <h3 className="font-semibold mb-3">
+    Letzte Buchungen
+  </h3>
 
+  {incomes.slice(0, 5).map((income) => (
+    <div
+      key={income.id}
+      className="flex justify-between py-1"
+    >
+      <span>{income.client}</span>
+      <span className="text-emerald-600">
+        +{zeigeEuro(income.amount)}
+      </span>
+    </div>
+  ))}
+
+  {expenses.slice(0, 5).map((expense) => (
+    <div
+      key={expense.id}
+      className="flex justify-between py-1"
+    >
+      <span>{expense.vendor}</span>
+      <span className="text-rose-600">
+        -{zeigeEuro(expense.amount)}
+      </span>
+    </div>
+  ))}
+</div>
       <div className="bg-muted p-4 rounded-xl text-xs text-muted-foreground leading-relaxed">
         <p className="font-semibold text-foreground mb-1">💡 Beta-Test-Hinweis:</p>
         Deine Eingaben werden aktuell live im Zwischenspeicher deiner App verrechnet.
