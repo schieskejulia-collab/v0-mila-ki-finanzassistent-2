@@ -75,6 +75,7 @@ let uid = Date.now()
 const newId = (p: string) => `${p}-${++uid}`
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
+  // --- States ---
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window === 'undefined') return demoExpenses
     const saved = localStorage.getItem('mila_expenses')
@@ -93,7 +94,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
   })
 
-  const [milaFeedback, setMilaFeedback] = useState("Hi, ich bin Mila! Bereit für deine Belege?")
+  const [milaFeedback, setMilaFeedback] = useState("Hi Julia, ich bin Mila! Bereit, deine Finanzen zu rocken?")
   const [goals, setGoals] = useState<Goal[]>(demoGoals)
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
@@ -113,6 +114,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return saved ? Number(saved) : 30
   })
 
+  // --- Persistence ---
   useEffect(() => {
     localStorage.setItem('mila_name', userName)
     localStorage.setItem('mila_status', userStatus)
@@ -122,14 +124,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mila_categories', JSON.stringify(categories))
   }, [userName, userStatus, taxRate, expenses, incomes, categories])
 
+  // --- Callbacks ---
   const triggerMilaFeedback = useCallback((category: string) => {
     const tip = findMilaTip(category)
     if (tip) {
-      setMilaFeedback(`${tip.titel}: ${tip.nische}`)
-    } else if (category === "einnahme") {
-      setMilaFeedback("💰 Yay, Geld kommt rein! Ich behalte deine Steuerlast im Auge.")
+      setMilaFeedback(`Hey Julia, pass auf: ${tip.nische}`)
+    } else if (category.toLowerCase() === "einnahme") {
+      setMilaFeedback("💰 Yay, Zahltag! Das Geld steht dir verdammt gut. Ich behalte die Steuer für dich im Blick!")
     } else {
-      setMilaFeedback("📦 Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?")
+      setMilaFeedback("📦 Alles klar, ich hab's sicher verstaut. Soll ich mal schauen, ob wir da noch was optimieren können?")
     }
   }, [])
 
@@ -163,21 +166,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setExpenses(demoExpenses)
     setIncomes(demoIncomes)
     setCategories(DEFAULT_CATEGORIES)
-    setMilaFeedback("Ich habe alles auf die Demo-Daten zurückgesetzt!")
+    setMilaFeedback("Ich habe alles auf die Demo-Daten zurückgesetzt! Wir fangen quasi von vorne an.")
   }, [])
 
   const clearAllData = useCallback(() => {
     setExpenses([])
     setIncomes([])
-    setMilaFeedback("Alles blitzblank! Dein Frühjahrsputz war erfolgreich.")
+    setMilaFeedback("Alles blitzblank! Dein digitaler Schreibtisch ist wieder sauber, Julia.")
   }, [])
 
   const markInvoicePaid = useCallback((id: string) => {
     setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'bezahlt' } : i)))
+    setMilaFeedback("Erledigt! Wieder ein Haken auf deiner Liste. ✅")
   }, [])
 
   const contributeToGoal = useCallback((id: string, amount: number) => {
     setGoals((prev) => prev.map((g) => g.id === id ? { ...g, saved: Math.min(g.target, g.saved + amount) } : g))
+    setMilaFeedback("Ein Schritt näher an deinem Ziel! Du machst das super. 🚀")
   }, [])
 
   const askMila = useCallback((prompt: string) => {
@@ -187,6 +192,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const clearPending = useCallback(() => setPendingPrompt(null), [])
 
+  // --- Memos ---
   const summary = useMemo(() => monthSummary(expenses, incomes, 0), [expenses, incomes])
   const prevSummary = useMemo(() => monthSummary(expenses, incomes, -1), [expenses, incomes])
   const breakdown = useMemo(() => categoryBreakdown(expenses), [expenses])
