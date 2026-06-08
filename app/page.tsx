@@ -4,6 +4,7 @@ import { useFinance } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 export default function DashboardPage() {
   const { 
@@ -17,13 +18,28 @@ export default function DashboardPage() {
     budgetStatus
   } = useFinance();
 
+  // Hydration Fix: Warten bis Client-seitig geladen
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground animate-pulse font-bold">Mila lädt deine Daten...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-6 pb-24 max-w-2xl mx-auto">
       {/* Header Bereich */}
       <div className="flex justify-between items-center pt-2">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-foreground">
-            Hallo {userName}! 👋
+            Hallo {userName || 'Julia'}! 👋
           </h1>
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
             Dein Finanz-Überblick
@@ -67,7 +83,7 @@ export default function DashboardPage() {
       <div className="bg-primary/10 border-l-4 border-primary p-5 rounded-r-3xl space-y-1 shadow-sm">
         <p className="text-[10px] font-black text-primary uppercase tracking-widest">Mila denkt mit ✨</p>
         <p className="text-base font-medium italic text-foreground/90 leading-snug">
-          "{milaFeedback}"
+          "{milaFeedback || 'Ich bin bereit für deine Belege!'}"
         </p>
       </div>
 
@@ -77,9 +93,9 @@ export default function DashboardPage() {
           <CardContent className="p-5 space-y-1">
             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Einnahmen</p>
             <p className="text-xl font-black text-emerald-700">
-              +{summary.totalIncomes.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
+              +{summary?.totalIncomes?.toLocaleString('de-DE', { minimumFractionDigits: 2 }) || "0,00"} €
             </p>
-            <p className="text-[9px] text-emerald-600/60 font-medium">{incomes.length} Buchungen</p>
+            <p className="text-[9px] text-emerald-600/60 font-medium">{incomes?.length || 0} Buchungen</p>
           </CardContent>
         </Card>
 
@@ -87,14 +103,14 @@ export default function DashboardPage() {
           <CardContent className="p-5 space-y-1">
             <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Ausgaben</p>
             <p className="text-xl font-black text-rose-700">
-              -{summary.totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
+              -{summary?.totalExpenses?.toLocaleString('de-DE', { minimumFractionDigits: 2 }) || "0,00"} €
             </p>
-            <p className="text-[9px] text-rose-600/60 font-medium">{expenses.length} Belege</p>
+            <p className="text-[9px] text-rose-600/60 font-medium">{expenses?.length || 0} Belege</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* 4. Budget-Fortschritt (Dein bestehendes Feature) */}
+      {/* 4. Budget-Fortschritt */}
       <Card className="border-border bg-card rounded-[2rem] shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">
@@ -102,15 +118,15 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {budgetStatus.map((budget) => (
+          {budgetStatus?.map((budget) => (
             <div key={budget.category} className="space-y-1.5">
               <div className="flex justify-between text-xs font-bold">
                 <span>{budget.category}</span>
-                <span className={budget.remaining < 0 ? "text-rose-600" : "text-emerald-600"}>
-                  {budget.remaining.toLocaleString('de-DE')} € übrig
+                <span className={(budget?.remaining ?? 0) < 0 ? "text-rose-600" : "text-emerald-600"}>
+                  {(budget?.remaining ?? 0).toLocaleString('de-DE')} € übrig
                 </span>
               </div>
-              <Progress value={budget.percent} className="h-2 rounded-full" />
+              <Progress value={budget?.percent ?? 0} className="h-2 rounded-full" />
             </div>
           ))}
         </CardContent>
