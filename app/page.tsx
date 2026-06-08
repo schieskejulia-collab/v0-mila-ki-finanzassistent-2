@@ -50,11 +50,16 @@ const {
         </div>
       </div>
 
-      {successMessage && (
-        <div className="bg-emerald-500/10 text-emerald-600 text-sm font-medium p-3 rounded-lg text-center border border-emerald-500/20 transition-all">
-          ✨ {successMessage}
-        </div>
-      )}
+    {successMessage && (
+  <div className="bg-emerald-500/10 text-emerald-600 text-sm font-medium p-3 rounded-lg text-center border border-emerald-500/20 transition-all">
+    ✨ {successMessage}
+  </div>
+)}
+
+<TransactionForm
+  userStatus={status}
+/>
+
 <div className="bg-card p-4 rounded-xl border border-border">
   <h3 className="font-semibold mb-3">
     Letzte Buchungen
