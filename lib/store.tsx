@@ -9,15 +9,6 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
-import type { Expense, Income, Goal, Budget } from './types'
-import { demoExpenses, demoIncomes, demoGoals, demoBudgets } from './demo-data'
-import {
-  monthSummary,
-  categoryBreakdown,
-  budgetStatuses,
-  savingTips,
-  type MonthSummary,
-} from './calculations'
 
 // --- MILAS WISSENS-DATENBANK ---
 function getMilaTip(category: string, status: string) {
@@ -36,184 +27,106 @@ const DEFAULT_CATEGORIES = [
 ]
 
 interface FinanceContextValue {
-  expenses: Expense[]
-  incomes: Income[]
-  goals: Goal[]
-  budgets: Budget[]
+  expenses: any[]
+  incomes: any[]
   categories: string[]
-  summary: MonthSummary
-  prevSummary: MonthSummary
-  breakdown: ReturnType<typeof categoryBreakdown>
-  budgetStatus: ReturnType<typeof budgetStatuses>
-  tips: ReturnType<typeof savingTips>
-  
-  // Mila Feedback System
   milaFeedback: string
   triggerMilaFeedback: (category: string) => void
-
-  // Aktionen
-  addExpense: (e: Omit<Expense, 'id'>) => void
+  addExpense: (e: any) => void
   deleteExpense: (id: string) => void
-  addIncome: (i: Omit<Income, 'id'>) => void
+  addIncome: (i: any) => void
   deleteIncome: (id: string) => void
-  markInvoicePaid: (id: string) => void
-  contributeToGoal: (id: string, amount: number) => void
-  
-  // Kategorien & System
-  addCategory: (name: string) => void
-  deleteCategory: (name: string) => void
   resetToDemo: () => void
   clearAllData: () => void
-
-  // Mila Chat
-  chatOpen: boolean
-  setChatOpen: (open: boolean) => void
-  pendingPrompt: string | null
-  askMila: (prompt: string) => void
-  clearPending: () => void
-  
   userName: string
   setUserName: (name: string) => void
-  userStatus: 'angestellt' | 'selbstständig'
-  setUserStatus: (status: 'angestellt' | 'selbstständig') => void
-  taxRate: number
-  setTaxRate: (rate: number) => void
+  userStatus: string
+  setUserStatus: (status: any) => void
+  isLoggedIn: boolean
+  login: (name: string, status: string) => void
+  logout: () => void
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
-let uid = Date.now()
-const newId = (p: string) => `${p}-${++uid}`
-
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  // --- States ---
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    if (typeof window === 'undefined') return demoExpenses
-    const saved = localStorage.getItem('mila_expenses')
-    return saved ? JSON.parse(saved) : demoExpenses
-  })
+  const [expenses, setExpenses] = useState<any[]>([])
+  const [incomes, setIncomes] = useState<any[]>([])
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [milaFeedback, setMilaFeedback] = useState("Hi, ich bin Mila!")
+  const [userName, setUserName] = useState("")
+  const [userStatus, setUserStatus] = useState("selbstständig")
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const [incomes, setIncomes] = useState<Income[]>(() => {
-    if (typeof window === 'undefined') return demoIncomes
-    const saved = localStorage.getItem('mila_incomes')
-    return saved ? JSON.parse(saved) : demoIncomes
-  })
-
-  const [categories, setCategories] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return DEFAULT_CATEGORIES
-    const saved = localStorage.getItem('mila_categories')
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
-  })
-
-  const [milaFeedback, setMilaFeedback] = useState("Hi, ich bin Mila! Bereit für deine Belege?")
-  const [goals, setGoals] = useState<Goal[]>(demoGoals)
-  const [budgets] = useState<Budget[]>(demoBudgets)
-  const [chatOpen, setChatOpen] = useState(false)
-  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
-  const [userName, setUserName] = useState(() => {
-    if (typeof window === 'undefined') return 'Julia'
-    return localStorage.getItem('mila_name') || 'Julia'
-  })
-  const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>(() => {
-    if (typeof window === 'undefined') return 'selbstständig'
-    const saved = localStorage.getItem('mila_status')
-    return saved === 'angestellt' ? 'angestellt' : 'selbstständig'
-  })
-  const [taxRate, setTaxRate] = useState(() => {
-    if (typeof window === 'undefined') return 30
-    const saved = localStorage.getItem('mila_tax')
-    return saved ? Number(saved) : 30
-  })
-
-  // --- Persistence ---
+  // Laden beim Start
   useEffect(() => {
-    localStorage.setItem('mila_name', userName)
-    localStorage.setItem('mila_status', userStatus)
-    localStorage.setItem('mila_tax', String(taxRate))
-    localStorage.setItem('mila_expenses', JSON.stringify(expenses))
-    localStorage.setItem('mila_incomes', JSON.stringify(incomes))
-    localStorage.setItem('mila_categories', JSON.stringify(categories))
-  }, [userName, userStatus, taxRate, expenses, incomes, categories])
+    const savedName = localStorage.getItem('mila_name')
+    const savedStatus = localStorage.getItem('mila_status')
+    const savedExpenses = localStorage.getItem('mila_expenses')
+    const savedIncomes = localStorage.getItem('mila_incomes')
 
-  // --- Callbacks ---
-  const triggerMilaFeedback = useCallback((category: string) => {
-    const tip = getMilaTip(category, userStatus)
-    setMilaFeedback(tip)
-  }, [userStatus])
-
-  const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
-    setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
-    if (e.category) triggerMilaFeedback(e.category)
-  }, [triggerMilaFeedback])
-
-  const deleteExpense = useCallback((id: string) => {
-    setExpenses((prev) => prev.filter(e => e.id !== id))
+    if (savedName) {
+      setUserName(savedName)
+      setIsLoggedIn(true)
+    }
+    if (savedStatus) setUserStatus(savedStatus)
+    if (savedExpenses) setExpenses(JSON.parse(savedExpenses))
+    if (savedIncomes) setIncomes(JSON.parse(savedIncomes))
   }, [])
 
-  const addIncome = useCallback((i: Omit<Income, 'id'>) => {
-    setIncomes((prev) => [{ ...i, id: newId('i') }, ...prev])
-    triggerMilaFeedback("einnahme")
-  }, [triggerMilaFeedback])
+  // Speichern bei Änderungen
+  useEffect(() => {
+    if (isLoggedIn) {
+      localStorage.setItem('mila_name', userName)
+      localStorage.setItem('mila_status', userStatus)
+      localStorage.setItem('mila_expenses', JSON.stringify(expenses))
+      localStorage.setItem('mila_incomes', JSON.stringify(incomes))
+    }
+  }, [userName, userStatus, expenses, incomes, isLoggedIn])
 
-  const deleteIncome = useCallback((id: string) => {
-    setIncomes((prev) => prev.filter(i => i.id !== id))
-  }, [])
-
-  const addCategory = useCallback((name: string) => {
-    setCategories((prev) => prev.includes(name) ? prev : [...prev, name])
-  }, [])
-
-  const deleteCategory = useCallback((name: string) => {
-    setCategories((prev) => prev.filter(c => c !== name))
-  }, [])
-
-  const resetToDemo = useCallback(() => {
-    setExpenses(demoExpenses)
-    setIncomes(demoIncomes)
-    setCategories(DEFAULT_CATEGORIES)
-    setMilaFeedback("Ich habe alles auf die Demo-Daten zurückgesetzt!")
-  }, [])
-
-  const clearAllData = useCallback(() => {
-    setExpenses([])
-    setIncomes([])
-    setMilaFeedback("Alles blitzblank! Dein Frühjahrsputz war erfolgreich.")
-  }, [])
-
-  const markInvoicePaid = useCallback((id: string) => {
-    setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'bezahlt' } : i)))
-  }, [])
-
-  const contributeToGoal = useCallback((id: string, amount: number) => {
-    setGoals((prev) => prev.map((g) => g.id === id ? { ...g, saved: Math.min(g.target, g.saved + amount) } : g))
-  }, [])
-
-  const askMila = useCallback((prompt: string) => {
-    setPendingPrompt(prompt)
-    setChatOpen(true)
-  }, [])
-
-  const clearPending = useCallback(() => setPendingPrompt(null), [])
-
-  // --- Memos ---
-  const summary = useMemo(() => monthSummary(expenses, incomes, 0), [expenses, incomes])
-  const prevSummary = useMemo(() => monthSummary(expenses, incomes, -1), [expenses, incomes])
-  const breakdown = useMemo(() => categoryBreakdown(expenses), [expenses])
-  const budgetStatus = useMemo(() => budgetStatuses(budgets, expenses), [budgets, expenses])
-  const tips = useMemo(() => savingTips(expenses), [expenses])
-
-  const value: FinanceContextValue = {
-    expenses, incomes, goals, budgets, categories,
-    summary, prevSummary, breakdown, budgetStatus, tips,
-    milaFeedback, triggerMilaFeedback,
-    addExpense, deleteExpense, addIncome, deleteIncome,
-    markInvoicePaid, contributeToGoal, addCategory, deleteCategory,
-    resetToDemo, clearAllData, chatOpen, setChatOpen,
-    pendingPrompt, askMila, clearPending,
-    userName, setUserName, userStatus, setUserStatus, taxRate, setTaxRate
+  const login = (name: string, status: string) => {
+    setUserName(name)
+    setUserStatus(status)
+    setIsLoggedIn(true)
+    localStorage.setItem('mila_name', name)
+    localStorage.setItem('mila_status', status)
   }
 
-  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+  const logout = () => {
+    setIsLoggedIn(false)
+    setUserName("")
+    localStorage.removeItem('mila_name')
+  }
+
+  const triggerMilaFeedback = (category: string) => {
+    setMilaFeedback(getMilaTip(category, userStatus))
+  }
+
+  const addExpense = (e: any) => {
+    const newExp = { ...e, id: `e-${Date.now()}` }
+    setExpenses(prev => [newExp, ...prev])
+    triggerMilaFeedback(e.category)
+  }
+
+  const deleteExpense = (id: string) => setExpenses(prev => prev.filter(e => e.id !== id))
+  
+  const addIncome = (i: any) => {
+    const newInc = { ...i, id: `i-${Date.now()}` }
+    setIncomes(prev => [newInc, ...prev])
+    setMilaFeedback("💰 Einnahme verbucht! Sehr gut.")
+  }
+
+  const deleteIncome = (id: string) => setIncomes(prev => prev.filter(i => i.id !== id))
+
+  const value = {
+    expenses, incomes, categories, milaFeedback, triggerMilaFeedback,
+    addExpense, deleteExpense, addIncome, deleteIncome,
+    userName, setUserName, userStatus, setUserStatus,
+    isLoggedIn, login, logout,
+    resetToDemo: () => {}, clearAllData: () => { setExpenses([]); setIncomes([]); }
+  }
+
+  return <FinanceContext.Provider value={value as any}>{children}</FinanceContext.Provider>
 }
 
 export function useFinance() {
