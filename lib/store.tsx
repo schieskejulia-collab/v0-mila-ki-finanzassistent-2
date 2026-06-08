@@ -36,8 +36,6 @@ interface FinanceContextValue {
   deleteExpense: (id: string) => void
   addIncome: (i: any) => void
   deleteIncome: (id: string) => void
-  resetToDemo: () => void
-  clearAllData: () => void
   userName: string
   setUserName: (name: string) => void
   userStatus: string
@@ -45,6 +43,8 @@ interface FinanceContextValue {
   isLoggedIn: boolean
   login: (name: string, status: string) => void
   logout: () => void
+  summary: any
+  budgetStatus: any[]
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -52,7 +52,7 @@ const FinanceContext = createContext<FinanceContextValue | null>(null)
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<any[]>([])
   const [incomes, setIncomes] = useState<any[]>([])
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [categories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [milaFeedback, setMilaFeedback] = useState("Hi, ich bin Mila!")
   const [userName, setUserName] = useState("")
   const [userStatus, setUserStatus] = useState("selbstständig")
@@ -74,7 +74,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (savedIncomes) setIncomes(JSON.parse(savedIncomes))
   }, [])
 
-  // Speichern bei Änderungen
+  // Speichern
   useEffect(() => {
     if (isLoggedIn) {
       localStorage.setItem('mila_name', userName)
@@ -88,14 +88,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setUserName(name)
     setUserStatus(status)
     setIsLoggedIn(true)
-    localStorage.setItem('mila_name', name)
-    localStorage.setItem('mila_status', status)
   }
 
   const logout = () => {
     setIsLoggedIn(false)
     setUserName("")
-    localStorage.removeItem('mila_name')
+    localStorage.clear()
+    window.location.reload()
   }
 
   const triggerMilaFeedback = (category: string) => {
@@ -103,27 +102,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   const addExpense = (e: any) => {
-    const newExp = { ...e, id: `e-${Date.now()}` }
+    const newExp = { ...e, id: `e-${Date.now()}`, date: e.date || new Date().toISOString() }
     setExpenses(prev => [newExp, ...prev])
-    triggerMilaFeedback(e.category)
+    triggerMilaFeedback(e.category || "Sonstiges")
   }
 
   const deleteExpense = (id: string) => setExpenses(prev => prev.filter(e => e.id !== id))
   
   const addIncome = (i: any) => {
-    const newInc = { ...i, id: `i-${Date.now()}` }
+    const newInc = { ...i, id: `i-${Date.now()}`, date: i.date || new Date().toISOString() }
     setIncomes(prev => [newInc, ...prev])
     setMilaFeedback("💰 Einnahme verbucht! Sehr gut.")
   }
 
   const deleteIncome = (id: string) => setIncomes(prev => prev.filter(i => i.id !== id))
 
+  // Berechnungen für das Dashboard
+  const summary = useMemo(() => {
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
+    const totalIncomes = incomes.reduce((sum, i) => sum + Number(i.amount), 0)
+    return { totalExpenses, totalIncomes, balance: totalIncomes - totalExpenses }
+  }, [expenses, incomes])
+
   const value = {
     expenses, incomes, categories, milaFeedback, triggerMilaFeedback,
     addExpense, deleteExpense, addIncome, deleteIncome,
     userName, setUserName, userStatus, setUserStatus,
-    isLoggedIn, login, logout,
-    resetToDemo: () => {}, clearAllData: () => { setExpenses([]); setIncomes([]); }
+    isLoggedIn, login, logout, summary, budgetStatus: []
   }
 
   return <FinanceContext.Provider value={value as any}>{children}</FinanceContext.Provider>
