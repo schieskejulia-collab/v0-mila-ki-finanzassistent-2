@@ -35,28 +35,23 @@ interface FinanceContextValue {
   breakdown: ReturnType<typeof categoryBreakdown>
   budgetStatus: ReturnType<typeof budgetStatuses>
   tips: ReturnType<typeof savingTips>
-  
   milaFeedback: string
   triggerMilaFeedback: (category: string) => void
-
   addExpense: (e: Omit<Expense, 'id'>) => void
   deleteExpense: (id: string) => void
   addIncome: (i: Omit<Income, 'id'>) => void
   deleteIncome: (id: string) => void
   markInvoicePaid: (id: string) => void
   contributeToGoal: (id: string, amount: number) => void
-  
   addCategory: (name: string) => void
   deleteCategory: (name: string) => void
   resetToDemo: () => void
   clearAllData: () => void
-
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
   pendingPrompt: string | null
   askMila: (prompt: string) => void
   clearPending: () => void
-  
   userName: string
   setUserName: (name: string) => void
   userStatus: UserStatus
@@ -73,20 +68,26 @@ const newId = (p: string) => `${p}-${++uid}`
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window === 'undefined') return demoExpenses
-    const saved = localStorage.getItem('mila_expenses')
-    return saved ? JSON.parse(saved) : demoExpenses
+    try {
+      const saved = localStorage.getItem('mila_expenses')
+      return saved ? JSON.parse(saved) : demoExpenses
+    } catch { return demoExpenses }
   })
 
   const [incomes, setIncomes] = useState<Income[]>(() => {
     if (typeof window === 'undefined') return demoIncomes
-    const saved = localStorage.getItem('mila_incomes')
-    return saved ? JSON.parse(saved) : demoIncomes
+    try {
+      const saved = localStorage.getItem('mila_incomes')
+      return saved ? JSON.parse(saved) : demoIncomes
+    } catch { return demoIncomes }
   })
 
   const [categories, setCategories] = useState<string[]>(() => {
     if (typeof window === 'undefined') return DEFAULT_CATEGORIES
-    const saved = localStorage.getItem('mila_categories')
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
+    try {
+      const saved = localStorage.getItem('mila_categories')
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
+    } catch { return DEFAULT_CATEGORIES }
   })
 
   const [userName, setUserName] = useState(() => {
@@ -97,10 +98,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [userStatus, setUserStatus] = useState<UserStatus>(() => {
     if (typeof window === 'undefined') return 'selbstständig'
     const saved = localStorage.getItem('mila_status') as UserStatus
-    return ['angestellt', 'selbstständig', 'kleinunternehmer', 'freelancer'].includes(saved) ? saved : 'selbstständig'
+    const validStatuses = ['angestellt', 'selbstständig', 'kleinunternehmer', 'freelancer']
+    return validStatuses.includes(saved) ? saved : 'selbstständig'
   })
 
-  const [milaFeedback, setMilaFeedback] = useState(`Hi ${userName}, ich bin Mila! Bereit für deine Belege?`)
+  const [milaFeedback, setMilaFeedback] = useState(`Hi ${userName}, ich bin Mila! Bereit?`)
   const [goals, setGoals] = useState<Goal[]>(demoGoals)
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
@@ -112,6 +114,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     localStorage.setItem('mila_name', userName)
     localStorage.setItem('mila_status', userStatus)
     localStorage.setItem('mila_tax', String(taxRate))
@@ -136,7 +139,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addIncome = useCallback((i: Omit<Income, 'id'>) => {
     setIncomes((prev) => [{ ...i, id: newId('i') }, ...prev])
-    setMilaFeedback(`💰 Yay ${userName}, Zahltag! Das Geld steht dir gut.`)
+    setMilaFeedback(`💰 Yay ${userName}, Zahltag!`)
   }, [userName])
 
   const deleteIncome = useCallback((id: string) => {
@@ -153,12 +156,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const resetToDemo = useCallback(() => {
     setExpenses(demoExpenses); setIncomes(demoIncomes); setCategories(DEFAULT_CATEGORIES);
-    setMilaFeedback("Alles auf Anfang! Demo-Daten sind geladen.")
+    setMilaFeedback("Alles auf Anfang!")
   }, [])
 
   const clearAllData = useCallback(() => {
     setExpenses([]); setIncomes([]);
-    setMilaFeedback("Blitzblank! Alles gelöscht.")
+    setMilaFeedback("Alles gelöscht.")
   }, [])
 
   const markInvoicePaid = useCallback((id: string) => {
