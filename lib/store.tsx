@@ -38,6 +38,14 @@ interface FinanceContextValue {
   pendingPrompt: string | null
   askMila: (prompt: string) => void
   clearPending: () => void
+userName: string
+setUserName: (name: string) => void
+
+userStatus: 'angestellt' | 'selbstständig'
+setUserStatus: (status: 'angestellt' | 'selbstständig') => void
+
+taxRate: number
+setTaxRate: (rate: number) => void
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -52,7 +60,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [budgets] = useState<Budget[]>(demoBudgets)
   const [chatOpen, setChatOpen] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
-
+const [userName, setUserName] = useState('Julia')
+const [userStatus, setUserStatus] = useState<'angestellt' | 'selbstständig'>('selbstständig')
+const [taxRate, setTaxRate] = useState(30)
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
   }, [])
@@ -116,6 +126,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     pendingPrompt,
     askMila,
     clearPending,
+userName,
+setUserName,
+
+userStatus,
+setUserStatus,
+
+taxRate,
+setTaxRate,
   }
 
   return (
