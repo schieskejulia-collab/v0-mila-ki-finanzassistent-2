@@ -1,97 +1,129 @@
 "use client"
 
-import { MorningBriefing } from "../components/ui/morning-briefing"
-import React, { useState } from 'react'
-import { TransactionForm } from '../components/ui/transaction-form'
-import { useFinance } from '../lib/store'
+import { useFinance } from "@/lib/store"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import Link from "next/link"
 
-export default function HomePage() {
-  const [successMessage, setSuccessMessage] = useState('')
-const {
-  userName,
-  userStatus,
-  summary,
-  incomes,
-  expenses,
-} = useFinance()
-  // Absolut sichere Euro-Formatierung ohne externe Datei
-  const zeigeEuro = (betrag: number) => {
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
-  }
-
-  const status = userStatus
+export default function DashboardPage() {
+  const { 
+    summary, 
+    userStatus, 
+    setUserStatus, 
+    milaFeedback, 
+    expenses, 
+    incomes,
+    userName,
+    budgetStatus
+  } = useFinance();
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="space-y-1">
-<MorningBriefing />
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-         Hallo, {userName || 'Macher'} 👋
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Schön, dass du da bist. Hier ist deine Finanz-Übersicht als <span className="font-semibold text-primary">{status}</span>.
+    <div className="p-4 space-y-6 pb-24 max-w-2xl mx-auto">
+      {/* Header Bereich */}
+      <div className="flex justify-between items-center pt-2">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">
+            Hallo {userName}! 👋
+          </h1>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+            Dein Finanz-Überblick
+          </p>
+        </div>
+        <div className="w-10 h-10 bg-secondary rounded-2xl flex items-center justify-center text-lg border border-border shadow-sm">
+          ✨
+        </div>
+      </div>
+
+      {/* 1. Status-Wähler: Mila's Kontext */}
+      <Card className="border-none bg-secondary/30 rounded-[2rem]">
+        <CardContent className="p-5 space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Steuerlicher Status
+            </h2>
+            <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full">
+              Live-Anpassung
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setUserStatus(status as any)}
+                className={`py-2.5 px-2 text-[9px] font-black rounded-xl border transition-all uppercase tracking-tighter ${
+                  userStatus === status 
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+                  : 'bg-background border-border text-muted-foreground'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. Mila's Soul Bubble */}
+      <div className="bg-primary/10 border-l-4 border-primary p-5 rounded-r-3xl space-y-1 shadow-sm">
+        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Mila denkt mit ✨</p>
+        <p className="text-base font-medium italic text-foreground/90 leading-snug">
+          "{milaFeedback}"
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card p-4 rounded-xl border border-border">
-          <p className="text-xs font-medium text-muted-foreground">Einnahmen</p>
-          <p className="text-lg font-bold text-emerald-600 mt-1">{zeigeEuro(summary.income)}</p>
-        </div>
-        <div className="bg-card p-4 rounded-xl border border-border">
-          <p className="text-xs font-medium text-muted-foreground">Ausgaben</p>
-          <p className="text-lg font-bold text-rose-600 mt-1">{zeigeEuro(summary.expenses)}</p>
-        </div>
-        <div className="bg-card p-4 rounded-xl border border-border col-span-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            {status === 'angestellt' ? 'Verfügbares Budget' : 'Aktueller Gewinn'}
-          </p>
-          <p className="text-xl font-extrabold text-foreground mt-1">{zeigeEuro(summary.profit)}</p>
-        </div>
+      {/* 3. Gespaltene Übersicht: Einnahmen vs. Ausgaben */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="border-none bg-emerald-50/50 rounded-[2rem]">
+          <CardContent className="p-5 space-y-1">
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Einnahmen</p>
+            <p className="text-xl font-black text-emerald-700">
+              +{summary.totalIncomes.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
+            </p>
+            <p className="text-[9px] text-emerald-600/60 font-medium">{incomes.length} Buchungen</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none bg-rose-50/50 rounded-[2rem]">
+          <CardContent className="p-5 space-y-1">
+            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Ausgaben</p>
+            <p className="text-xl font-black text-rose-700">
+              -{summary.totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €
+            </p>
+            <p className="text-[9px] text-rose-600/60 font-medium">{expenses.length} Belege</p>
+          </CardContent>
+        </Card>
       </div>
 
-    {successMessage && (
-  <div className="bg-emerald-500/10 text-emerald-600 text-sm font-medium p-3 rounded-lg text-center border border-emerald-500/20 transition-all">
-    ✨ {successMessage}
-  </div>
-)}
+      {/* 4. Budget-Fortschritt (Dein bestehendes Feature) */}
+      <Card className="border-border bg-card rounded-[2rem] shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">
+            Budget-Check
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {budgetStatus.map((budget) => (
+            <div key={budget.category} className="space-y-1.5">
+              <div className="flex justify-between text-xs font-bold">
+                <span>{budget.category}</span>
+                <span className={budget.remaining < 0 ? "text-rose-600" : "text-emerald-600"}>
+                  {budget.remaining.toLocaleString('de-DE')} € übrig
+                </span>
+              </div>
+              <Progress value={budget.percent} className="h-2 rounded-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
-<TransactionForm
-  userStatus={status}
-/>
-
-<div className="bg-card p-4 rounded-xl border border-border">
-  <h3 className="font-semibold mb-3">
-    Letzte Buchungen
-  </h3>
-
-  {incomes.slice(0, 5).map((income) => (
-    <div
-      key={income.id}
-      className="flex justify-between py-1"
-    >
-      <span>{income.client}</span>
-      <span className="text-emerald-600">
-        +{zeigeEuro(income.amount)}
-      </span>
-    </div>
-  ))}
-
-  {expenses.slice(0, 5).map((expense) => (
-    <div
-      key={expense.id}
-      className="flex justify-between py-1"
-    >
-      <span>{expense.vendor}</span>
-      <span className="text-rose-600">
-        -{zeigeEuro(expense.amount)}
-      </span>
-    </div>
-  ))}
-</div>
-      <div className="bg-muted p-4 rounded-xl text-xs text-muted-foreground leading-relaxed">
-        <p className="font-semibold text-foreground mb-1">💡 Beta-Test-Hinweis:</p>
-        Deine Eingaben werden aktuell live im Zwischenspeicher deiner App verrechnet.
+      {/* Quick Links */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/buchungen" className="flex items-center justify-center gap-2 p-4 bg-secondary/40 rounded-2xl font-bold text-xs hover:bg-secondary transition-all">
+          <span>📒</span> Buchungen
+        </Link>
+        <Link href="/wissen" className="flex items-center justify-center gap-2 p-4 bg-secondary/40 rounded-2xl font-bold text-xs hover:bg-secondary transition-all">
+          <span>💡</span> Mila Wissen
+        </Link>
       </div>
     </div>
   )
