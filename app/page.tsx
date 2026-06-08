@@ -7,8 +7,6 @@ import { getTotals, USER } from '../lib/demo-data'
 import { useFinance } from '../lib/store'
 
 export default function HomePage() {
-  const initialTotals = getTotals()
-  const [totals, setTotals] = useState(initialTotals)
   const [successMessage, setSuccessMessage] = useState('')
 const {
   userName,
@@ -20,23 +18,6 @@ const {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
   }
 
-  const handleAddTransaction = (newTransaction: any) => {
-    setTotals((prev) => {
-      const isExpense = newTransaction.type === 'expense'
-      const amountAbs = Math.abs(newTransaction.amount)
-
-      const newIncome = isExpense ? prev.income : prev.income + amountAbs
-      const newExpense = isExpense ? prev.expense + amountAbs : prev.expense
-      const newProfit = newIncome - newExpense
-
-      return {
-        ...prev,
-        income: newIncome,
-        expense: newExpense,
-        profit: newProfit,
-        openInvoices: prev.openInvoices 
-      }
-    })
 
     setSuccessMessage('Erfolgreich gebucht!')
     setTimeout(() => setSuccessMessage(''), 3000)
