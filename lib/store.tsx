@@ -18,18 +18,7 @@ import {
   savingTips,
   type MonthSummary,
 } from './calculations'
-
-// --- MILAS WISSENS-DATENBANK ---
-function getMilaTip(category: string, status: string) {
-  const cat = category.toLowerCase();
-  if (cat.includes("software")) return "💻 Voll absetzbar! Da Software meist unter 800€ kostet, ziehen wir das sofort im selben Jahr ab.";
-  if (cat.includes("bewirtung")) return "🍽️ Geschäftsessen! Ich buche 70% für dich ab. Schreib mir kurz die Namen der Gäste in die Notizen.";
-  if (cat.includes("reisen")) return "✈️ Auf Achse? Denk an die Verpflegungspauschale! Ab 8 Std. Abwesenheit gibt es extra Geld.";
-  if (cat.includes("weiterbildung")) return "🎓 Investment in dich! Das setzen wir voll ab. Sogar die Fahrt zum Kurs zählt.";
-  if (cat.includes("buero") || cat.includes("bedarf")) return "📎 Bürobedarf ist immer gut. Kleinkram bis 800€ setzen wir sofort ab.";
-  if (cat.includes("einnahme")) return "💰 Yay, Geld kommt rein! Ich behalte deine Steuerlast im Auge.";
-  return "📦 Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
-}
+import { findMilaTip } from './mila-knowledge'
 
 const DEFAULT_CATEGORIES = [
   'Reisen', 'Weiterbildung', 'Software', 'Marketing', 'Bürobedarf', 'Bewirtung', 'Versicherung', 'Hardware', 'Sonstiges'
@@ -86,7 +75,6 @@ let uid = Date.now()
 const newId = (p: string) => `${p}-${++uid}`
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  // --- States ---
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window === 'undefined') return demoExpenses
     const saved = localStorage.getItem('mila_expenses')
@@ -125,7 +113,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return saved ? Number(saved) : 30
   })
 
-  // --- Persistence ---
   useEffect(() => {
     localStorage.setItem('mila_name', userName)
     localStorage.setItem('mila_status', userStatus)
@@ -135,11 +122,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mila_categories', JSON.stringify(categories))
   }, [userName, userStatus, taxRate, expenses, incomes, categories])
 
-  // --- Callbacks ---
   const triggerMilaFeedback = useCallback((category: string) => {
-    const tip = getMilaTip(category, userStatus)
-    setMilaFeedback(tip)
-  }, [userStatus])
+    const tip = findMilaTip(category)
+    if (tip) {
+      setMilaFeedback(`${tip.titel}: ${tip.nische}`)
+    } else if (category === "einnahme") {
+      setMilaFeedback("💰 Yay, Geld kommt rein! Ich behalte deine Steuerlast im Auge.")
+    } else {
+      setMilaFeedback("📦 Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?")
+    }
+  }, [])
 
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
@@ -195,7 +187,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const clearPending = useCallback(() => setPendingPrompt(null), [])
 
-  // --- Memos ---
   const summary = useMemo(() => monthSummary(expenses, incomes, 0), [expenses, incomes])
   const prevSummary = useMemo(() => monthSummary(expenses, incomes, -1), [expenses, incomes])
   const breakdown = useMemo(() => categoryBreakdown(expenses), [expenses])
