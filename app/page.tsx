@@ -4,12 +4,16 @@ import { MorningBriefing } from "../components/ui/morning-briefing"
 import React, { useState } from 'react'
 import { TransactionForm } from '../components/ui/transaction-form'
 import { getTotals, USER } from '../lib/demo-data'
+import { useFinance } from '../lib/store'
 
 export default function HomePage() {
   const initialTotals = getTotals()
   const [totals, setTotals] = useState(initialTotals)
   const [successMessage, setSuccessMessage] = useState('')
-
+const {
+  userName,
+  userStatus,
+} = useFinance()
   // Absolut sichere Euro-Formatierung ohne externe Datei
   const zeigeEuro = (betrag: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(betrag)
