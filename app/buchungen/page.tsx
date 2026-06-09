@@ -70,4 +70,71 @@ export default function BuchungenPage() {
         </h2>
 
         {incomes.length === 0 ? (
-          <div className="rounded-[2rem] bg-white p-5
+          <div className="rounded-[2rem] bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">
+            Noch keine Einnahmen erfasst.
+          </div>
+        ) : (
+          incomes.map((income) => (
+            <div key={income.id} className="rounded-[2rem] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-black">{income.title || 'Einnahme'}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {income.client || 'Kein Kunde'} · {formatDate(income.date)}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="font-black text-emerald-700">+{formatEuro(income.amount)}</p>
+                  <button
+                    type="button"
+                    onClick={() => deleteIncome(income.id)}
+                    className="mt-2 text-xs font-black text-rose-600"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Ausgaben
+        </h2>
+
+        {expenses.length === 0 ? (
+          <div className="rounded-[2rem] bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">
+            Noch keine Ausgaben erfasst.
+          </div>
+        ) : (
+          expenses.map((expense) => (
+            <div key={expense.id} className="rounded-[2rem] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-black">{expense.title || expense.vendor || 'Ausgabe'}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {expense.category || 'Sonstiges'} · {formatDate(expense.date)}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="font-black text-rose-700">-{formatEuro(expense.amount)}</p>
+                  <button
+                    type="button"
+                    onClick={() => deleteExpense(expense.id)}
+                    className="mt-2 text-xs font-black text-rose-600"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+    </main>
+  )
+}
