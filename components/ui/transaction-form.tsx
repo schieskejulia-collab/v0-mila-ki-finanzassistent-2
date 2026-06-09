@@ -2,23 +2,19 @@
 
 import React, { useState, useRef } from 'react'
 import { useFinance, STEUER_TIPPS, getMilaTipForUser } from '@/lib/store'
+import { CATEGORY_LIST, type CategoryId } from '@/lib/types'
 
 export function TransactionForm() {
   const { userStatus = 'selbstständig', userName = 'Julia', addExpense, addIncome } = useFinance()
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState<CategoryId | ''>('')
   const [title, setTitle] = useState('')
   const [receiptImage, setReceiptImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Kategorien aus den echten Steuer-Tipps ziehen
-  const currentCategories = type === 'expense' 
-    ? STEUER_TIPPS.map(t => t.kategorie)
-    : ['Projekt-Honorar', 'Produktverkauf', 'Gehalt', 'Sonstiges'];
-
   const activeTipp = type === 'expense' && category 
-    ? STEUER_TIPPS.find(t => t.kategorie === category)
+    ? STEUER_TIPPS.find(t => t.id === category)
     : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,9 +33,9 @@ export function TransactionForm() {
     if (!amount || !category || !title) return
     const value = parseFloat(amount.replace(',', '.'));
     if (type === 'expense') {
-      addExpense({ amount: value, category, date: new Date().toISOString(), vendor: title, vat: 19, hasReceipt: !!receiptImage })
+      addExpense({ amount: value, category: category as CategoryId, date: new Date().toISOString(), vendor: title, vat: 19, hasReceipt: !!receiptImage })
     } else {
-      addIncome({ amount: value, date: new Date().toISOString(), client: title, vat: 19, source: category, status: 'bezahlt' })
+      addIncome({ amount: value, date: new Date().toISOString(), client: title, vat: 19, source: 'kunde', status: 'bezahlt' })
     }
     setAmount(''); setTitle(''); setCategory(''); setReceiptImage(null);
   }
@@ -47,13 +43,9 @@ export function TransactionForm() {
   return (
     <div className="w-full p-6 bg-card rounded-[2.5rem] border-2 border-primary/5 shadow-2xl space-y-5">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-black text-foreground tracking-tight">Neue Buchung</h3>
+        <h3 className="text-xl font-black text-foreground">Neue Buchung</h3>
         {type === 'expense' && (
-          <button 
-            type="button" 
-            onClick={() => fileInputRef.current?.click()} 
-            className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold transition-all ${receiptImage ? 'bg-green-500 text-white' : 'bg-primary/10 text-primary'}`}
-          >
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-bold transition-all ${receiptImage ? 'bg-green-500 text-white' : 'bg-primary/10 text-primary'}`}>
             {receiptImage ? '✅ Beleg' : '📸 Scan'}
           </button>
         )}
@@ -68,9 +60,13 @@ export function TransactionForm() {
 
       <div className="grid grid-cols-2 gap-4">
         <input type="text" inputMode="decimal" placeholder="Betrag €" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-4 py-3 bg-muted/20 rounded-2xl text-base font-bold outline-none" />
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-3 bg-muted/20 rounded-2xl text-sm font-bold outline-none">
+        <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId)} className="w-full px-4 py-3 bg-muted/20 rounded-2xl text-sm font-bold outline-none">
           <option value="">Kategorie...</option>
-          {currentCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          {type === 'expense' ? (
+            CATEGORY_LIST.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)
+          ) : (
+            <option value="sonstiges">Einnahme</option>
+          )}
         </select>
       </div>
 
@@ -79,7 +75,7 @@ export function TransactionForm() {
       {activeTipp && (
         <div className="bg-primary/5 rounded-3xl p-5 border-l-8 border-primary animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-[10px] font-black text-primary uppercase">Mila Insider ✨</p>
+            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Mila Insider ✨</p>
             <span className="text-[9px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase">{activeTipp.status_info}</span>
           </div>
           <p className="text-sm font-bold text-foreground mb-1">{activeTipp.titel}</p>
