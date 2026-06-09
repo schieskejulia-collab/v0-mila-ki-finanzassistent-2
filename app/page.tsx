@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
 
-const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer']
+const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', {
@@ -13,7 +13,7 @@ function formatEuro(value: number) {
   })
 }
 
-export default function DashboardPage() {
+export default function HomePage() {
   const {
     summary,
     userStatus,
@@ -35,8 +35,8 @@ export default function DashboardPage() {
 
   if (!isMounted) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-6">
-        <p className="animate-pulse text-sm font-bold text-violet-700">
+      <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-6 text-slate-950">
+        <p className="animate-pulse text-sm font-black text-violet-700">
           Mila lädt deine Daten...
         </p>
       </main>
@@ -69,7 +69,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-black tracking-tight">
             Hallo {userName || 'Julia'} 👋
           </h1>
-          <p className="mt-1 text-xs font-bold uppercase tracking-[0.2em] text-violet-500">
+          <p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-violet-500">
             Dein Finanz-Überblick
           </p>
         </div>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
             <button
               key={status}
               type="button"
-              onClick={() => setUserStatus(status as any)}
+              onClick={() => setUserStatus(status)}
               className={
                 userStatus === status
                   ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-white shadow-sm'
@@ -161,7 +161,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={addDemoExpense}
-          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm"
+          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm active:bg-rose-700"
         >
           Demo-Ausgabe
         </button>
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={addDemoIncome}
-          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm"
+          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm active:bg-emerald-700"
         >
           Demo-Einnahme
         </button>
@@ -197,7 +197,9 @@ export default function DashboardPage() {
                       ? 'h-full rounded-full bg-rose-500'
                       : 'h-full rounded-full bg-violet-600'
                   }
-                  style={{ width: `${Math.min(100, Math.max(0, budget.percent))}%` }}
+                  style={{
+                    width: `${Math.min(100, Math.max(0, budget.percent))}%`,
+                  }}
                 />
               </div>
             </div>
@@ -205,17 +207,17 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 gap-3 pb-4">
         <Link
           href="/neue-buchungen"
-          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm"
+          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
         >
           + Neue Buchung
         </Link>
 
         <Link
           href="/buchungen"
-          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm"
+          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
         >
           📒 Buchungen
         </Link>
