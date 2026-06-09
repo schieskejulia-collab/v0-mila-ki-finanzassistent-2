@@ -2,6 +2,8 @@
 
 import { useFinance } from "@/lib/store"
 import { useState, useMemo } from "react"
+import { MilaFeedback } from "@/components/ui/mila-feedback"
+<MilaFeedback />
 
 const CATEGORY_ICONS: Record<string, string> = {
   "reisen": "✈️",
