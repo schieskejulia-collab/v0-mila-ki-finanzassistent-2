@@ -52,11 +52,12 @@ const normalizeCategory = (label: string) => {
   if (!amount || !category || !title) return
 
   const value = parseFloat(amount)
+  const normalized = normalizeCategory(category)
 
   if (type === 'expense') {
     addExpense({
       amount: value,
-      category: category.toLowerCase(),   // ← WICHTIG!
+      category: normalized,
       date: new Date().toISOString(),
       vendor: title,
       vat: 19,
@@ -68,8 +69,15 @@ const normalizeCategory = (label: string) => {
       date: new Date().toISOString(),
       client: title,
       vat: 19,
-      status: 'offen',                    // ← sinnvoller Default
-      source:  category: normalizeCategory(category)
+      status: 'offen',
+      source: normalized,
+    })
+  }
+
+  setAmount('')
+  setTitle('')
+  setCategory('')
+}
 
   // ← WICHTIG!
     })
