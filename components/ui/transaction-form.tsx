@@ -1,5 +1,7 @@
 "use client"
 
+import { ReceiptUpload } from "@/components/ui/receipt-upload"
+<ReceiptUpload />
 import React, { useState } from 'react'
 import { formatEuro } from '@/lib/utils'
 import { useFinance } from '@/lib/store'
