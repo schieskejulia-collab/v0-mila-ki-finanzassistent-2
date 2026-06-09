@@ -40,8 +40,8 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang="de" className={`${inter.variable} light bg-background`} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="de" className={`${inter.variable} light bg-[#fbf9ff]`} suppressHydrationWarning>
+      <body className="min-h-screen bg-[#fbf9ff] font-sans text-slate-950 antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -49,8 +49,8 @@ export default function RootLayout({
           forcedTheme="light"
         >
           <FinanceProvider>
-            <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
-              <div className="flex-1 pb-24">{children}</div>
+            <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
+              <div className="relative z-10 flex-1 pb-28">{children}</div>
               <BottomNav />
             </div>
           </FinanceProvider>
