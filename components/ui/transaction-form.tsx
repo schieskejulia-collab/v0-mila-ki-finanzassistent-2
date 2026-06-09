@@ -28,6 +28,24 @@ const {
         income: ['Kunden-Projekt', 'Dienstleistung', 'Produktverkauf', 'Sonstiges'],
         expense: ['Software & Tools', 'Büro & Coworking', 'Reisekosten', 'Bewirtung', 'Marketing']
       }
+const normalizeCategory = (label: string) => {
+  const map: Record<string, string> = {
+    "Software & Tools": "software",
+    "Büro & Coworking": "miete",
+    "Reisekosten": "reisen",
+    "Bewirtung": "bewirtung",
+    "Marketing": "marketing",
+
+    "Arbeitsmittel": "buerobedarf",
+    "Fahrtkosten / Pendeln": "reisen",
+    "Homeoffice": "miete",
+    "Fachbücher / Kurse": "weiterbildung",
+    "Miete / Wohnen": "miete",
+    "Freizeit & Abo": "abo",
+  }
+
+  return map[label] || "sonstiges"
+}
 
   const handleSubmit = (e: React.FormEvent) => {
   e.preventDefault()
@@ -51,7 +69,9 @@ const {
       client: title,
       vat: 19,
       status: 'offen',                    // ← sinnvoller Default
-      source: category.toLowerCase(),     // ← WICHTIG!
+      source:  category: normalizeCategory(category)
+
+  // ← WICHTIG!
     })
   }
 
