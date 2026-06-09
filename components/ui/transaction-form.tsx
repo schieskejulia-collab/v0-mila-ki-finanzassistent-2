@@ -30,30 +30,36 @@ const {
       }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!amount || !category || !title) return
+  e.preventDefault()
+  if (!amount || !category || !title) return
 
-    const value = parseFloat(amount)
+  const value = parseFloat(amount)
 
-if (type === 'expense') {
-  addExpense({
-    amount: value,
-    category: 'sonstiges',
-    date: new Date().toISOString(),
-    vendor: title,
-    vat: 19,
-    hasReceipt: false,
-  })
-} else {
-  addIncome({
-    amount: value,
-    date: new Date().toISOString(),
-    client: title,
-    vat: 19,
-    status: 'bezahlt',
-    source: 'sonstiges',
-  })
+  if (type === 'expense') {
+    addExpense({
+      amount: value,
+      category: category.toLowerCase(),   // ← WICHTIG!
+      date: new Date().toISOString(),
+      vendor: title,
+      vat: 19,
+      hasReceipt: false,
+    })
+  } else {
+    addIncome({
+      amount: value,
+      date: new Date().toISOString(),
+      client: title,
+      vat: 19,
+      status: 'offen',                    // ← sinnvoller Default
+      source: category.toLowerCase(),     // ← WICHTIG!
+    })
+  }
+
+  setAmount('')
+  setTitle('')
+  setCategory('')
 }
+
     // Formular zurücksetzen
     setAmount('')
     setTitle('')
