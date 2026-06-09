@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from 'react'
-import { useFinance, getMilaTipForUser } from '@/lib/store'
+import { useFinance, STEUER_TIPPS, getMilaTipForUser } from '@/lib/store'
 
 export function TransactionForm() {
   const { userStatus = 'selbstständig', userName = 'Julia', addExpense, addIncome } = useFinance()
@@ -13,6 +13,7 @@ export function TransactionForm() {
   const [receiptImage, setReceiptImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Deine individuellen Kategorien je nach Status
   const allCategories: any = {
     angestellt: {
       income: ['Gehalt', 'Nebenjob', 'Rückerstattung'],
@@ -33,7 +34,11 @@ export function TransactionForm() {
   };
 
   const currentCategories = allCategories[userStatus] || allCategories['selbstständig'];
-  const activeTip = type === 'expense' && category ? getMilaTipForUser(category, userStatus) : null
+
+  // Mila findet die Nische und die Absetzbarkeit
+  const activeTippData = type === 'expense' && category 
+    ? STEUER_TIPPS.find(t => t.kategorie.toLowerCase().includes(category.toLowerCase()) || t.keywords.some(k => category.toLowerCase().includes(k)))
+    : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -41,14 +46,17 @@ export function TransactionForm() {
       const reader = new FileReader()
       reader.onloadend = () => {
         setReceiptImage(reader.result as string)
-        if (!title) setTitle("Scan " + new Date().toLocaleDateString())
+        if (!title) setTitle("Beleg vom " + new Date().toLocaleDateString())
       }
       reader.readAsDataURL(file)
     }
   }
 
   const handleSubmit = () => {
-    if (!amount || !category || !title) return
+    if (!amount || !category || !title) {
+      alert("Mila braucht noch ein paar Infos von dir, Julia! Bitte füll alles aus.");
+      return;
+    }
     const value = parseFloat(amount.replace(',', '.'));
     if (type === 'expense') {
       addExpense({ amount: value, category, date: new Date().toISOString(), vendor: title, vat: 19, hasReceipt: !!receiptImage })
@@ -59,35 +67,108 @@ export function TransactionForm() {
   }
 
   return (
-    <div className="w-full p-4 bg-card rounded-2xl border border-border shadow-lg space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold">Neue Buchung</h3>
+    <div className="w-full p-5 bg-card rounded-[2rem] border-2 border-primary/10 shadow-xl space-y-5 relative overflow-hidden">
+      {/* Dekorativer Hintergrund für Mila-Vibe */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+      
+      <div className="flex justify-between items-center relative z-10">
+        <div>
+          <h3 className="text-xl font-extrabold text-foreground">Neue Buchung</h3>
+          <p className="text-xs text-muted-foreground">Lass uns das gemeinsam erledigen!</p>
+        </div>
         {type === 'expense' && (
-          <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-2 rounded-xl text-xs font-bold transition-all ${receiptImage ? 'bg-green-500 text-white' : 'bg-primary/10 text-primary'}`}>
-            {receiptImage ? '✅ Beleg geladen' : '📷 Beleg scannen'}
+          <button 
+            type="button" 
+            onClick={() => fileInputRef.current?.click()} 
+            className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all shadow-lg ${receiptImage ? 'bg-green-500 text-white' : 'bg-primary text-white hover:scale-105'}`}
+          >
+            <span className="text-xl">{receiptImage ? '✅' : '📷'}</span>
+            <span className="text-[8px] font-bold uppercase mt-1">{receiptImage ? 'Geladen' : 'Scan'}</span>
           </button>
         )}
       </div>
+      
       <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-      <div className="flex bg-muted p-1 rounded-xl">
-        <button type="button" className={`flex-1 py-2 text-xs font-bold rounded-lg ${type === 'expense' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`} onClick={() => setType('expense')}>Ausgabe</button>
-        <button type="button" className={`flex-1 py-2 text-xs font-bold rounded-lg ${type === 'income' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`} onClick={() => setType('income')}>Einnahme</button>
+
+      {/* Switcher zwischen Einnahme und Ausgabe */}
+      <div className="flex bg-muted/50 p-1.5 rounded-2xl">
+        <button 
+          type="button" 
+          className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${type === 'expense' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground'}`} 
+          onClick={() => { setType('expense'); setCategory(''); }}
+        >
+          AUSGABE
+        </button>
+        <button 
+          type="button" 
+          className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${type === 'income' ? 'bg-background text-green-600 shadow-sm' : 'text-muted-foreground'}`} 
+          onClick={() => { setType('income'); setCategory(''); }}
+        >
+          EINNAHME
+        </button>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <input type="text" inputMode="decimal" placeholder="Betrag €" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm font-bold outline-none" />
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm outline-none">
-          <option value="">Kategorie...</option>
-          {currentCategories[type].map((cat: string) => <option key={cat} value={cat}>{cat}</option>)}
-        </select>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Betrag in €</label>
+          <input 
+            type="text" 
+            inputMode="decimal"
+            placeholder="0,00" 
+            value={amount} 
+            onChange={(e) => setAmount(e.target.value)} 
+            className="w-full px-4 py-3 bg-muted/30 border-2 border-transparent focus:border-primary/20 rounded-2xl text-base font-bold outline-none transition-all" 
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Kategorie</label>
+          <select 
+            value={category} 
+            onChange={(e) => setCategory(e.target.value)} 
+            className="w-full px-4 py-3 bg-muted/30 border-2 border-transparent focus:border-primary/20 rounded-2xl text-sm font-bold outline-none appearance-none transition-all"
+          >
+            <option value="">Wählen...</option>
+            {currentCategories[type].map((cat: string) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      <input type="text" placeholder="Titel / Händler" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm outline-none" />
-      {activeTip && (
-        <div className="bg-primary/5 p-3 rounded-xl border-l-4 border-primary">
-          <p className="text-[10px] font-bold text-primary uppercase mb-1">Mila Insider ✨</p>
-          <p className="text-xs italic">{activeTip}</p>
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Beschreibung / Händler</label>
+        <input 
+          type="text" 
+          placeholder={type === 'expense' ? 'Wo warst du shoppen?' : 'Wer hat dich bezahlt?'} 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+          className="w-full px-4 py-3 bg-muted/30 border-2 border-transparent focus:border-primary/20 rounded-2xl text-sm font-medium outline-none transition-all" 
+        />
+      </div>
+
+      {/* --- HIER IST MILAS SEELE: DIE NISCHEN & ABSETZBARKEIT --- */}
+      {activeTippData && (
+        <div className="bg-primary/5 rounded-[1.5rem] p-4 border-l-8 border-primary animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-[10px] font-black text-primary uppercase tracking-tighter">Milas Insider-Wissen ✨</p>
+            <span className="text-[9px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase">
+              {activeTippData.status_info}
+            </span>
+          </div>
+          <p className="text-sm font-bold text-foreground mb-1">{activeTippData.titel}</p>
+          <p className="text-xs italic leading-relaxed text-foreground/80">
+            "{activeTippData.nische[userStatus]}"
+          </p>
         </div>
       )}
-      <button type="button" onClick={handleSubmit} className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl text-sm shadow-md active:scale-95 transition-all">Eintrag speichern</button>
+
+      <button 
+        type="button"
+        onClick={handleSubmit}
+        className="w-full py-4 bg-primary text-white font-black rounded-2xl text-sm shadow-xl shadow-primary/20 active:scale-[0.98] transition-all uppercase tracking-widest"
+      >
+        Buchung speichern
+      </button>
     </div>
   )
 }
