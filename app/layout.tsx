@@ -3,7 +3,9 @@ import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-import { Providers } from './providers'
+import { FinanceProvider } from '@/lib/store'
+import { BottomNav } from '@/components/bottom-nav'
+import { ThemeProvider } from '@/components/theme-provider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -40,7 +42,14 @@ export default function RootLayout({
   return (
     <html lang="de" className={`${inter.variable} bg-background`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <FinanceProvider>
+            <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background">
+              <div className="flex-1 pb-24">{children}</div>
+              <BottomNav />
+            </div>
+          </FinanceProvider>
+        </ThemeProvider>
 
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
