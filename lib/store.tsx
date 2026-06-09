@@ -22,6 +22,9 @@ import {
 
 // --- USER STATUS ERWEITERT ---
 export type UserStatus =
+// --- Morning Briefing ---
+const [morningBriefing, setMorningBriefing] = useState("")
+
   | 'angestellt'
   | 'selbstständig'
   | 'kleinunternehmer'
@@ -147,6 +150,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const tip = getMilaTipForUser(category)
     setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
   }, [userName])
+// --- Morning Briefing Generator ---
+function generateMorningBriefing(userName: string, summary: MonthSummary, incomes: Income[]) {
+  const offene = incomes.filter(i => i.status === "offen").length
+  const gewinn = summary.income - summary.expenses
+
+  let stimmung = ""
+
+  if (gewinn > 2000) stimmung = "Du bist richtig gut unterwegs."
+  else if (gewinn > 0) stimmung = "Alles stabil, du machst das gut."
+  else stimmung = "Ich halte dich. Wir schauen das gemeinsam an."
+
+  return `
+Guten Morgen ${userName} ☀️
+
+• Dein aktueller Monatsgewinn liegt bei ${gewinn.toFixed(2)}€.
+• Du hast ${offene} offene Rechnungen.
+• ${stimmung}
+
+Atme kurz. Ich begleite dich heute durch alles, was ansteht.
+`
+}
+
+const refreshMorningBriefing = () => {
+  const text = generateMorningBriefing(userName, summary, incomes)
+  setMorningBriefing(text)
+}
+
 
   // --- EXPENSES ---
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
