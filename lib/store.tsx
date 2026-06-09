@@ -146,10 +146,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [userName, userStatus, taxRate, expenses, incomes])
 
   // --- MILA FEEDBACK ---
-  const triggerMilaFeedback = useCallback((category: CategoryId) => {
-    const tip = getMilaTipForUser(category)
-    setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
-  }, [userName])
+const triggerMilaFeedback = useCallback((category: CategoryId) => {
+  const tip = getMilaTipForUser(category)
+  setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
+}, [userName])
+
+// --- Morning Briefing ---
+const [morningBriefing, setMorningBriefing] = useState("")
+
 // --- Morning Briefing Generator ---
 function generateMorningBriefing(userName: string, summary: MonthSummary, incomes: Income[]) {
   const offene = incomes.filter(i => i.status === "offen").length
