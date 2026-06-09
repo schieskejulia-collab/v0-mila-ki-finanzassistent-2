@@ -128,4 +128,158 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch { return demoExpenses }
   })
 
-  const [incomes, setIn
+  const [incomes, setIncomes] = useState<Income[]>(() => {
+    if (typeof window === 'undefined') return demoIncomes
+    try {
+      return JSON.parse(localStorage.getItem('mila_incomes') || 'null') || demoIncomes
+    } catch { return demoIncomes }
+  })
+
+  const [userName, setUserName] = useState(() => {
+    if (typeof window === 'undefined') return 'Julia'
+    return localStorage.getItem('mila_name') || 'Julia'
+  })
+
+  const [userStatus, _setUserStatus] = useState<UserStatus>(() => {
+    if (typeof window === 'undefined') return 'selbstständig'
+    const saved = localStorage.getItem('mila_status') as UserStatus
+    const valid = ['angestellt', 'selbstständig', 'kleinunternehmer', 'freelancer', 'minijob']
+    return valid.includes(saved) ? saved : 'selbstständig'
+  })
+
+  const [milaFeedback, setMilaFeedback] = useState(`Hi ${userName}, ich bin Mila!`)
+  const [goals, setGoals] = useState<Goal[]>(demoGoals)
+  const [budgets] = useState<Budget[]>(demoBudgets)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
+
+  const [taxRate, setTaxRate] = useState(() => {
+    if (typeof window === 'undefined') return 30
+    return Number(localStorage.getItem('mila_tax')) || autoTaxRateForStatus('selbstständig')
+  })
+
+  // --- MORNING BRIEFING ---
+  const [morningBriefing, setMorningBriefing] = useState("")
+
+  function generateMorningBriefing(userName: string, summary: MonthSummary, incomes: Income[]) {
+    const offene = incomes.filter(i => i.status === "offen").length
+    const gewinn = summary.income - summary.expenses
+
+    let stimmung = ""
+    if (gewinn > 2000) stimmung = "Du bist richtig gut unterwegs."
+    else if (gewinn > 0) stimmung = "Alles stabil, du machst das gut."
+    else stimmung = "Ich halte dich. Wir schauen das gemeinsam an."
+
+    return `
+Guten Morgen ${userName} ☀️
+
+• Dein aktueller Monatsgewinn liegt bei ${gewinn.toFixed(2)}€.
+• Du hast ${offene} offene Rechnungen.
+• ${stimmung}
+
+Atme kurz. Ich begleite dich heute durch alles, was ansteht.
+`
+  }
+
+  const refreshMorningBriefing = () => {
+    const text = generateMorningBriefing(userName, summary, incomes)
+    setMorningBriefing(text)
+  }
+
+  // --- LOCALSTORAGE SYNC ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem('mila_name', userName)
+    localStorage.setItem('mila_status', userStatus)
+    localStorage.setItem('mila_tax', String(taxRate))
+    localStorage.setItem('mila_expenses', JSON.stringify(expenses))
+    localStorage.setItem('mila_incomes', JSON.stringify(incomes))
+  }, [userName, userStatus, taxRate, expenses, incomes])
+
+  // --- FEEDBACK ---
+  const triggerMilaFeedback = useCallback((category: CategoryId) => {
+    const tip = getMilaTipForUser(category)
+    setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
+  }, [userName])
+
+  // --- EXPENSES ---
+  const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
+    setExpenses(prev => [{ ...e, id: newId('e') }, ...prev])
+    if (e.category) triggerMilaFeedback(e.category)
+  }, [triggerMilaFeedback])
+
+  const deleteExpense = useCallback((id: string) =>
+    setExpenses(prev => prev.filter(e => e.id !== id)), [])
+
+  // --- INCOME ---
+  const addIncome = useCallback((i: Omit<Income, 'id'>) => {
+    setIncomes(prev => [{ ...i, id: newId('i') }, ...prev])
+    setMilaFeedback(`💰 Yay ${userName}, Zahltag!`)
+  }, [userName])
+
+  const deleteIncome = useCallback((id: string) =>
+    setIncomes(prev => prev.filter(i => i.id !== id)), [])
+
+  // --- GOALS ---
+  const markInvoicePaid = useCallback((id: string) =>
+    setIncomes(prev => prev.map(i => i.id === id ? { ...i, status: 'bezahlt' } : i)), [])
+
+  const contributeToGoal = useCallback((id: string, amount: number) =>
+    setGoals(prev => prev.map(g =>
+      g.id === id ? { ...g, saved: Math.min(g.target, g.saved + amount) } : g
+    )), [])
+
+  // --- CHAT ---
+  const askMila = useCallback((prompt: string) => {
+    setPendingPrompt(prompt)
+    setChatOpen(true)
+  }, [])
+
+  const clearPending = useCallback(() => setPendingPrompt(null), [])
+
+  // --- SUMMARY ---
+  const summary = useMemo(() => monthSummary(expenses, incomes, 0), [expenses, incomes])
+  const prevSummary = useMemo(() => monthSummary(expenses, incomes, -1), [expenses, incomes])
+  const breakdown = useMemo(() => categoryBreakdown(expenses), [expenses])
+  const budgetStatus = useMemo(() => budgetStatuses(budgets, expenses), [budgets, expenses])
+  const tips = useMemo(() => savingTips(expenses), [expenses])
+
+  // --- USER STATUS ---
+  const setUserStatus = (status: UserStatus) => {
+    _setUserStatus(status)
+    setTaxRate(autoTaxRateForStatus(status))
+  }
+
+  const value: FinanceContextValue = {
+    expenses, incomes, goals, budgets, categories: Object.keys(CATEGORIES),
+    summary, prevSummary, breakdown, budgetStatus, tips,
+
+    milaFeedback, triggerMilaFeedback,
+
+    morningBriefing,
+    refreshMorningBriefing,
+
+    addExpense, deleteExpense,
+    addIncome, deleteIncome,
+    markInvoicePaid, contributeToGoal,
+
+    resetToDemo: () => { setExpenses(demoExpenses); setIncomes(demoIncomes) },
+    clearAllData: () => { setExpenses([]); setIncomes([]) },
+
+    chatOpen, setChatOpen,
+    pendingPrompt, askMila, clearPending,
+
+    userName, setUserName,
+    userStatus, setUserStatus,
+
+    taxRate, setTaxRate,
+  }
+
+  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+}
+
+export function useFinance() {
+  const ctx = useContext(FinanceContext)
+  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
+  return ctx
+}
