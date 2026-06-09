@@ -1,46 +1,68 @@
-"use client"
+'use client'
 
-import React from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+const navItems = [
+  {
+    href: '/',
+    label: 'Startseite',
+    icon: '🏠',
+  },
+  {
+    href: '/buchungen',
+    label: 'Buchungen',
+    icon: '📒',
+  },
+  {
+    href: '/neue-buchungen',
+    label: 'Neu',
+    icon: '➕',
+  },
+  {
+    href: '/wissen',
+    label: 'Wissen',
+    icon: '💡',
+  },
+  {
+    href: '/profil',
+    label: 'Profil',
+    icon: '👤',
+  },
+]
 
 export function BottomNav() {
-  const router = useRouter()
+  const pathname = usePathname()
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-card border-t border-border flex justify-around py-3 px-6 z-50 shadow-lg">
-      
-      <button
-        onClick={() => router.push('/')}
-        className="flex flex-col items-center gap-1 text-primary"
-      >
-        <span className="text-xl">📊</span>
-        <span className="text-[10px] font-medium">Übersicht</span>
-      </button>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-3">
+      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between rounded-[2rem] border border-violet-100 bg-white/95 px-2 py-2 shadow-xl backdrop-blur">
+        {navItems.map((item) => {
+          const isActive =
+            item.href === '/'
+              ? pathname === '/'
+              : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
-<button
-  onClick={() => router.push('/buchungen')}
-  className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-all"
->
-  <span className="text-xl">📒</span>
-  <span className="text-[10px] font-medium">Buchungen</span>
-</button>
-
-      <button
-        onClick={() => router.push('/chat')}
-        className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-all"
-      >
-        <span className="text-xl">💬</span>
-        <span className="text-[10px] font-medium">Mila Chat</span>
-      </button>
-
-      <button
-        onClick={() => router.push('/profil')}
-        className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-all"
-      >
-        <span className="text-xl">⚙️</span>
-        <span className="text-[10px] font-medium">Profil</span>
-      </button>
-
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                isActive
+                  ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-2 py-2 text-white'
+                  : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-2 py-2 text-slate-500'
+              }
+            >
+              <span className="text-lg leading-none">{item.icon}</span>
+              <span className="mt-1 truncate text-[9px] font-black">
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }
+
+export default BottomNav
