@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#7c3aed',
+  themeColor: '#f8f5ff',
 }
 
 export default function RootLayout({
@@ -40,11 +40,16 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang="de" className={`${inter.variable} bg-background`} suppressHydrationWarning>
-      <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <html lang="de" className={`${inter.variable} light bg-background`} suppressHydrationWarning>
+      <body className="font-sans antialiased bg-background text-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          forcedTheme="light"
+        >
           <FinanceProvider>
-            <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background">
+            <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
               <div className="flex-1 pb-24">{children}</div>
               <BottomNav />
             </div>
