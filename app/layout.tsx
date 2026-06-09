@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { FinanceProvider } from '../lib/store'
 import { BottomNav } from '../components/bottom-nav'
+import { ThemeProvider } from '../components/theme-provider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -38,17 +39,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="de" className={`${inter.variable} bg-background`}>
+    <html lang="de" className={`${inter.variable} bg-background`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <FinanceProvider>
-          <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background">
-            <div className="flex-1 pb-24">
-              {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <FinanceProvider>
+            <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background">
+              <div className="flex-1 pb-24">{children}</div>
+              <BottomNav />
             </div>
-
-            <BottomNav />
-          </div>
-        </FinanceProvider>
+          </FinanceProvider>
+        </ThemeProvider>
 
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
