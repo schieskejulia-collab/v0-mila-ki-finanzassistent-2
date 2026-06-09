@@ -97,6 +97,10 @@ export function getMilaTipForUser(categoryName: string, status: UserStatus): str
 
 // --- STORE LOGIK ---
 
+const DEFAULT_CATEGORIES = [
+  'Reisen', 'Weiterbildung', 'Software', 'Marketing', 'Bürobedarf', 'Bewirtung', 'Versicherung', 'Hardware', 'Sonstiges'
+]
+
 interface FinanceContextValue {
   expenses: Expense[]; incomes: Income[]; goals: Goal[]; budgets: Budget[]; categories: string[];
   summary: MonthSummary; prevSummary: MonthSummary; breakdown: any; budgetStatus: any; tips: any;
