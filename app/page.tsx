@@ -99,3 +99,127 @@ export default function DashboardPage() {
                 userStatus === status
                   ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-white shadow-sm'
                   : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-violet-700'
+              }
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
+          Mila denkt mit
+        </p>
+        <p className="mt-2 text-base font-semibold italic leading-snug text-slate-900">
+          „{milaFeedback || 'Ich bin bereit für deine Belege!'}“
+        </p>
+      </section>
+
+      <section className="grid grid-cols-2 gap-4">
+        <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+            Einnahmen
+          </p>
+          <p className="mt-2 text-2xl font-black text-emerald-700">
+            {formatEuro(summary.totalIncomes)}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-emerald-600/70">
+            {incomes.length} Buchungen
+          </p>
+        </div>
+
+        <div className="rounded-[2rem] bg-rose-50 p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
+            Ausgaben
+          </p>
+          <p className="mt-2 text-2xl font-black text-rose-700">
+            {formatEuro(summary.totalExpenses)}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-rose-600/70">
+            {expenses.length} Belege
+          </p>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+          Kontostand
+        </p>
+        <p
+          className={
+            summary.balance >= 0
+              ? 'mt-2 text-4xl font-black text-emerald-700'
+              : 'mt-2 text-4xl font-black text-rose-700'
+          }
+        >
+          {formatEuro(summary.balance)}
+        </p>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={addDemoExpense}
+          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm"
+        >
+          Demo-Ausgabe
+        </button>
+
+        <button
+          type="button"
+          onClick={addDemoIncome}
+          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm"
+        >
+          Demo-Einnahme
+        </button>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+          Budget-Check
+        </h2>
+
+        <div className="space-y-4">
+          {budgetStatus.map((budget) => (
+            <div key={budget.category} className="space-y-2">
+              <div className="flex justify-between text-xs font-bold">
+                <span>{budget.category}</span>
+                <span className={budget.remaining < 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                  {formatEuro(budget.remaining)} übrig
+                </span>
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={
+                    budget.remaining < 0
+                      ? 'h-full rounded-full bg-rose-500'
+                      : 'h-full rounded-full bg-violet-600'
+                  }
+                  style={{ width: `${Math.min(100, Math.max(0, budget.percent))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        <Link
+          href="/neue-buchungen"
+          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm"
+        >
+          + Neue Buchung
+        </Link>
+
+        <Link
+          href="/buchungen"
+          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm"
+        >
+          📒 Buchungen
+        </Link>
+      </section>
+    </main>
+  )
+}
