@@ -19,87 +19,38 @@ import {
   type MonthSummary,
 } from './calculations'
 
-// --- MILAS INTEGRIERTES WISSEN ---
+// --- MILAS EXPERTEN-WISSEN (DEINE SEELE) ---
 export type UserStatus = 'angestellt' | 'selbstständig' | 'kleinunternehmer' | 'freelancer';
 
 export interface SteuerTipp {
   kategorie: string;
+  emoji: string;
   titel: string;
-  beschreibung: string;
-  nische: Record<UserStatus, string>;
   status_info: string;
+  nische: string;
   keywords: string[];
 }
 
 export const STEUER_TIPPS: SteuerTipp[] = [
-  {
-    kategorie: "🏠 Home-Office",
-    titel: "Deine Wohlfühl-Zone",
-    beschreibung: "Pauschale für die Arbeit von Zuhause.",
-    status_info: "Voll absetzbar",
-    keywords: ["homeoffice", "miete", "wohnen", "arbeitszimmer"],
-    nische: {
-      angestellt: "Für dich sind das Werbungskosten! 6€ pro Tag, bis zu 1260€ im Jahr, auch ohne extra Zimmer.",
-      selbstständig: "Betriebsausgabe! Wir setzen die Pauschale an oder anteilig Miete/Strom, wenn du ein echtes Büro hast.",
-      kleinunternehmer: "Betriebsausgabe! Da du keine USt zahlst, setzen wir den Brutto-Betrag voll an.",
-      freelancer: "Homeoffice-Pauschale rockt! 6€ pro Tag sind sicher, solange du nicht im Coworking warst."
-    }
-  },
-  {
-    kategorie: "🍽️ Bewirtung",
-    titel: "Networking & Genuss",
-    beschreibung: "Essen mit Kunden oder Partnern.",
-    status_info: "70% absetzbar",
-    keywords: ["bewirtung", "essen", "restaurant", "kunden"],
-    nische: {
-      angestellt: "Schwierig als Angestellter, außer du zahlst für Kollegen. Meistens eher was für Chefs!",
-      selbstständig: "70% sind absetzbar. Wichtig: Namen der Gäste und Anlass auf den Beleg schreiben!",
-      kleinunternehmer: "70% vom Brutto-Betrag! Denk an den Bewirtungsbeleg, sonst meckert das Finanzamt.",
-      freelancer: "Dein Business-Lunch! 70% gehen durch. Trinkgeld zählt auch dazu!"
-    }
-  },
-  {
-    kategorie: "💻 Arbeitsmittel",
-    titel: "Dein Tech-Upgrade",
-    beschreibung: "Laptops, Software, Monitore.",
-    status_info: "Sofortabzug bis 800€",
-    keywords: ["software", "tools", "hardware", "laptop", "technik", "abo", "arbeitsmittel"],
-    nische: {
-      angestellt: "Werbungskosten! Über 800€ müssen wir über 3 Jahre verteilen (AfA), darunter sofort.",
-      selbstständig: "Betriebsausgabe! Dank 'Digital-AfA' können wir Laptops oft sogar in einem Jahr voll absetzen.",
-      kleinunternehmer: "Brutto-Sofortabzug bis 952€ (800€ netto + 19% MwSt), da du nicht vorsteuerabzugsberechtigt bist!",
-      freelancer: "Dein Handwerkszeug! Software-Abos wie Adobe oder Notion setzen wir monatlich voll ab."
-    }
-  },
-  {
-    kategorie: "✈️ Reisekosten",
-    titel: "Mila on Tour",
-    beschreibung: "Fahrtkosten und Verpflegung.",
-    status_info: "Pauschalen",
-    keywords: ["reisekosten", "fahrtkosten", "pendeln", "zug", "auto", "reisen"],
-    nische: {
-      angestellt: "Pendlerpauschale! 0,30€ pro KM für den einfachen Weg zur Arbeit. Bei Dienstreisen mehr!",
-      selbstständig: "Jeder KM zählt! 0,30€ (Auto) oder 0,20€ (Rad). Denk an die Verpflegungspauschale ab 8 Std.!",
-      kleinunternehmer: "Reisekosten sind Brutto-Ausgaben. Mila rechnet dir die Pauschalen für die Verpflegung aus.",
-      freelancer: "Ab zum Kunden! Bahntickets und Hotel setzen wir voll an. Verpflegungsmehraufwand nicht vergessen!"
-    }
-  }
+  { kategorie: "Home-Office", emoji: "🏠", titel: "Die Homeoffice-Pauschale", status_info: "Voll absetzbar", nische: "Egal ob Küchentisch oder Couch – Hauptsache du warst produktiv! 6€ pro Tag sind sicher.", keywords: ["home", "miete", "wohnen", "strom"] },
+  { kategorie: "Arbeitsmittel", emoji: "🛠️", titel: "Dein Tech-Upgrade", status_info: "Sofortabzug bis 800€", nische: "Laptops, Monitore & Co setzen wir sofort ab, wenn sie unter 800€ netto kosten. Dein Setup muss glänzen!", keywords: ["laptop", "hardware", "monitor", "maus", "tastatur"] },
+  { kategorie: "Software", emoji: "💻", titel: "Apps & Abos", status_info: "Voll absetzbar", nische: "Adobe, Notion oder ChatGPT? Alles, was dein Business smarter macht, setzen wir monatlich voll ab.", keywords: ["software", "tools", "abo", "notion", "adobe", "cloud"] },
+  { kategorie: "Weiterbildung", emoji: "📚", titel: "Investment in dich", status_info: "Voll absetzbar", nische: "Kurse, Coachings oder Fachbücher – jeder Cent für dein Wissen mindert deine Steuerlast.", keywords: ["kurs", "coaching", "buch", "seminar", "lernen"] },
+  { kategorie: "Reisekosten", emoji: "✈️", titel: "Mila on Tour", status_info: "Pauschale", nische: "Jeder KM zählt! 0,30€ fürs Auto oder 0,20€ fürs Rad. Denk auch an die Verpflegungspauschale ab 8 Std.!", keywords: ["reise", "fahrt", "zug", "hotel", "taxi", "km"] },
+  { kategorie: "Bewirtung", emoji: "🍽️", titel: "Business-Lunch", status_info: "70% absetzbar", nische: "Lass es dir schmecken! 70% gehen durch. Schreib nur kurz die Namen der Gäste auf den Beleg.", keywords: ["essen", "restaurant", "bewirtung", "lunch"] },
+  { kategorie: "Marketing", emoji: "📣", titel: "Sichtbarkeit", status_info: "Voll absetzbar", nische: "Anzeigen, Visitenkarten oder deine Website – alles, was dich bekannter macht, ist steuerlich dein Freund.", keywords: ["werbung", "ads", "marketing", "website", "design"] },
+  { kategorie: "Bürohund", emoji: "🐶", titel: "Der Bürohund-Trick", status_info: "Anteilig absetzbar", nische: "Ja, wirklich! Haftpflicht oder spezielles Training können wir oft anteilig als Betriebsausgabe durchkriegen.", keywords: ["hund", "tier", "versicherung"] }
 ];
 
 export function getMilaTipForUser(categoryName: string, status: UserStatus): string {
   const search = categoryName.toLowerCase();
-  const tipp = STEUER_TIPPS.find(t => 
-    t.kategorie.toLowerCase().includes(search) || 
-    t.keywords.some(k => search.includes(k))
-  );
-  return tipp ? tipp.nische[status] : "Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
+  const tipp = STEUER_TIPPS.find(t => t.kategorie.toLowerCase().includes(search) || t.keywords.some(k => search.includes(k)));
+  return tipp ? tipp.nische : "Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
 }
 
-// --- STORE LOGIK ---
+const DEFAULT_CATEGORIES = STEUER_TIPPS.map(t => t.kategorie).concat(['Sonstiges']);
 
-const DEFAULT_CATEGORIES = [
-  'Reisen', 'Weiterbildung', 'Software', 'Marketing', 'Bürobedarf', 'Bewirtung', 'Versicherung', 'Hardware', 'Sonstiges'
-]
+// --- STORE LOGIK ---
 
 interface FinanceContextValue {
   expenses: Expense[]; incomes: Income[]; goals: Goal[]; budgets: Budget[]; categories: string[];
