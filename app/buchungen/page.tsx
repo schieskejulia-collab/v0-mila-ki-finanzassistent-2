@@ -26,26 +26,32 @@ export default function BuchungenPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>("all")
 
   // Daten aufbereiten
-  const alleBuchungen = useMemo(() => [
-    ...incomes.map((i) => ({
-      id: i.id,
-      title: i.client || "Einnahme",
-      amount: i.amount,
-      date: i.date,
-      category: "einnahme",
-      type: "income",
-    })),
-    ...expenses.map((e) => ({
-      id: e.id,
-      title: e.vendor || "Ausgabe",
-      amount: e.amount,
-      date: e.date,
-      category: e.category || "sonstiges",
-      type: "expense",
-    })),
-  ].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  ), [incomes, expenses]);
+    // Daten aufbereiten (Abgesichert gegen leere Speicher-Zustände!)
+  const alleBuchungen = useMemo(() => {
+    const sichereIncomes = incomes || [];
+    const sichereExpenses = expenses || [];
+    
+    return [
+      ...sichereIncomes.map((i) => ({
+        id: i.id || `i-${Math.random()}`,
+        title: i.client || i.title || "Einnahme",
+        amount: Number(i.amount) || 0,
+        date: i.date || new Date().toISOString(),
+        category: "einnahme",
+        type: "income",
+      })),
+      ...sichereExpenses.map((e) => ({
+        id: e.id || `e-${Math.random()}`,
+        title: e.vendor || e.title || "Ausgabe",
+        amount: Number(e.amount) || 0,
+        date: e.date || new Date().toISOString(),
+        category: e.category || "sonstiges",
+        type: "expense",
+      })),
+    ].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [incomes, expenses]);
 
   // Verfügbare Monate für den Filter extrahieren
   const verfügbareMonate = useMemo(() => {
