@@ -9,7 +9,8 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
-import type { Expense, Income, Goal, Budget } from './types'
+import type { Expense, Income, Goal, Budget, CategoryId } from './types'
+import { CATEGORIES } from './types'
 import { demoExpenses, demoIncomes, demoGoals, demoBudgets } from './demo-data'
 import {
   monthSummary,
@@ -19,47 +20,40 @@ import {
   type MonthSummary,
 } from './calculations'
 
-// --- MILAS EXPERTEN-WISSEN (DEINE SEELE) ---
+// --- MILAS EXPERTEN-WISSEN (PASSEND ZU DEINEN TYPES) ---
 export type UserStatus = 'angestellt' | 'selbstständig' | 'kleinunternehmer' | 'freelancer';
 
 export interface SteuerTipp {
-  kategorie: string;
-  emoji: string;
+  id: CategoryId;
   titel: string;
   status_info: string;
   nische: string;
-  keywords: string[];
 }
 
 export const STEUER_TIPPS: SteuerTipp[] = [
-  { kategorie: "Home-Office", emoji: "🏠", titel: "Die Homeoffice-Pauschale", status_info: "Voll absetzbar", nische: "Egal ob Küchentisch oder Couch – Hauptsache du warst produktiv! 6€ pro Tag sind sicher.", keywords: ["home", "miete", "wohnen", "strom"] },
-  { kategorie: "Arbeitsmittel", emoji: "🛠️", titel: "Dein Tech-Upgrade", status_info: "Sofortabzug bis 800€", nische: "Laptops, Monitore & Co setzen wir sofort ab, wenn sie unter 800€ netto kosten. Dein Setup muss glänzen!", keywords: ["laptop", "hardware", "monitor", "maus", "tastatur"] },
-  { kategorie: "Software", emoji: "💻", titel: "Apps & Abos", status_info: "Voll absetzbar", nische: "Adobe, Notion oder ChatGPT? Alles, was dein Business smarter macht, setzen wir monatlich voll ab.", keywords: ["software", "tools", "abo", "notion", "adobe", "cloud"] },
-  { kategorie: "Weiterbildung", emoji: "📚", titel: "Investment in dich", status_info: "Voll absetzbar", nische: "Kurse, Coachings oder Fachbücher – jeder Cent für dein Wissen mindert deine Steuerlast.", keywords: ["kurs", "coaching", "buch", "seminar", "lernen"] },
-  { kategorie: "Reisekosten", emoji: "✈️", titel: "Mila on Tour", status_info: "Pauschale", nische: "Jeder KM zählt! 0,30€ fürs Auto oder 0,20€ fürs Rad. Denk auch an die Verpflegungspauschale ab 8 Std.!", keywords: ["reise", "fahrt", "zug", "hotel", "taxi", "km"] },
-  { kategorie: "Bewirtung", emoji: "🍽️", titel: "Business-Lunch", status_info: "70% absetzbar", nische: "Lass es dir schmecken! 70% gehen durch. Schreib nur kurz die Namen der Gäste auf den Beleg.", keywords: ["essen", "restaurant", "bewirtung", "lunch"] },
-  { kategorie: "Marketing", emoji: "📣", titel: "Sichtbarkeit", status_info: "Voll absetzbar", nische: "Anzeigen, Visitenkarten oder deine Website – alles, was dich bekannter macht, ist steuerlich dein Freund.", keywords: ["werbung", "ads", "marketing", "website", "design"] },
-  { kategorie: "Bürohund", emoji: "🐶", titel: "Der Bürohund-Trick", status_info: "Anteilig absetzbar", nische: "Ja, wirklich! Haftpflicht oder spezielles Training können wir oft anteilig als Betriebsausgabe durchkriegen.", keywords: ["hund", "tier", "versicherung"] }
+  { id: 'miete', titel: "Homeoffice-Pauschale", status_info: "Voll absetzbar", nische: "Egal ob Küchentisch oder Couch – Hauptsache du warst produktiv! 6€ pro Tag sind sicher." },
+  { id: 'software', titel: "Apps & Abos", status_info: "Voll absetzbar", nische: "Adobe, Notion oder ChatGPT? Alles, was dein Business smarter macht, setzen wir monatlich voll ab." },
+  { id: 'marketing', titel: "Sichtbarkeit", status_info: "Voll absetzbar", nische: "Anzeigen, Visitenkarten oder deine Website – alles, was dich bekannter macht, ist steuerlich dein Freund." },
+  { id: 'buerobedarf', titel: "Arbeitsmittel & Tech", status_info: "Sofortabzug", nische: "Laptops, Monitore & Co setzen wir sofort ab, wenn sie unter 800€ netto kosten. Dein Setup muss glänzen!" },
+  { id: 'reisen', titel: "Mila on Tour", status_info: "Pauschale", nische: "Jeder KM zählt! 0,30€ fürs Auto oder 0,20€ fürs Rad. Denk auch an die Verpflegungspauschale!" },
+  { id: 'weiterbildung', titel: "Investment in dich", status_info: "Voll absetzbar", nische: "Kurse, Coachings oder Fachbücher – jeder Cent für dein Wissen mindert deine Steuerlast." },
+  { id: 'sonstiges', titel: "Kleinkram & Co.", status_info: "Checken wir", nische: "Hier schaue ich individuell drüber. Denk dran: Fast alles, was betrieblich ist, lässt sich irgendwie nutzen!" }
 ];
 
-export function getMilaTipForUser(categoryName: string, status: UserStatus): string {
-  const search = categoryName.toLowerCase();
-  const tipp = STEUER_TIPPS.find(t => t.kategorie.toLowerCase().includes(search) || t.keywords.some(k => search.includes(k)));
+export function getMilaTipForUser(catId: CategoryId): string {
+  const tipp = STEUER_TIPPS.find(t => t.id === catId);
   return tipp ? tipp.nische : "Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
 }
-
-const DEFAULT_CATEGORIES = STEUER_TIPPS.map(t => t.kategorie).concat(['Sonstiges']);
 
 // --- STORE LOGIK ---
 
 interface FinanceContextValue {
   expenses: Expense[]; incomes: Income[]; goals: Goal[]; budgets: Budget[]; categories: string[];
   summary: MonthSummary; prevSummary: MonthSummary; breakdown: any; budgetStatus: any; tips: any;
-  milaFeedback: string; triggerMilaFeedback: (category: string) => void;
+  milaFeedback: string; triggerMilaFeedback: (category: CategoryId) => void;
   addExpense: (e: Omit<Expense, 'id'>) => void; deleteExpense: (id: string) => void;
   addIncome: (i: Omit<Income, 'id'>) => void; deleteIncome: (id: string) => void;
   markInvoicePaid: (id: string) => void; contributeToGoal: (id: string, amount: number) => void;
-  addCategory: (name: string) => void; deleteCategory: (name: string) => void;
   resetToDemo: () => void; clearAllData: () => void;
   chatOpen: boolean; setChatOpen: (open: boolean) => void;
   pendingPrompt: string | null; askMila: (prompt: string) => void; clearPending: () => void;
@@ -88,14 +82,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('mila_incomes')
       return saved ? JSON.parse(saved) : demoIncomes
     } catch { return demoIncomes }
-  })
-
-  const [categories, setCategories] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return DEFAULT_CATEGORIES
-    try {
-      const saved = localStorage.getItem('mila_categories')
-      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES
-    } catch { return DEFAULT_CATEGORIES }
   })
 
   const [userName, setUserName] = useState(() => {
@@ -128,28 +114,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mila_tax', String(taxRate))
     localStorage.setItem('mila_expenses', JSON.stringify(expenses))
     localStorage.setItem('mila_incomes', JSON.stringify(incomes))
-    localStorage.setItem('mila_categories', JSON.stringify(categories))
-  }, [userName, userStatus, taxRate, expenses, incomes, categories])
+  }, [userName, userStatus, taxRate, expenses, incomes])
 
-  const triggerMilaFeedback = useCallback((category: string) => {
-    const tip = getMilaTipForUser(category, userStatus)
+  const triggerMilaFeedback = useCallback((category: CategoryId) => {
+    const tip = getMilaTipForUser(category)
     setMilaFeedback(`Hey ${userName}, pass auf: ${tip}`)
-  }, [userStatus, userName])
+  }, [userName])
 
   const addExpense = useCallback((e: Omit<Expense, 'id'>) => {
-    setExpenses((prev) => [{ ...e, id: newId('e') }, ...prev])
+    setExpenses((prev) => [{ ...e, id: newId('e') } as Expense, ...prev])
     if (e.category) triggerMilaFeedback(e.category)
   }, [triggerMilaFeedback])
 
   const deleteExpense = useCallback((id: string) => setExpenses((prev) => prev.filter(e => e.id !== id)), [])
   const addIncome = useCallback((i: Omit<Income, 'id'>) => {
-    setIncomes((prev) => [{ ...i, id: newId('i') }, ...prev])
+    setIncomes((prev) => [{ ...i, id: newId('i') } as Income, ...prev])
     setMilaFeedback(`💰 Yay ${userName}, Zahltag!`)
   }, [userName])
   const deleteIncome = useCallback((id: string) => setIncomes((prev) => prev.filter(i => i.id !== id)), [])
-  const addCategory = useCallback((name: string) => setCategories((prev) => prev.includes(name) ? prev : [...prev, name]), [])
-  const deleteCategory = useCallback((name: string) => setCategories((prev) => prev.filter(c => c !== name)), [])
-  const resetToDemo = useCallback(() => { setExpenses(demoExpenses); setIncomes(demoIncomes); setCategories(DEFAULT_CATEGORIES); }, [])
+  const resetToDemo = useCallback(() => { setExpenses(demoExpenses); setIncomes(demoIncomes); }, [])
   const clearAllData = useCallback(() => { setExpenses([]); setIncomes([]); }, [])
   const markInvoicePaid = useCallback((id: string) => setIncomes((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'bezahlt' } : i))), [])
   const contributeToGoal = useCallback((id: string, amount: number) => setGoals((prev) => prev.map((g) => g.id === id ? { ...g, saved: Math.min(g.target, g.saved + amount) } : g)), [])
@@ -163,11 +146,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const tips = useMemo(() => savingTips(expenses), [expenses])
 
   const value: FinanceContextValue = {
-    expenses, incomes, goals, budgets, categories, summary, prevSummary, breakdown, budgetStatus, tips,
+    expenses, incomes, goals, budgets, categories: Object.keys(CATEGORIES), summary, prevSummary, breakdown, budgetStatus, tips,
     milaFeedback, triggerMilaFeedback, addExpense, deleteExpense, addIncome, deleteIncome,
-    markInvoicePaid, contributeToGoal, addCategory, deleteCategory, resetToDemo, clearAllData,
+    markInvoicePaid, contributeToGoal, resetToDemo, clearAllData,
     chatOpen, setChatOpen, pendingPrompt, askMila, clearPending, userName, setUserName,
-    userStatus, setUserStatus, taxRate, setTaxRate
+    userStatus, setUserStatus, taxRate, setTaxRate, addCategory: () => {}, deleteCategory: () => {}
   }
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
