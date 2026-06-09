@@ -1,4 +1,3 @@
-final_buchungen_page.tsx
 "use client"
 
 import { useFinance } from "@/lib/store"
@@ -202,3 +201,4 @@ export default function BuchungenPage() {
       </div>
     </div>
   )
+}
