@@ -83,11 +83,6 @@ const normalizeCategory = (label: string) => {
     })
   }
 
-  setAmount('')
-  setTitle('')
-  setCategory('')
-}
-
     // Formular zurücksetzen
     setAmount('')
     setTitle('')
