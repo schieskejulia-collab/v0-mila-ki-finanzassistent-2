@@ -29,25 +29,32 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    console.log("📥 POST Body:", body)
+    console.log("📥 POST Body empfangen:", body)
+
+    // --- DEBUG: Body prüfen ---
+    if (!body.title || !body.amount) {
+      console.log("⚠️ Body unvollständig:", body)
+    }
+
+    const insertPayload = {
+      title: body.title,
+      amount: Number(body.amount),
+      created_at: new Date().toISOString()
+    }
+
+    console.log("📦 Insert Payload:", insertPayload)
 
     const { data, error } = await supabase
       .from("expenses")
-      .insert([
-        {
-          title: body.title,
-          amount: Number(body.amount),
-          created_at: new Date().toISOString()
-        }
-      ])
+      .insert([insertPayload])
       .select()
+
+    console.log("💾 Supabase Antwort:", { data, error })
 
     if (error) {
       console.error("❌ Supabase Insert Error:", error)
       throw error
     }
-
-    console.log("💾 Gespeichert:", data)
 
     return NextResponse.json({
       success: true,
