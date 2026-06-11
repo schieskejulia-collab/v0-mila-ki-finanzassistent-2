@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 
-// --- Debug: Prüfen, ob ENV Variablen geladen sind ---
+// --- DEBUG: ENV prüfen ---
 console.log("🔌 SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
 console.log("🔑 SUPABASE KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 6))
 
-// --- GET: Test, ob Verbindung zu Supabase funktioniert ---
+// --- GET: Verbindung testen ---
 export async function GET() {
+  console.log("📡 GET /api/expenses aufgerufen")
+
   const { data, error } = await supabase
     .from("expenses")
     .select("*")
     .limit(1)
 
-  console.log("🧪 Test-Select:", { data, error })
+  console.log("🧪 Test-Select Ergebnis:", { data, error })
 
   return NextResponse.json({
     success: true,
@@ -23,9 +25,10 @@ export async function GET() {
 
 // --- POST: Neue Ausgabe speichern ---
 export async function POST(req: Request) {
+  console.log("📡 POST /api/expenses aufgerufen")
+
   try {
     const body = await req.json()
-
     console.log("📥 POST Body:", body)
 
     const { data, error } = await supabase
