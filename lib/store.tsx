@@ -9,37 +9,6 @@ import {
   type ReactNode,
 } from 'react'
 
-export const STEUER_TIPPS = [
-  {
-    titel: 'Software absetzen',
-    kategorie: 'Software',
-    status_info: 'Selbstständig',
-    beschreibung:
-      'Software kann oft sofort oder über die Nutzungsdauer abgesetzt werden, je nach Preis und Nutzung.',
-  },
-  {
-    titel: 'Bewirtung korrekt buchen',
-    kategorie: 'Bewirtung',
-    status_info: 'Freelancer',
-    beschreibung:
-      'Geschäftsessen sind nur teilweise absetzbar und brauchen einen geschäftlichen Anlass.',
-  },
-  {
-    titel: 'Reisen und Verpflegung',
-    kategorie: 'Reisen',
-    status_info: 'Alle',
-    beschreibung:
-      'Bei beruflichen Reisen können Fahrt, Übernachtung und Pauschalen relevant sein.',
-  },
-  {
-    titel: 'Weiterbildung',
-    kategorie: 'Weiterbildung',
-    status_info: 'Alle',
-    beschreibung:
-      'Berufliche Weiterbildung ist oft voll absetzbar, wenn sie den Job unterstützt.',
-  },
-]
-
 export type UserStatus =
   | 'angestellt'
   | 'selbstständig'
@@ -47,22 +16,22 @@ export type UserStatus =
   | 'kleinunternehmer'
 
 export type Expense = {
-  id: string
+  id: string | number
   title: string
   vendor: string
   amount: number
   date: string
   category: string
-  note?: string
+  note?: string | null
 }
 
 export type Income = {
-  id: string
+  id: string | number
   title: string
   client: string
   amount: number
   date: string
-  note?: string
+  note?: string | null
 }
 
 export type BudgetStatus = {
@@ -92,16 +61,16 @@ interface FinanceContextValue {
     date?: string
     category?: string
     note?: string
-  }) => void
-  deleteExpense: (id: string) => void
+  }) => Promise<void>
+  deleteExpense: (id: string | number) => Promise<void>
   addIncome: (income: {
     title?: string
     client?: string
     amount: number | string
     date?: string
     note?: string
-  }) => void
-  deleteIncome: (id: string) => void
+  }) => Promise<void>
+  deleteIncome: (id: string | number) => Promise<void>
   userName: string
   setUserName: (name: string) => void
   userStatus: UserStatus
@@ -138,27 +107,8 @@ const STATUS_VALUES: UserStatus[] = [
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
-function createId(prefix: string) {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `${prefix}-${crypto.randomUUID()}`
-  }
-
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
-
 function isUserStatus(value: unknown): value is UserStatus {
   return typeof value === 'string' && STATUS_VALUES.includes(value as UserStatus)
-}
-
-function safeParseArray<T>(value: string | null): T[] {
-  if (!value) return []
-
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
 }
 
 export function toNumber(value: number | string | undefined | null): number {
@@ -167,7 +117,6 @@ export function toNumber(value: number | string | undefined | null): number {
   }
 
   const raw = String(value ?? '').trim()
-
   if (!raw) return 0
 
   const normalized = raw.includes(',')
@@ -356,50 +305,37 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [incomes, setIncomes] = useState<Income[]>([])
   const [categories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [milaFeedback, setMilaFeedback] = useState(
-    'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.'
+    'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.',
   )
   const [userName, setUserName] = useState('Julia')
   const [userStatus, setUserStatus] = useState<UserStatus>('selbstständig')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    async function loadData() {
+      try {
+        const [expRes, incRes] = await Promise.all([
+          fetch('/api/expenses'),
+          fetch('/api/incomes'),
+        ])
 
-    try {
-      const savedName = window.localStorage.getItem('mila_name')
-      const savedStatus = window.localStorage.getItem('mila_status')
-      const savedExpenses = window.localStorage.getItem('mila_expenses')
-      const savedIncomes = window.localStorage.getItem('mila_incomes')
+        const expJson = await expRes.json()
+        const incJson = await incRes.json()
 
-      if (savedName) {
-        setUserName(savedName)
+        if (expJson.success) {
+          setExpenses(expJson.data || [])
+        }
+
+        if (incJson.success) {
+          setIncomes(incJson.data || [])
+        }
+      } catch (e) {
+        console.error('Laden fehlgeschlagen:', e)
       }
-
-      if (isUserStatus(savedStatus)) {
-        setUserStatus(savedStatus)
-      }
-
-      setExpenses(safeParseArray<Expense>(savedExpenses))
-      setIncomes(safeParseArray<Income>(savedIncomes))
-    } catch {
-      setExpenses([])
-      setIncomes([])
     }
+
+    loadData()
   }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-
-    try {
-      window.localStorage.setItem('mila_name', userName)
-      window.localStorage.setItem('mila_status', userStatus)
-      window.localStorage.setItem('mila_expenses', JSON.stringify(expenses))
-      window.localStorage.setItem('mila_incomes', JSON.stringify(incomes))
-    } catch {
-      // Mila läuft weiter, auch wenn localStorage blockiert ist.
-    }
-  }, [userName, userStatus, expenses, incomes, mounted])
 
   const login = (name: string, status: UserStatus) => {
     setUserName(name || 'Julia')
@@ -415,29 +351,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setExpenses([])
     setIncomes([])
     setMilaFeedback('Du wurdest ausgeloggt. Ich bin bereit, wenn du zurück bist.')
-
-    try {
-      window.localStorage.removeItem('mila_name')
-      window.localStorage.removeItem('mila_status')
-      window.localStorage.removeItem('mila_expenses')
-      window.localStorage.removeItem('mila_incomes')
-    } catch {
-      // Ignorieren.
-    }
   }
 
   const triggerMilaFeedback = (category: string) => {
     setMilaFeedback(getMilaTip(category, userStatus))
   }
 
-  const addExpense = (expense: {
-    title?: string
-    vendor?: string
-    amount: number | string
-    date?: string
-    category?: string
-    note?: string
-  }) => {
+  const addExpense: FinanceContextValue['addExpense'] = async (expense) => {
     const title = expense.title?.trim() || 'Ausgabe'
     const vendor = expense.vendor?.trim() || ''
     const automaticCategory = inferCategory(`${title} ${vendor} ${expense.note || ''}`)
@@ -446,8 +366,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ? expense.category
         : automaticCategory
 
-    const newExpense: Expense = {
-      id: createId('expense'),
+    const payload = {
       title,
       vendor,
       amount: toNumber(expense.amount),
@@ -456,24 +375,51 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       note: expense.note?.trim() || '',
     }
 
-    setExpenses((prev) => [newExpense, ...prev])
-    setMilaFeedback(getMilaTip(category, userStatus))
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+
+      if (!data.success) {
+        console.error('Supabase Fehler (Expense):', data)
+        setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
+        return
+      }
+
+      const saved: Expense = data.data?.[0]
+      setExpenses((prev) => [saved, ...prev])
+      setMilaFeedback(getMilaTip(category, userStatus))
+    } catch (e) {
+      console.error('Netzwerkfehler (Expense):', e)
+      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    }
   }
 
-  const deleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
-    setMilaFeedback('Die Ausgabe wurde gelöscht.')
+  const deleteExpense: FinanceContextValue['deleteExpense'] = async (id) => {
+    try {
+      const res = await fetch(`/api/expenses?id=${id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        console.error('Supabase Fehler (Delete Expense):', data)
+        return
+      }
+
+      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
+      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+    } catch (e) {
+      console.error('Netzwerkfehler (Delete Expense):', e)
+    }
   }
 
-  const addIncome = (income: {
-    title?: string
-    client?: string
-    amount: number | string
-    date?: string
-    note?: string
-  }) => {
-    const newIncome: Income = {
-      id: createId('income'),
+  const addIncome: FinanceContextValue['addIncome'] = async (income) => {
+    const payload = {
       title: income.title?.trim() || 'Einnahme',
       client: income.client?.trim() || '',
       amount: toNumber(income.amount),
@@ -481,13 +427,47 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       note: income.note?.trim() || '',
     }
 
-    setIncomes((prev) => [newIncome, ...prev])
-    setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
+    try {
+      const res = await fetch('/api/incomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+
+      if (!data.success) {
+        console.error('Supabase Fehler (Income):', data)
+        setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
+        return
+      }
+
+      const saved: Income = data.data?.[0]
+      setIncomes((prev) => [saved, ...prev])
+      setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
+    } catch (e) {
+      console.error('Netzwerkfehler (Income):', e)
+      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    }
   }
 
-  const deleteIncome = (id: string) => {
-    setIncomes((prev) => prev.filter((income) => income.id !== id))
-    setMilaFeedback('Die Einnahme wurde gelöscht.')
+  const deleteIncome: FinanceContextValue['deleteIncome'] = async (id) => {
+    try {
+      const res = await fetch(`/api/incomes?id=${id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        console.error('Supabase Fehler (Delete Income):', data)
+        return
+      }
+
+      setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
+      setMilaFeedback('Die Einnahme wurde gelöscht.')
+    } catch (e) {
+      console.error('Netzwerkfehler (Delete Income):', e)
+    }
   }
 
   const summary = useMemo<Summary>(() => {
