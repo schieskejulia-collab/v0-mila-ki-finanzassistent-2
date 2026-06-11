@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase"
 
 export async function GET() {
   return NextResponse.json({
@@ -11,11 +12,23 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
 
-    console.log("Neue Ausgabe:", body)
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert([
+        {
+          title: body.title,
+          amount: Number(body.amount)
+        }
+      ])
+      .select()
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json({
       success: true,
-      data: body
+      data
     })
   } catch (error) {
     console.error(error)
