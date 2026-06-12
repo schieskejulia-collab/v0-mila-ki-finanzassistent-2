@@ -163,23 +163,6 @@ export default function HomePage() {
         </p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={addDemoExpense}
-          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm active:bg-rose-700 pointer-events-auto cursor-pointer"
-        >
-          Demo-Ausgabe
-        </button>
-
-        <button
-          type="button"
-          onClick={addDemoIncome}
-          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm active:bg-emerald-700 pointer-events-auto cursor-pointer"
-        >
-          Demo-Einnahme
-        </button>
-      </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
