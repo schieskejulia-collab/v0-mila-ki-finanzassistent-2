@@ -33,6 +33,7 @@ export async function POST(req: Request) {
           vendor: body.vendor,
           category: body.category,
           note: body.note,
+date: new Date().toISOString().split("T")[0]
         },
       ])
       .select();
