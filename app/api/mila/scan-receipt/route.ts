@@ -11,7 +11,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Kein Bild empfangen' }, { status: 400 })
     }
 
-    // Falls das Base64-Präfix mitgegeben wurde, filtern wir es heraus
     const cleanBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64
 
     if (!process.env.GROQ_API_KEY) {
@@ -19,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Konfigurationsfehler auf dem Server' }, { status: 500 })
     }
 
-    // Anfrage an Groq mit dem Llama 3.2 Vision Modell
+    // JETZT MIT DEM AKTUELLEN 90B-VISION-MODELL STATT DEM ABGESCHALTETEN 11B-PREVIEW
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.2-11b-vision-preview',
+        model: 'llama-3.2-90b-vision-preview', 
         response_format: { type: 'json_object' },
         messages: [
           {
