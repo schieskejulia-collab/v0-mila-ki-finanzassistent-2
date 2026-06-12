@@ -2,9 +2,11 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -83,221 +85,79 @@ interface FinanceContextValue {
 }
 
 const DEFAULT_CATEGORIES = [
-  'Software',
-  'Reisen',
-  'Weiterbildung',
-  'Marketing',
-  'Bürobedarf',
-  'Bewirtung',
-  'Versicherung',
-  'Hardware',
-  'Telefon & Internet',
-  'Miete',
-  'Fahrtkosten',
-  'Bankgebühren',
-  'Sonstiges',
+  'Software', 'Reisen', 'Weiterbildung', 'Marketing', 'Bürobedarf',
+  'Bewirtung', 'Versicherung', 'Hardware', 'Telefon & Internet',
+  'Miete', 'Fahrtkosten', 'Bankgebühren', 'Sonstiges',
 ]
 
+// ✅ Fix #6: Außerhalb von useMemo, wird nicht bei jedem Render neu erzeugt
+const BUDGET_LIMITS: Record<string, number> = {
+  Software: 200,
+  Reisen: 500,
+  Weiterbildung: 300,
+  Marketing: 250,
+  Bürobedarf: 150,
+  Bewirtung: 200,
+  Versicherung: 100,
+  Hardware: 400,
+  'Telefon & Internet': 150,
+  Miete: 600,
+  Fahrtkosten: 250,
+  Bankgebühren: 80,
+  Sonstiges: 100,
+}
+
 const STATUS_VALUES: UserStatus[] = [
-  'angestellt',
-  'selbstständig',
-  'freelancer',
-  'kleinunternehmer',
+  'angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer',
 ]
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
+// ✅ Fix #4: isUserStatus jetzt tatsächlich genutzt (in login)
 function isUserStatus(value: unknown): value is UserStatus {
   return typeof value === 'string' && STATUS_VALUES.includes(value as UserStatus)
 }
 
 export function toNumber(value: number | string | undefined | null): number {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0
-  }
-
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
   const raw = String(value ?? '').trim()
   if (!raw) return 0
-
   const normalized = raw.includes(',')
     ? raw.replace(/\./g, '').replace(',', '.')
     : raw
-
   const cleaned = normalized.replace(/[^\d.-]/g, '')
   const number = Number(cleaned)
-
   return Number.isFinite(number) ? number : 0
 }
 
 export function inferCategory(input: string): string {
   const text = input.toLowerCase()
-
-  if (
-    text.includes('canva') ||
-    text.includes('figma') ||
-    text.includes('adobe') ||
-    text.includes('openai') ||
-    text.includes('chatgpt') ||
-    text.includes('notion') ||
-    text.includes('software') ||
-    text.includes('app') ||
-    text.includes('tool') ||
-    text.includes('saas')
-  ) {
-    return 'Software'
-  }
-
-  if (
-    text.includes('hotel') ||
-    text.includes('bahn') ||
-    text.includes('db') ||
-    text.includes('flug') ||
-    text.includes('reise') ||
-    text.includes('airbnb') ||
-    text.includes('booking')
-  ) {
-    return 'Reisen'
-  }
-
-  if (
-    text.includes('kurs') ||
-    text.includes('coaching') ||
-    text.includes('seminar') ||
-    text.includes('workshop') ||
-    text.includes('weiterbildung') ||
-    text.includes('fortbildung')
-  ) {
-    return 'Weiterbildung'
-  }
-
-  if (
-    text.includes('instagram') ||
-    text.includes('meta') ||
-    text.includes('facebook') ||
-    text.includes('google ads') ||
-    text.includes('werbung') ||
-    text.includes('marketing')
-  ) {
-    return 'Marketing'
-  }
-
-  if (
-    text.includes('büro') ||
-    text.includes('buero') ||
-    text.includes('papier') ||
-    text.includes('stift') ||
-    text.includes('drucker') ||
-    text.includes('toner')
-  ) {
-    return 'Bürobedarf'
-  }
-
-  if (
-    text.includes('restaurant') ||
-    text.includes('cafe') ||
-    text.includes('café') ||
-    text.includes('essen') ||
-    text.includes('bewirtung') ||
-    text.includes('lunch') ||
-    text.includes('dinner')
-  ) {
-    return 'Bewirtung'
-  }
-
-  if (
-    text.includes('versicherung') ||
-    text.includes('haftpflicht') ||
-    text.includes('rechtsschutz')
-  ) {
-    return 'Versicherung'
-  }
-
-  if (
-    text.includes('macbook') ||
-    text.includes('iphone') ||
-    text.includes('laptop') ||
-    text.includes('monitor') ||
-    text.includes('hardware') ||
-    text.includes('kamera')
-  ) {
-    return 'Hardware'
-  }
-
-  if (
-    text.includes('telefon') ||
-    text.includes('internet') ||
-    text.includes('mobilfunk') ||
-    text.includes('vodafone') ||
-    text.includes('telekom') ||
-    text.includes('o2')
-  ) {
-    return 'Telefon & Internet'
-  }
-
-  if (
-    text.includes('miete') ||
-    text.includes('coworking') ||
-    text.includes('bürofläche') ||
-    text.includes('buero')
-  ) {
-    return 'Miete'
-  }
-
-  if (
-    text.includes('taxi') ||
-    text.includes('uber') ||
-    text.includes('bolt') ||
-    text.includes('tank') ||
-    text.includes('parken') ||
-    text.includes('fahrt')
-  ) {
-    return 'Fahrtkosten'
-  }
-
-  if (
-    text.includes('bank') ||
-    text.includes('gebühr') ||
-    text.includes('gebuehr') ||
-    text.includes('konto') ||
-    text.includes('paypal') ||
-    text.includes('stripe')
-  ) {
-    return 'Bankgebühren'
-  }
-
+  if (/canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'Software'
+  if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'Reisen'
+  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'Weiterbildung'
+  if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'Marketing'
+  if (/büro|buero|papier|stift|drucker|toner/.test(text)) return 'Bürobedarf'
+  if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'Bewirtung'
+  if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'Versicherung'
+  if (/macbook|iphone|laptop|monitor|hardware|kamera/.test(text)) return 'Hardware'
+  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'Telefon & Internet'
+  if (/miete|coworking|bürofläche|buero/.test(text)) return 'Miete'
+  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'Fahrtkosten'
+  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'Bankgebühren'
   return 'Sonstiges'
 }
 
-function getMilaTip(category: string, status: UserStatus) {
-  if (category === 'Software') {
-    return '💻 Software erkannt. Das kann oft sehr gut als Betriebsausgabe verbucht werden.'
+function getMilaTip(category: string, status: UserStatus): string {
+  const tips: Partial<Record<string, string>> = {
+    Software:            '💻 Software erkannt. Das kann oft sehr gut als Betriebsausgabe verbucht werden.',
+    Bewirtung:           '🍽️ Bewirtung erkannt. Notiere am besten Anlass und Teilnehmer.',
+    Reisen:              '✈️ Reise erkannt. Fahrt, Hotel und Verpflegung können steuerlich relevant sein.',
+    Weiterbildung:       '🎓 Weiterbildung erkannt. Sehr stark, das ist oft beruflich gut begründbar.',
+    Marketing:           '📣 Marketing erkannt. Ich ordne das deinen Akquise-Ausgaben zu.',
+    Hardware:            '🖥️ Hardware erkannt. Je nach Preis kann Abschreibung wichtig sein.',
+    'Telefon & Internet':'📱 Telefon & Internet erkannt. Achte auf berufliche Nutzung.',
   }
-
-  if (category === 'Bewirtung') {
-    return '🍽️ Bewirtung erkannt. Notiere am besten Anlass und Teilnehmer.'
-  }
-
-  if (category === 'Reisen') {
-    return '✈️ Reise erkannt. Fahrt, Hotel und Verpflegung können steuerlich relevant sein.'
-  }
-
-  if (category === 'Weiterbildung') {
-    return '🎓 Weiterbildung erkannt. Sehr stark, das ist oft beruflich gut begründbar.'
-  }
-
-  if (category === 'Marketing') {
-    return '📣 Marketing erkannt. Ich ordne das deinen Akquise-Ausgaben zu.'
-  }
-
-  if (category === 'Hardware') {
-    return '💻 Hardware erkannt. Je nach Preis kann Abschreibung wichtig sein.'
-  }
-
-  if (category === 'Telefon & Internet') {
-    return '📱 Telefon & Internet erkannt. Achte auf berufliche Nutzung.'
-  }
-
-  return `✨ Ich habe die Buchung als ${category} eingeordnet. Status: ${status}.`
+  return tips[category] ?? `✨ Ich habe die Buchung als ${category} eingeordnet. Status: ${status}.`
 }
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
@@ -311,77 +171,95 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [userStatus, setUserStatus] = useState<UserStatus>('selbstständig')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
 
+  // ✅ Fix #2: mountedRef verhindert State-Updates auf unmountierter Komponente
+  const mountedRef = useRef(true)
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [expRes, incRes] = await Promise.all([
-          fetch('/api/expenses'),
-          fetch('/api/incomes'),
-        ])
-
-        const expJson = await expRes.json()
-        const incJson = await incRes.json()
-
-        if (expJson.success) {
-          setExpenses(expJson.data || [])
-        }
-
-        if (incJson.success) {
-          setIncomes(incJson.data || [])
-        }
-      } catch (e) {
-        console.error('Laden fehlgeschlagen:', e)
-      }
-    }
-
-    loadData()
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
   }, [])
 
-  const login = (name: string, status: UserStatus) => {
-    setUserName(name || 'Julia')
-    setUserStatus(status)
-    setIsLoggedIn(true)
-    setMilaFeedback(`Willkommen zurück, ${name || 'Julia'} ✨`)
-  }
+  // ✅ Fix #3: loadData als useCallback, damit login es aufrufen kann
+  const loadData = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [expRes, incRes] = await Promise.all([
+        fetch('/api/expenses', { signal }),
+        fetch('/api/incomes',  { signal }),
+      ])
 
-  const logout = () => {
+      // Fetch wurde abgebrochen → kein weiteres State-Update
+      if (signal?.aborted) return
+
+      const [expJson, incJson] = await Promise.all([
+        expRes.json(),
+        incRes.json(),
+      ])
+
+      if (!mountedRef.current) return   // Komponente bereits unmountet
+
+      if (expJson.success) setExpenses(expJson.data ?? [])
+      if (incJson.success) setIncomes(incJson.data ?? [])
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      if (mountedRef.current) console.error('Laden fehlgeschlagen:', e)
+    }
+  }, [])
+
+  // ✅ Fix #2: AbortController saubert beim Unmount / Re-Render auf
+  useEffect(() => {
+    const controller = new AbortController()
+    loadData(controller.signal)
+    return () => controller.abort()
+  }, [loadData])
+
+  // ✅ Fix #4: status wird mit isUserStatus validiert
+  const login = useCallback((name: string, status: UserStatus) => {
+    const safeName   = name?.trim() || 'Julia'
+    const safeStatus = isUserStatus(status) ? status : 'selbstständig'
+    setUserName(safeName)
+    setUserStatus(safeStatus)
+    setIsLoggedIn(true)
+    setMilaFeedback(`Willkommen zurück, ${safeName} ✨`)
+    // ✅ Fix #3: Daten nach Login sofort laden
+    loadData()
+  }, [loadData])
+
+  const logout = useCallback(() => {
     setIsLoggedIn(false)
     setUserName('Julia')
     setUserStatus('selbstständig')
     setExpenses([])
     setIncomes([])
     setMilaFeedback('Du wurdest ausgeloggt. Ich bin bereit, wenn du zurück bist.')
-  }
+  }, [])
 
-  const triggerMilaFeedback = (category: string) => {
+  const triggerMilaFeedback = useCallback((category: string) => {
     setMilaFeedback(getMilaTip(category, userStatus))
-  }
+  }, [userStatus])
 
-  const addExpense: FinanceContextValue['addExpense'] = async (expense) => {
-    const title = expense.title?.trim() || 'Ausgabe'
-    const vendor = expense.vendor?.trim() || ''
-    const automaticCategory = inferCategory(`${title} ${vendor} ${expense.note || ''}`)
+  const addExpense: FinanceContextValue['addExpense'] = useCallback(async (expense) => {
+    const title   = expense.title?.trim()  || 'Ausgabe'
+    const vendor  = expense.vendor?.trim() || ''
+    const autoCategory = inferCategory(`${title} ${vendor} ${expense.note ?? ''}`)
     const category =
       expense.category && expense.category !== 'Automatisch'
         ? expense.category
-        : automaticCategory
+        : autoCategory
 
     const payload = {
       title,
       vendor,
-      amount: toNumber(expense.amount),
-      date: expense.date || new Date().toISOString().slice(0, 10),
+      amount:   toNumber(expense.amount),
+      date:     expense.date || new Date().toISOString().slice(0, 10),
       category,
-      note: expense.note?.trim() || '',
+      note:     expense.note?.trim() || '',
     }
 
     try {
-      const res = await fetch('/api/expenses', {
-        method: 'POST',
+      const res  = await fetch('/api/expenses', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body:    JSON.stringify(payload),
       })
-
       const data = await res.json()
 
       if (!data.success) {
@@ -390,20 +268,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const saved: Expense = data.data?.[0]
-      setExpenses((prev) => [saved, ...prev])
-      setMilaFeedback(getMilaTip(category, userStatus))
+      // ✅ Fix #5: Guard gegen undefined / leeres Array
+      const saved: Expense | undefined = data.data?.[0]
+      if (!saved) {
+        console.error('Keine gespeicherte Expense zurückerhalten:', data)
+        setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
+        return
+      }
+
+      if (mountedRef.current) {
+        setExpenses((prev) => [saved, ...prev])
+        setMilaFeedback(getMilaTip(category, userStatus))
+      }
     } catch (e) {
       console.error('Netzwerkfehler (Expense):', e)
-      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+      if (mountedRef.current)
+        setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
     }
-  }
+  }, [userStatus])
 
-  const deleteExpense: FinanceContextValue['deleteExpense'] = async (id) => {
+  const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
     try {
-      const res = await fetch(`/api/expenses?id=${id}`, {
-        method: 'DELETE',
-      })
+      const res  = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
       const data = await res.json()
 
       if (!data.success) {
@@ -411,29 +297,30 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
-      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+      if (mountedRef.current) {
+        setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
+        setMilaFeedback('Die Ausgabe wurde gelöscht.')
+      }
     } catch (e) {
       console.error('Netzwerkfehler (Delete Expense):', e)
     }
-  }
+  }, [])
 
-  const addIncome: FinanceContextValue['addIncome'] = async (income) => {
+  const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
     const payload = {
-      title: income.title?.trim() || 'Einnahme',
+      title:  income.title?.trim()  || 'Einnahme',
       client: income.client?.trim() || '',
       amount: toNumber(income.amount),
-      date: income.date || new Date().toISOString().slice(0, 10),
-      note: income.note?.trim() || '',
+      date:   income.date || new Date().toISOString().slice(0, 10),
+      note:   income.note?.trim() || '',
     }
 
     try {
-      const res = await fetch('/api/incomes', {
-        method: 'POST',
+      const res  = await fetch('/api/incomes', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body:    JSON.stringify(payload),
       })
-
       const data = await res.json()
 
       if (!data.success) {
@@ -442,20 +329,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const saved: Income = data.data?.[0]
-      setIncomes((prev) => [saved, ...prev])
-      setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
+      // ✅ Fix #5: Guard gegen undefined / leeres Array
+      const saved: Income | undefined = data.data?.[0]
+      if (!saved) {
+        console.error('Keine gespeicherte Income zurückerhalten:', data)
+        setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
+        return
+      }
+
+      if (mountedRef.current) {
+        setIncomes((prev) => [saved, ...prev])
+        setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
+      }
     } catch (e) {
       console.error('Netzwerkfehler (Income):', e)
-      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+      if (mountedRef.current)
+        setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
     }
-  }
+  }, [])
 
-  const deleteIncome: FinanceContextValue['deleteIncome'] = async (id) => {
+  const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
     try {
-      const res = await fetch(`/api/incomes?id=${id}`, {
-        method: 'DELETE',
-      })
+      const res  = await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' })
       const data = await res.json()
 
       if (!data.success) {
@@ -463,95 +358,49 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
-      setMilaFeedback('Die Einnahme wurde gelöscht.')
+      if (mountedRef.current) {
+        setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
+        setMilaFeedback('Die Einnahme wurde gelöscht.')
+      }
     } catch (e) {
       console.error('Netzwerkfehler (Delete Income):', e)
     }
-  }
+  }, [])
 
   const summary = useMemo<Summary>(() => {
-    const totalExpenses = expenses.reduce((sum, expense) => {
-      return sum + toNumber(expense.amount)
-    }, 0)
-
-    const totalIncomes = incomes.reduce((sum, income) => {
-      return sum + toNumber(income.amount)
-    }, 0)
-
-    return {
-      totalExpenses,
-      totalIncomes,
-      balance: totalIncomes - totalExpenses,
-    }
+    const totalExpenses = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
+    const totalIncomes  = incomes.reduce((sum,  i) => sum + toNumber(i.amount), 0)
+    return { totalExpenses, totalIncomes, balance: totalIncomes - totalExpenses }
   }, [expenses, incomes])
 
   const budgetStatus = useMemo<BudgetStatus[]>(() => {
-    const budgetLimits: Record<string, number> = {
-      Software: 200,
-      Reisen: 500,
-      Weiterbildung: 300,
-      Marketing: 250,
-      Bürobedarf: 150,
-      Bewirtung: 200,
-      Versicherung: 100,
-      Hardware: 400,
-      'Telefon & Internet': 150,
-      Miete: 600,
-      Fahrtkosten: 250,
-      Bankgebühren: 80,
-      Sonstiges: 100,
-    }
-
     return categories.map((category) => {
       const spent = expenses
-        .filter((expense) => expense.category === category)
-        .reduce((sum, expense) => sum + toNumber(expense.amount), 0)
-
-      const limit = budgetLimits[category] ?? 100
+        .filter((e) => e.category === category)
+        .reduce((sum, e) => sum + toNumber(e.amount), 0)
+      const limit     = BUDGET_LIMITS[category] ?? 100
       const remaining = limit - spent
-      const percent = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0
-
-      return {
-        category,
-        spent,
-        limit,
-        remaining,
-        percent,
-      }
+      const percent   = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0
+      return { category, spent, limit, remaining, percent }
     })
   }, [categories, expenses])
 
-  const value: FinanceContextValue = {
-    expenses,
-    incomes,
-    categories,
-    milaFeedback,
-    triggerMilaFeedback,
-    addExpense,
-    deleteExpense,
-    addIncome,
-    deleteIncome,
-    userName,
-    setUserName,
-    userStatus,
-    setUserStatus,
-    isLoggedIn,
-    login,
-    logout,
-    summary,
-    budgetStatus,
-  }
+  const value = useMemo<FinanceContextValue>(() => ({
+    expenses, incomes, categories, milaFeedback, triggerMilaFeedback,
+    addExpense, deleteExpense, addIncome, deleteIncome,
+    userName, setUserName, userStatus, setUserStatus,
+    isLoggedIn, login, logout, summary, budgetStatus,
+  }), [
+    expenses, incomes, milaFeedback, triggerMilaFeedback,
+    addExpense, deleteExpense, addIncome, deleteIncome,
+    userName, userStatus, isLoggedIn, login, logout, summary, budgetStatus,
+  ])
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
 
 export function useFinance() {
   const ctx = useContext(FinanceContext)
-
-  if (!ctx) {
-    throw new Error('useFinance must be used within FinanceProvider')
-  }
-
+  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
   return ctx
 }
