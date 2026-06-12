@@ -188,12 +188,31 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [categories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [milaFeedback, setMilaFeedback] = useState(
     'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.',
+const [morningBriefing, setMorningBriefing] = useState('')
   )
   const [userName, setUserName] = useState('Julia')
   
   // Voreinstellung direkt auf "freelancer" für den perfekten Start
   const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
+const refreshMorningBriefing = async () => {
+  const income = incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
+  const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
+  const profit = income - expensesTotal
+
+  setMorningBriefing(`
+🌸 Guten Tag ${userName}
+
+Einnahmen: ${income.toFixed(2)} €
+Ausgaben: ${expensesTotal.toFixed(2)} €
+Überschuss: ${profit.toFixed(2)} €
+
+Ich habe aktuell ${expenses.length} Ausgaben und ${incomes.length} Einnahmen für dich im Blick.
+
+💜 Mein Tipp:
+Behalte deine Steuerrücklage im Auge.
+`)
+}
 
   const mountedRef = useRef(true)
   useEffect(() => {
