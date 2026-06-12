@@ -40,14 +40,21 @@ export async function POST(req: Request) {
 
 if (!response.ok) {
   console.error("Groq Fehler:", data);
+return NextResponse.json({
+  success: true,
+  data: parsed
+});
+} catch (error) {
+  console.error("Scan Fehler:", error);
 
   return NextResponse.json(
     {
       success: false,
-      error: "Groq API Fehler"
+      error: "Serverfehler"
     },
     { status: 500 }
   );
+}
 }
 
 // Antwort von Groq holen
