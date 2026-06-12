@@ -55,6 +55,8 @@ interface FinanceContextValue {
   incomes: Income[]
   categories: string[]
   milaFeedback: string
+morningBriefing: string
+refreshMorningBriefing: () => Promise<void>
   triggerMilaFeedback: (category: string) => void
   addExpense: (expense: {
     title?: string
