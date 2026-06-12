@@ -17,6 +17,13 @@ const {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?' }
   ])
+useEffect(() => {
+  const saved = localStorage.getItem('mila-chat')
+
+  if (saved) {
+    setMessages(JSON.parse(saved))
+  }
+}, [])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
