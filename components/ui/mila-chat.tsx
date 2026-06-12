@@ -32,7 +32,12 @@ useEffect(() => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
+useEffect(() => {
+  localStorage.setItem(
+    'mila-chat',
+    JSON.stringify(messages)
+  )
+}, [messages])
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
