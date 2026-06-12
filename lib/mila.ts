@@ -1,96 +1,64 @@
-import { formatEUR } from './format'
-import {
-  type MonthSummary,
-  type CategoryBreakdown,
-  type BudgetStatus,
-  type SavingTip,
-} from './calculations'
-import type { Expense, Income, Goal } from './types'
-import OpenAI from "openai"
+import { Expense, Income } from './store' // Oder wo deine Typen liegen
 
-// --- KI CLIENT ---
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1",
-})
-
-// --- MILA PERSÖNLICHKEIT ---
-export function getMilaPersonality(status: string = "selbstständig"): string {
-  return `
-Du bist Mila – eine warme, ruhige, klare Finanzbegleiterin.
-Du sprichst einfach, menschlich und ohne Fachwörter.
-Du beruhigst, sortierst und gibst kleine, machbare Schritte.
-Aktueller Nutzer-Typ: ${status.toUpperCase()}
-
-Dein Stil:
-– warm, ruhig, freundlich
-– kurze, klare Sätze
-– kein Druck, keine Panik
-– Orientierung statt Belehrung
-
-WICHTIG: Antworte immer direkt als Mila.
-`
-}
-
-// --- LIVE CHAT ---
-export async function getMilaReplyLive(
-  message: string,
-  ctx: MilaContext,
-  userStatus: string = "selbstständig",
-  userName: string = "Nutzer"
-): Promise<string> {
-
-  const finanzKontext = `
-Aktuelle Finanzdaten des Nutzers (${userName}):
-- Einnahmen gesamt: ${formatEUR(ctx.summary?.income || 0)}
-- Ausgaben gesamt: ${formatEUR(ctx.summary?.expenses || 0)}
-- Aktueller Gewinn: ${formatEUR(ctx.summary?.profit || 0)}
-`
+// Hilfsfunktion für den direkten, schlanken Groq-Aufruf ohne extra OpenAI-Paket
+async function callGroqChat(messages: any[]) {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) {
+    console.error('❌ GROQ_API_KEY fehlt in den Umgebungsvariablen!')
+    return 'Konfigurationsfehler: API-Key fehlt.'
+  }
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: getMilaPersonality(userStatus) },
-        { role: "system", content: finanzKontext },
-        { role: "user", content: message }
-      ],
-      temperature: 0.6,
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-specdec', // Das offizielle, superschnelle Textmodell auf Groq
+        messages: messages,
+        temperature: 0.7,
+      }),
     })
 
-    return response.choices[0]?.message?.content ||
-      "Ich habe kurz den Faden verloren. Sag es mir nochmal, ich bin da."
-  } catch (error) {
-    console.error("Groq Fehler:", error)
-    return generateMilaReply(message, ctx)
+    const data = await res.json()
+    if (!res.ok) {
+      console.error('Groq Chat Fehler:', data)
+      return 'Mila hat gerade Schwierigkeiten beim Nachdenken. Bitte versuch es gleich nochmal.'
+    }
+
+    return data.choices[0].message.content || 'Ich konnte keine Antwort generieren.'
+  } catch (err) {
+    console.error('Netzwerkfehler zu Groq:', err)
+    return 'Verbindung zu Mila unterbrochen.'
   }
 }
 
-// --- FALLBACK LOGIK ---
-export interface MilaContext {
-  summary: MonthSummary
-  prevSummary: MonthSummary
-  breakdown: CategoryBreakdown[]
-  budgetStatus: BudgetStatus[]
-  tips: SavingTip[]
-  expenses: Expense[]
-  incomes: Income[]
-  goals: Goal[]
-}
+// Die Funktion, die vermutlich von deiner app/api/chat/route.ts aufgerufen wird
+export async function getMilaChatResponse(userMessage: string, history: any[] = [], contextData?: { expenses: Expense[], incomes: Income[] }) {
+  
+  // Kontext für Mila zusammenbauen, damit sie deine echten Finanzen kennt
+  const contextPrompt = contextData 
+    ? `Hier sind die aktuellen Finanzdaten des Nutzers:
+       Ausgaben: ${JSON.stringify(contextData.expenses)}
+       Einnahmen: ${JSON.stringify(contextData.incomes)}`
+    : ''
 
-export function generateMilaReply(message: string, ctx: MilaContext): string {
-  const m = message.toLowerCase()
-  const { summary, tips } = ctx
+  const messages = [
+    {
+      role: 'system',
+      content: `Du bist Mila, eine empathische, kluge KI-Finanzassistentin für Freelancer und Selbstständige. 
+      Hilf dem Nutzer, seine Finanzen zu verstehen, Steuertipps zu bekommen und motiviert zu bleiben. 
+      Antworte kurz, übersichtlich (gerne mit Aufzählungszeichen) und freundlich. Du duzt den Nutzer.
+      ${contextPrompt}`
+    },
+    ...history,
+    {
+      role: 'user',
+      content: userMessage
+    }
+  ]
 
-  if (/steuer|rücklage/.test(m)) {
-    return `Für deinen aktuellen Gewinn von ${formatEUR(summary.profit)} empfehle ich dir rund 30 % Steuerrücklage.`
-  }
-
-  if (/spar|tipp/.test(m)) {
-    if (!tips?.length) return "Ich sehe gerade keine Sparpotenziale."
-    const total = tips.reduce((a, t) => a + (t.potential || 0), 0)
-    return `Ich sehe etwa ${formatEUR(total)} Sparpotenzial.`
-  }
-
-  return `Dein aktueller Gewinn liegt bei ${formatEUR(summary.profit)}. Frag mich gern weiter.`
+  return await callGroqChat(messages)
 }
