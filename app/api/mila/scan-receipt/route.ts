@@ -1,67 +1,21 @@
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-
-import { NextResponse } from 'next/server'
-
-export async function POST(req: Request) {
-  try {
-    const { imageBase64 } = await req.json()
-
-    if (!imageBase64) {
-      return NextResponse.json({ success: false, error: 'Kein Bild empfangen' }, { status: 400 })
-    }
-
-    const cleanBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64
-
-    if (!process.env.GROQ_API_KEY) {
-      console.error('❌ GROQ_API_KEY fehlt in den Umgebungsvariablen!')
-      return NextResponse.json({ success: false, error: 'Konfigurationsfehler auf dem Server' }, { status: 500 })
-    }
-
-    // JETZT MIT DEM AKTUELLEN PRODUKTIONSMODELL: llama-3.2-90b-vision-instruct
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.2-90b-vision-instruct', 
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Du bist Mila, eine smarte Finanz-Assistentin. Analysiere diesen Beleg. Extrahiere den Gesamtbetrag (als reine Zahl mit Punkt, z.B. 14.99), den Händler (vendor) und ordne es einer dieser Kategorien zu: "Software", "Marketing", "Bewirtung", "Reisen", "Sonstiges". Antworte AUSSCHLIESSLICH als JSON-Objekt in diesem Format: {"amount": 14.99, "vendor": "Händlername", "category": "Kategorie", "title": "Kurzer Titel"}'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${cleanBase64}`
-                }
-              }
-            ]
-          }
+// In deiner API-Route für die Beleg-KI
+const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'llama-3.2-90b-vision-preview', // Dieses Modell ist aktuell verfügbar
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analysiere diesen Beleg. Gib mir JSON zurück mit: amount, vendor, category.' },
+          { type: 'image_url', image_url: { url: `data:image/png;base64,${imageBase64}` } }
         ]
-      })
-    })
-
-    const groqData = await response.json()
-
-    if (!response.ok) {
-      console.error('❌ Groq Vision API Fehler:', groqData)
-      return NextResponse.json({ success: false, error: groqData.error?.message || 'Fehler bei der Beleganalyse' }, { status: 500 })
-    }
-
-    const rawContent = groqData.choices[0].message.content
-    const parsedData = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent
-
-    return NextResponse.json({ success: true, data: parsedData })
-
-  } catch (err: any) {
-    console.error('❌ Crash in Scan-Receipt Route:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
-  }
-}
+      }
+    ],
+    response_format: { type: "json_object" }
+  }),
+});
