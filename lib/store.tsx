@@ -203,6 +203,20 @@ const refreshMorningBriefing = async () => {
   const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
   const profit = income - expensesTotal
 
+  let tip = 'Behalte deine Steuerrücklage im Auge.'
+
+  if (profit > 1000) {
+    tip = 'Dein Monat läuft stark. Prüfe, ob du einen Teil des Überschusses zurücklegen möchtest.'
+  }
+
+  if (expenses.length > incomes.length) {
+    tip = 'Du hast aktuell mehr Ausgaben als Einnahmen erfasst. Prüfe offene Rechnungen.'
+  }
+
+  if (profit < 0) {
+    tip = 'Deine Ausgaben liegen aktuell über den Einnahmen. Schau auf größere Kostenblöcke.'
+  }
+
   setMorningBriefing(`
 🌸 Guten Tag ${userName}
 
@@ -213,9 +227,13 @@ Ausgaben: ${expensesTotal.toFixed(2)} €
 Ich habe aktuell ${expenses.length} Ausgaben und ${incomes.length} Einnahmen für dich im Blick.
 
 💜 Mein Tipp:
-Behalte deine Steuerrücklage im Auge.
+${tip}
 `)
 }
+  const income = incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
+  const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
+  const profit = income - expensesTotal
+
 
   const mountedRef = useRef(true)
   useEffect(() => {
