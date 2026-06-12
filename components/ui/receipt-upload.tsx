@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 
+interface ReceiptUploadProps {
+  onScanSuccess?: (data: { title: string; amount: number; vendor: string; category: string }) => void
+}
+
 export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) => void }) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusText, setStatusText] = useState("")
@@ -13,26 +17,29 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
     setStatusText("Mila liest Beleg...")
 
     try {
-      // 1. Datei in Base64 konvertieren
       const base64 = await fileToBase64(file)
 
-      // 2. Aufruf der Next.js Route mit Groq Vision
       const res = await fetch("/api/mila/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: base64 }),
       })
 
+      // Abfangen, falls der Server kein JSON zurückgibt (z.B. bei 500er HTML-Fehlern)
+      const contentType = res.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server antwortete mit einem Fehler (Kein JSON). Bitte prüfe deine Logfiles.")
+      }
+
       const json = await res.json()
       
       if (!res.ok || !json.success) {
-        throw new Error(json.error || "Scan fehlgeschlagen")
+        throw new Error(json.error || "Mila konnte den Beleg nicht richtig entziffern.")
       }
 
-      setStatusText("Daten erfolgreich ausgelesen! 🎉")
+      setStatusText("Daten erfolgreich eingetragen! 🎉")
       
-      // Übergibt die erkannten Daten (title, amount, vendor, category) an das Formular
-      if (onScanSuccess) {
+      if (onScanSuccess && json.data) {
         onScanSuccess(json.data)
       }
 
@@ -43,7 +50,7 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
       setTimeout(() => {
         setIsScanning(false)
         setStatusText("")
-      }, 2500)
+      }, 3000)
     }
   }
 
@@ -77,7 +84,7 @@ function fileToBase64(file: File): Promise<string> {
       if (typeof reader.result === "string") {
         resolve(reader.result)
       } else {
-        reject(new Error("Datei konnte nicht gelesen werden"))
+        reject(new Error("Datei konnte nicht verarbeitet werden."))
       }
     }
     reader.onerror = (error) => reject(error)
