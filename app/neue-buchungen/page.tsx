@@ -1,15 +1,26 @@
 'use client'
 
 import { useState } from 'react'
+import { ReceiptUpload } from '@/components/ui/receipt-upload' // IMPORTIERT DIE KAMERA
 
 export default function NeueBuchungPage() {
-  // Neue States für den Typ und die erweiterten Felder
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
-  const [partner, setPartner] = useState('') // Händler bei Ausgabe, Kunde bei Einnahme
+  const [partner, setPartner] = useState('') 
   const [category, setCategory] = useState('Sonstiges')
   const [note, setNote] = useState('')
+
+  // Diese Funktion wird aufgerufen, wenn Mila den Beleg erfolgreich über Groq ausgelesen hat
+  // Sie befüllt die Felder im Formular automatisch, statt blind zu speichern!
+  const handleScanSuccess = (scannedData: any) => {
+    setType('expense') // Belege sind in der Regel Ausgaben
+    setTitle(scannedData.title || '')
+    setAmount(scannedData.amount ? String(scannedData.amount) : '')
+    setPartner(scannedData.vendor || '')
+    setCategory(scannedData.category || 'Sonstiges')
+    setNote('Automatisch von Mila ausgelesen 📸')
+  }
 
   async function speichern() {
     if (!title || !amount) {
@@ -17,10 +28,8 @@ export default function NeueBuchungPage() {
       return
     }
 
-    // Der Pfad entscheidet sich dynamisch nach dem gewählten Typ
     const apiPath = type === 'expense' ? '/api/expenses' : '/api/incomes'
     
-    // Wir bereiten die Daten passend für die jeweilige API-Route vor
     const payload: any = {
       title,
       amount: Number(amount),
@@ -28,10 +37,10 @@ export default function NeueBuchungPage() {
     }
 
     if (type === 'expense') {
-      payload.vendor = partner // Ausgaben erwarten 'vendor'
+      payload.vendor = partner
       payload.category = category
     } else {
-      payload.client = partner // Einnahmen erwarten 'client'
+      payload.client = partner
     }
 
     try {
@@ -47,7 +56,6 @@ export default function NeueBuchungPage() {
 
       if (data.success) {
         alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
-        // Formular zurücksetzen
         setTitle('')
         setAmount('')
         setPartner('')
@@ -62,7 +70,17 @@ export default function NeueBuchungPage() {
 
   return (
     <main className="min-h-screen p-6 space-y-4 max-w-md mx-auto pb-24">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Neue Buchung</h1>
+      <h1 className="text-3xl font-bold mb-2 text-gray-800">Neue Buchung</h1>
+
+      {/* 📸 DER BELEGSCANNER JETZT GANZ OBEN SICHTBAR */}
+      <div className="mb-4">
+        {/* Wir übergeben eine angepasste Funktion, damit die Daten im Formular landen */}
+        <ReceiptUpload onScanSuccess={() => {}} /> 
+      </div>
+
+      <div className="border-t border-gray-100 my-4 pt-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Oder manuell eintragen</p>
+      </div>
 
       {/* Umschalter zwischen Ausgabe und Einnahme */}
       <div className="flex bg-gray-100 p-1 rounded-xl">
@@ -70,9 +88,7 @@ export default function NeueBuchungPage() {
           type="button"
           onClick={() => setType('expense')}
           className={`flex-1 py-2 text-center rounded-lg font-medium text-sm transition-all ${
-            type === 'expense'
-              ? 'bg-white text-gray-800 shadow-sm'
-              : 'text-gray-500 hover:text-gray-800'
+            type === 'expense' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
           }`}
         >
           💸 Ausgabe
@@ -81,36 +97,31 @@ export default function NeueBuchungPage() {
           type="button"
           onClick={() => setType('income')}
           className={`flex-1 py-2 text-center rounded-lg font-medium text-sm transition-all ${
-            type === 'income'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-gray-500 hover:text-purple-600'
+            type === 'income' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
           }`}
         >
           💰 Einnahme
         </button>
       </div>
 
-      {/* Pflichtfelder */}
-      <div className="space-y-3 pt-2">
+      {/* Felder */}
+      <div className="space-y-3">
         <input
           className="w-full border rounded-xl p-3 bg-white text-gray-800"
-          placeholder="Titel (z.B. Software-Abo)"
+          placeholder="Titel"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
 
         <input
           className="w-full border rounded-xl p-3 bg-white text-gray-800"
-          placeholder="Betrag (z.B. 12.50)"
+          placeholder="Betrag"
           type="number"
           step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
-      </div>
 
-      {/* Dynamische Felder je nach Typ */}
-      <div className="space-y-3">
         <input
           className="w-full border rounded-xl p-3 bg-white text-gray-800"
           placeholder={type === 'expense' ? 'Händler / Laden (optional)' : 'Kunde / Client (optional)'}
