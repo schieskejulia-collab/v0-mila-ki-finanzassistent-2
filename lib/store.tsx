@@ -437,10 +437,24 @@ refreshMorningBriefing, triggerMilaFeedback,
     userName, setUserName, userStatus, setUserStatus,
     isLoggedIn, login, logout, summary, budgetStatus,
   }), [
-    expenses, incomes, milaFeedback, triggerMilaFeedback,
-    addExpense, deleteExpense, addIncome, deleteIncome,
-    userName, userStatus, isLoggedIn, login, logout, summary, budgetStatus,
-  ])
+  expenses,
+  incomes,
+  milaFeedback,
+  morningBriefing,
+  refreshMorningBriefing,
+  triggerMilaFeedback,
+  addExpense,
+  deleteExpense,
+  addIncome,
+  deleteIncome,
+  userName,
+  userStatus,
+  isLoggedIn,
+  login,
+  logout,
+  summary,
+  budgetStatus,
+])
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
