@@ -11,11 +11,11 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.2-90b-vision-preview",
+        model: "llama-3.3-70b-versatile",
         messages: [{
           role: "user",
           content: [
-            { type: "text", text: 'Analysiere diesen Beleg. Gib NUR JSON zurück: {"amount": 0, "vendor": "", "category": "", "title": ""}.' },
+            { type: "text", text: 'Analysiere diesen Beleg. Gib NUR ein gültiges JSON zurück: {"amount": 0, "vendor": "", "category": "", "title": ""}.' },
             { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } }
           ]
         }],
