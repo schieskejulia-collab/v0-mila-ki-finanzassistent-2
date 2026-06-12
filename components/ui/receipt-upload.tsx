@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 
-export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void }) {
+// GEÄNDERT: onScanSuccess übergibt jetzt die ausgelesenen Daten direkt an das Formular
+export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) => void }) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusText, setStatusText] = useState("")
 
@@ -13,10 +14,8 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
     setStatusText("Mila liest Beleg...")
 
     try {
-      // 1. Datei in Base64 konvertieren
       const base64 = await fileToBase64(file)
 
-      // 2. Aufruf unserer neuen Next.js Route
       const res = await fetch("/api/mila/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,48 +28,28 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
         throw new Error(json.error || "Scan fehlgeschlagen")
       }
 
-      // Die von Groq zurückgegebenen Daten
-      const rawData = json.data
-
-      // 3. Speichern direkt in unsere Supabase-Route mit den korrekten Feldern!
-      setStatusText("Speichere in Supabase...")
-      const saveRes = await fetch("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: rawData.title || "Belegscan",
-          amount: Number(rawData.amount) || 0,
-          vendor: rawData.vendor || "Unbekannter Händler",
-          category: rawData.category || "Sonstiges",
-          date: new Date().toISOString().slice(0, 10),
-          note: "Automatisch erfasst von Mila via Groq 📸"
-        }),
-      })
-
-      const saveJson = await saveRes.json()
-
-      if (saveRes.ok && saveJson.success) {
-        setStatusText("Erfolgreich erfasst! 🎉")
-        if (onScanSuccess) onScanSuccess()
-      } else {
-        throw new Error(saveJson.error || "Fehler beim Speichern der Ausgabe")
+      setStatusText("Daten erfolgreich ausgelesen! 🎉")
+      
+      // Übergibt die erkannten Daten (title, amount, vendor, category) an das Formular
+      if (onScanSuccess) {
+        onScanSuccess(json.data)
       }
 
     } catch (err: any) {
       console.error(err)
       setStatusText("Fehler: " + err.message)
-    } finally {
+    } {
       setTimeout(() => {
         setIsScanning(false)
         setStatusText("")
-      }, 3000)
+      }, 2500)
     }
   }
 
   return (
     <div className="w-full space-y-2">
       <label className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-purple-300 rounded-2xl bg-purple-50/50 cursor-pointer hover:bg-purple-50 transition-all text-center">
-        <div className="flex flex-col items-center justify-center pt-3 pb-3">
+        <div className="flex flex-col items-center justify-center pt-2 pb-2">
           <span className="text-3xl mb-1">{isScanning ? "⏳" : "📸"}</span>
           <p className="text-sm font-bold text-slate-700">
             {isScanning ? statusText : "Beleg fotografieren oder hochladen"}
