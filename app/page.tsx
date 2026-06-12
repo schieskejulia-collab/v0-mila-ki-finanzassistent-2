@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { MorningBriefing } from '@/components/ui/morning-briefing'
 
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
@@ -111,7 +112,7 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
+<MorningBriefing />
       <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
           Mila denkt mit
