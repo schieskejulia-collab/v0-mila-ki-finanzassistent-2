@@ -1,86 +1,31 @@
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { NextResponse } from "next/server"
 
-import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-
-// --- GET: Ausgaben abrufen ---
 export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error("❌ Supabase GET Error:", error.message, error.details)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, data })
-  } catch (err: any) {
-    console.error("❌ API GET Absturz:", err.message)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
-  }
+  return NextResponse.json({
+    success: true,
+    message: "Expenses API läuft 🚀"
+  })
 }
 
-// --- POST: Neue Ausgabe speichern ---
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    console.log("📡 Eingehender POST Body:", body)
 
-    const insertPayload = {
-      title: body.title,
-      vendor: body.vendor || '',
-      amount: Number(body.amount),
-      category: body.category || 'Sonstiges',
-      date: body.date || new Date().toISOString().slice(0, 10),
-      note: body.note || null,
-      created_at: new Date().toISOString(),
-    }
+    console.log("Neue Ausgabe:", body)
 
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert([insertPayload])
-      .select()
+    return NextResponse.json({
+      success: true,
+      data: body
+    })
+  } catch (error) {
+    console.error(error)
 
-    if (error) {
-      console.error("❌ Supabase POST Error:", error.message, error.details, error.hint)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, data })
-  } catch (err: any) {
-    console.error("❌ API POST Absturz:", err.message)
     return NextResponse.json(
-      { success: false, error: err.message ?? 'Unbekannter Fehler' },
-      { status: 500 },
+      {
+        success: false,
+        error: "Fehler beim Speichern"
+      },
+      { status: 500 }
     )
-  }
-}
-
-// --- DELETE: Ausgabe löschen ---
-export async function DELETE(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'id fehlt' }, { status: 400 })
-    }
-
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
-
-    if (error) {
-      console.error("❌ Supabase DELETE Error:", error.message, error.details)
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (err: any) {
-    console.error("❌ API DELETE Absturz:", err.message)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
