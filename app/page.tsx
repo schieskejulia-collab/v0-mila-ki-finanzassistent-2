@@ -31,12 +31,12 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsMounted(true)
-    // Sobald die Komponente geladen ist, setzen wir den Status fest auf Freelancer,
-    // falls im Speicher noch "selbstständig" als Standardwert schlummert.
-    if (setUserStatus) {
+    // Falls beim ersten Laden noch ein alter Status feststeckt, 
+    // setzen wir ihn einmalig sauber auf freelancer.
+    if (setUserStatus && userStatus !== 'freelancer') {
       setUserStatus('freelancer')
     }
-  }, [setUserStatus])
+  }, [setUserStatus, userStatus])
 
   if (!isMounted) {
     return (
@@ -53,8 +53,8 @@ export default function HomePage() {
       title: 'Canva Pro',
       vendor: 'Canva',
       amount: 14.99,
-      category: 'Software',
-      date: new Date().toISOString(),
+      category: 'software', // FIX: Jetzt kleingeschrieben passend zur DB & Store!
+      date: new Date().toISOString().slice(0, 10),
     })
   }
 
@@ -62,8 +62,8 @@ export default function HomePage() {
     addIncome({
       title: 'Kundenprojekt',
       client: 'Demo Kundin',
-      amount: 450,
-      date: new Date().toISOString(),
+      amount: 450.00,
+      date: new Date().toISOString().slice(0, 10),
     })
   }
 
@@ -166,7 +166,7 @@ export default function HomePage() {
         <button
           type="button"
           onClick={addDemoExpense}
-          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm active:bg-rose-700"
+          className="rounded-3xl bg-rose-600 p-4 text-sm font-black text-white shadow-sm active:bg-rose-700 pointer-events-auto cursor-pointer"
         >
           Demo-Ausgabe
         </button>
@@ -174,7 +174,7 @@ export default function HomePage() {
         <button
           type="button"
           onClick={addDemoIncome}
-          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm active:bg-emerald-700"
+          className="rounded-3xl bg-emerald-600 p-4 text-sm font-black text-white shadow-sm active:bg-emerald-700 pointer-events-auto cursor-pointer"
         >
           Demo-Einnahme
         </button>
@@ -191,7 +191,7 @@ export default function HomePage() {
               <div className="flex justify-between text-xs font-bold">
                 <span>{budget.category}</span>
                 <span className={budget.remaining < 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                  {formatEuro(budget.remaining)} übrig
+                  {formatEuro(budget.remaining)} {budget.remaining < 0 ? 'überzogen' : 'übrig'}
                 </span>
               </div>
 
@@ -213,9 +213,9 @@ export default function HomePage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3 pb-4">
-        {/* Korrigiert: Zeigt jetzt auf das korrekte Verzeichnis deiner Buchungsseite */}
+        {/* FIX: Zeigt jetzt auf das korrekte Verzeichnis deines neuen Formulars ohne Plural-S-Fehler */}
         <Link
-          href="/neue-buchungen"
+          href="/neue-buchung"
           className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
         >
           + Neue Buchung
