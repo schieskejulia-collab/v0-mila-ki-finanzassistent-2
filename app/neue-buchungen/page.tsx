@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ReceiptUpload } from '@/components/ui/receipt-upload' // IMPORTIERT DIE KAMERA
+import { ReceiptUpload } from '@/components/ui/receipt-upload'
 
 export default function NeueBuchungPage() {
   const [type, setType] = useState<'expense' | 'income'>('expense')
@@ -12,8 +12,10 @@ export default function NeueBuchungPage() {
   const [note, setNote] = useState('')
 
   // Diese Funktion wird aufgerufen, wenn Mila den Beleg erfolgreich über Groq ausgelesen hat
-  // Sie befüllt die Felder im Formular automatisch, statt blind zu speichern!
+  // Sie befüllt die Felder im Formular automatisch, damit du alles kontrollieren kannst!
   const handleScanSuccess = (scannedData: any) => {
+    if (!scannedData) return
+    
     setType('expense') // Belege sind in der Regel Ausgaben
     setTitle(scannedData.title || '')
     setAmount(scannedData.amount ? String(scannedData.amount) : '')
@@ -33,14 +35,14 @@ export default function NeueBuchungPage() {
     const payload: any = {
       title,
       amount: Number(amount),
-      note,
+      note: note || '', // Verhindert den null-Fehler in der Datenbank
     }
 
     if (type === 'expense') {
-      payload.vendor = partner
+      payload.vendor = partner || ''
       payload.category = category
     } else {
-      payload.client = partner
+      payload.client = partner || ''
     }
 
     try {
@@ -56,10 +58,12 @@ export default function NeueBuchungPage() {
 
       if (data.success) {
         alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
+        // Formular nach Erfolg zurücksetzen
         setTitle('')
         setAmount('')
         setPartner('')
         setNote('')
+        setCategory('Sonstiges')
       } else {
         alert(`Fehler beim Speichern: ${data.error} ❌`)
       }
@@ -72,10 +76,9 @@ export default function NeueBuchungPage() {
     <main className="min-h-screen p-6 space-y-4 max-w-md mx-auto pb-24">
       <h1 className="text-3xl font-bold mb-2 text-gray-800">Neue Buchung</h1>
 
-      {/* 📸 DER BELEGSCANNER JETZT GANZ OBEN SICHTBAR */}
+      {/* 📸 DER BELEGSCANNER GANZ OBEN – Jetzt korrekt verknüpft! */}
       <div className="mb-4">
-        {/* Wir übergeben eine angepasste Funktion, damit die Daten im Formular landen */}
-        <ReceiptUpload onScanSuccess={() => {}} /> 
+        <ReceiptUpload onScanSuccess={handleScanSuccess} /> 
       </div>
 
       <div className="border-t border-gray-100 my-4 pt-4">
@@ -104,17 +107,17 @@ export default function NeueBuchungPage() {
         </button>
       </div>
 
-      {/* Felder */}
+      {/* Eingabefelder */}
       <div className="space-y-3">
         <input
-          className="w-full border rounded-xl p-3 bg-white text-gray-800"
+          className="w-full border rounded-xl p-3 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Titel"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
 
         <input
-          className="w-full border rounded-xl p-3 bg-white text-gray-800"
+          className="w-full border rounded-xl p-3 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Betrag"
           type="number"
           step="0.01"
@@ -123,7 +126,7 @@ export default function NeueBuchungPage() {
         />
 
         <input
-          className="w-full border rounded-xl p-3 bg-white text-gray-800"
+          className="w-full border rounded-xl p-3 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder={type === 'expense' ? 'Händler / Laden (optional)' : 'Kunde / Client (optional)'}
           value={partner}
           onChange={(e) => setPartner(e.target.value)}
@@ -131,7 +134,7 @@ export default function NeueBuchungPage() {
 
         {type === 'expense' && (
           <select
-            className="w-full border rounded-xl p-3 bg-white text-gray-800"
+            className="w-full border rounded-xl p-3 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
@@ -144,7 +147,7 @@ export default function NeueBuchungPage() {
         )}
 
         <input
-          className="w-full border rounded-xl p-3 bg-white text-gray-800"
+          className="w-full border rounded-xl p-3 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Notiz (optional)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
