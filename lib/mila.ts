@@ -36,14 +36,37 @@ async function callGroqChat(messages: any[]) {
 }
 
 // Die Funktion, die vermutlich von deiner app/api/chat/route.ts aufgerufen wird
-export async function getMilaChatResponse(userMessage: string, history: any[] = [], contextData?: { expenses: Expense[], incomes: Income[] }) {
-  
-  // Kontext für Mila zusammenbauen, damit sie deine echten Finanzen kennt
+export async function getMilaChatResponse(
+  userMessage: string,
+  history: any[] = [],
+  contextData?: {
+    expenses?: Expense[]
+    incomes?: Income[]
+    userName?: string
+    userStatus?: string
+    summary?: any
+  }
+) {
+
   const contextPrompt = `
-const messages = [
-  {
-    role: 'system',
-    content: `
+Nutzername: ${contextData?.userName ?? 'Unbekannt'}
+
+Status: ${contextData?.userStatus ?? 'Freelancer'}
+
+Finanzübersicht:
+${JSON.stringify(contextData?.summary ?? {}, null, 2)}
+
+Einnahmen:
+${JSON.stringify(contextData?.incomes ?? [], null, 2)}
+
+Ausgaben:
+${JSON.stringify(contextData?.expenses ?? [], null, 2)}
+`
+
+  const messages = [
+    {
+      role: 'system',
+      content: `
 Du bist Mila.
 
 Du bist eine freundliche Finanzbegleiterin.
@@ -66,28 +89,15 @@ Aktuelle Daten:
 
 ${contextPrompt}
 `
-  },
+    },
 
-  ...history,
+    ...history,
 
-  {
-    role: 'user',
-    content: userMessage
-  }
-]
-Nutzername: ${contextData?.userName ?? 'Unbekannt'}
-
-Status: ${contextData?.userStatus ?? 'Freelancer'}
-
-Finanzübersicht:
-${JSON.stringify(contextData?.summary ?? {}, null, 2)}
-
-Einnahmen:
-${JSON.stringify(contextData?.incomes ?? [], null, 2)}
-
-Ausgaben:
-${JSON.stringify(contextData?.expenses ?? [], null, 2)}
-`
+    {
+      role: 'user',
+      content: userMessage
+    }
+  ]
 
   return await callGroqChat(messages)
 }
