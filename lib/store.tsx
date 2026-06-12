@@ -63,6 +63,8 @@ interface FinanceContextValue {
     date?: string
     category?: string
     note?: string
+    hasReceipt?: boolean
+    vat?: number
   }) => Promise<void>
   deleteExpense: (id: string | number) => Promise<void>
   addIncome: (income: {
@@ -71,6 +73,9 @@ interface FinanceContextValue {
     amount: number | string
     date?: string
     note?: string
+    vat?: number
+    status?: string
+    source?: string
   }) => Promise<void>
   deleteIncome: (id: string | number) => Promise<void>
   userName: string
@@ -84,27 +89,44 @@ interface FinanceContextValue {
   budgetStatus: BudgetStatus[]
 }
 
+// Einheitliche, kleingeschriebene Keys passend zum Formular & der DB
 const DEFAULT_CATEGORIES = [
-  'Software', 'Reisen', 'Weiterbildung', 'Marketing', 'Bürobedarf',
-  'Bewirtung', 'Versicherung', 'Hardware', 'Telefon & Internet',
-  'Miete', 'Fahrtkosten', 'Bankgebühren', 'Sonstiges',
+  'software', 'reisen', 'weiterbildung', 'marketing', 'buerobedarf',
+  'bewirtung', 'versicherung', 'hardware', 'telefon & internet',
+  'miete', 'fahrtkosten', 'bankgebühren', 'sonstiges',
 ]
 
-// ✅ Fix #6: Außerhalb von useMemo, wird nicht bei jedem Render neu erzeugt
+// Schönes Mapping für die Anzeige im Budget-Check
+export const CATEGORY_LABELS: Record<string, string> = {
+  software: 'Software & Tools',
+  reisen: 'Reisekosten',
+  weiterbildung: 'Weiterbildung',
+  marketing: 'Marketing',
+  buerobedarf: 'Büro & Arbeitsmittel',
+  bewirtung: 'Bewirtung',
+  versicherung: 'Versicherung',
+  hardware: 'Hardware',
+  'telefon & internet': 'Telefon & Internet',
+  miete: 'Miete & Coworking',
+  fahrtkosten: 'Fahrtkosten',
+  bankgebühren: 'Bankgebühren',
+  sonstiges: 'Sonstiges',
+}
+
 const BUDGET_LIMITS: Record<string, number> = {
-  Software: 200,
-  Reisen: 500,
-  Weiterbildung: 300,
-  Marketing: 250,
-  Bürobedarf: 150,
-  Bewirtung: 200,
-  Versicherung: 100,
-  Hardware: 400,
-  'Telefon & Internet': 150,
-  Miete: 600,
-  Fahrtkosten: 250,
-  Bankgebühren: 80,
-  Sonstiges: 100,
+  software: 200,
+  reisen: 500,
+  weiterbildung: 300,
+  marketing: 250,
+  buerobedarf: 150,
+  bewirtung: 200,
+  versicherung: 100,
+  hardware: 400,
+  'telefon & internet': 150,
+  miete: 600,
+  fahrtkosten: 250,
+  bankgebühren: 80,
+  sonstiges: 100,
 }
 
 const STATUS_VALUES: UserStatus[] = [
@@ -113,7 +135,6 @@ const STATUS_VALUES: UserStatus[] = [
 
 const FinanceContext = createContext<FinanceContextValue | null>(null)
 
-// ✅ Fix #4: isUserStatus jetzt tatsächlich genutzt (in login)
 function isUserStatus(value: unknown): value is UserStatus {
   return typeof value === 'string' && STATUS_VALUES.includes(value as UserStatus)
 }
@@ -132,32 +153,33 @@ export function toNumber(value: number | string | undefined | null): number {
 
 export function inferCategory(input: string): string {
   const text = input.toLowerCase()
-  if (/canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'Software'
-  if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'Reisen'
-  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'Weiterbildung'
-  if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'Marketing'
-  if (/büro|buero|papier|stift|drucker|toner/.test(text)) return 'Bürobedarf'
-  if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'Bewirtung'
-  if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'Versicherung'
-  if (/macbook|iphone|laptop|monitor|hardware|kamera/.test(text)) return 'Hardware'
-  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'Telefon & Internet'
-  if (/miete|coworking|bürofläche|buero/.test(text)) return 'Miete'
-  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'Fahrtkosten'
-  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'Bankgebühren'
-  return 'Sonstiges'
+  if (/canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'software'
+  if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'reisen'
+  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'weiterbildung'
+  if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'marketing'
+  if (/büro|buero|papier|stift|drucker|toner/.test(text)) return 'buerobedarf'
+  if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'bewirtung'
+  if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'versicherung'
+  if (/macbook|iphone|laptop|monitor|hardware|kamera/.test(text)) return 'hardware'
+  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'telefon & internet'
+  if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
+  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
+  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'bankgebühren'
+  return 'sonstiges'
 }
 
 function getMilaTip(category: string, status: UserStatus): string {
+  const displayLabel = CATEGORY_LABELS[category] || category
   const tips: Partial<Record<string, string>> = {
-    Software:            '💻 Software erkannt. Das kann oft sehr gut als Betriebsausgabe verbucht werden.',
-    Bewirtung:           '🍽️ Bewirtung erkannt. Notiere am besten Anlass und Teilnehmer.',
-    Reisen:              '✈️ Reise erkannt. Fahrt, Hotel und Verpflegung können steuerlich relevant sein.',
-    Weiterbildung:       '🎓 Weiterbildung erkannt. Sehr stark, das ist oft beruflich gut begründbar.',
-    Marketing:           '📣 Marketing erkannt. Ich ordne das deinen Akquise-Ausgaben zu.',
-    Hardware:            '🖥️ Hardware erkannt. Je nach Preis kann Abschreibung wichtig sein.',
-    'Telefon & Internet':'📱 Telefon & Internet erkannt. Achte auf berufliche Nutzung.',
+    software:            '💻 Software erkannt. Das kann oft sehr gut als Betriebsausgabe verbucht werden.',
+    bewirtung:           '🍽️ Bewirtung erkannt. Notiere am besten Anlass und Teilnehmer.',
+    reisen:              '✈️ Reise erkannt. Fahrt, Hotel und Verpflegung können steuerlich relevant sein.',
+    weiterbildung:       '🎓 Weiterbildung erkannt. Sehr stark, das ist oft beruflich gut begründbar.',
+    marketing:           '📣 Marketing erkannt. Ich ordne das deinen Akquise-Ausgaben zu.',
+    hardware:            '🖥️ Hardware erkannt. Je nach Preis kann Abschreibung wichtig sein.',
+    'telefon & internet':'📱 Telefon & Internet erkannt. Achte auf berufliche Nutzung.',
   }
-  return tips[category] ?? `✨ Ich habe die Buchung als ${category} eingeordnet. Status: ${status}.`
+  return tips[category] ?? `✨ Ich habe die Buchung als ${displayLabel} eingeordnet. Status: ${status}.`
 }
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
@@ -168,17 +190,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.',
   )
   const [userName, setUserName] = useState('Julia')
-  const [userStatus, setUserStatus] = useState<UserStatus>('selbstständig')
+  
+  // Voreinstellung direkt auf "freelancer" für den perfekten Start
+  const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
 
-  // ✅ Fix #2: mountedRef verhindert State-Updates auf unmountierter Komponente
   const mountedRef = useRef(true)
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
-  // ✅ Fix #3: loadData als useCallback, damit login es aufrufen kann
   const loadData = useCallback(async (signal?: AbortSignal) => {
     try {
       const [expRes, incRes] = await Promise.all([
@@ -186,7 +208,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         fetch('/api/incomes',  { signal }),
       ])
 
-      // Fetch wurde abgebrochen → kein weiteres State-Update
       if (signal?.aborted) return
 
       const [expJson, incJson] = await Promise.all([
@@ -194,7 +215,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         incRes.json(),
       ])
 
-      if (!mountedRef.current) return   // Komponente bereits unmountet
+      if (!mountedRef.current) return
 
       if (expJson.success) setExpenses(expJson.data ?? [])
       if (incJson.success) setIncomes(incJson.data ?? [])
@@ -204,29 +225,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ✅ Fix #2: AbortController saubert beim Unmount / Re-Render auf
   useEffect(() => {
     const controller = new AbortController()
     loadData(controller.signal)
     return () => controller.abort()
   }, [loadData])
 
-  // ✅ Fix #4: status wird mit isUserStatus validiert
   const login = useCallback((name: string, status: UserStatus) => {
     const safeName   = name?.trim() || 'Julia'
-    const safeStatus = isUserStatus(status) ? status : 'selbstständig'
+    const safeStatus = isUserStatus(status) ? status : 'freelancer'
     setUserName(safeName)
     setUserStatus(safeStatus)
     setIsLoggedIn(true)
     setMilaFeedback(`Willkommen zurück, ${safeName} ✨`)
-    // ✅ Fix #3: Daten nach Login sofort laden
     loadData()
   }, [loadData])
 
   const logout = useCallback(() => {
     setIsLoggedIn(false)
     setUserName('Julia')
-    setUserStatus('selbstständig')
+    setUserStatus('freelancer')
     setExpenses([])
     setIncomes([])
     setMilaFeedback('Du wurdest ausgeloggt. Ich bin bereit, wenn du zurück bist.')
@@ -252,6 +270,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       date:     expense.date || new Date().toISOString().slice(0, 10),
       category,
       note:     expense.note?.trim() || '',
+      vat:      expense.vat ?? 19,
+      hasReceipt: expense.hasReceipt ?? false
     }
 
     try {
@@ -268,7 +288,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // ✅ Fix #5: Guard gegen undefined / leeres Array
       const saved: Expense | undefined = data.data?.[0]
       if (!saved) {
         console.error('Keine gespeicherte Expense zurückerhalten:', data)
@@ -313,6 +332,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       amount: toNumber(income.amount),
       date:   income.date || new Date().toISOString().slice(0, 10),
       note:   income.note?.trim() || '',
+      vat:    income.vat ?? 19,
+      status: income.status || 'offen',
+      source: income.source || 'sonstiges'
     }
 
     try {
@@ -329,7 +351,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // ✅ Fix #5: Guard gegen undefined / leeres Array
       const saved: Income | undefined = data.data?.[0]
       if (!saved) {
         console.error('Keine gespeicherte Income zurückerhalten:', data)
@@ -381,7 +402,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const limit     = BUDGET_LIMITS[category] ?? 100
       const remaining = limit - spent
       const percent   = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0
-      return { category, spent, limit, remaining, percent }
+      
+      // Verwende lesbare Labels für die UI ("software" -> "Software & Tools")
+      const readableLabel = CATEGORY_LABELS[category] || category
+      return { category: readableLabel, spent, limit, remaining, percent }
     })
   }, [categories, expenses])
 
