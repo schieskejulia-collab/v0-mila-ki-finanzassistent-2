@@ -1,31 +1,67 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    });
+  }
+
   return NextResponse.json({
     success: true,
-    message: "Expenses API läuft 🚀"
-  })
+    data,
+  });
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    const body = await req.json();
 
-    console.log("Neue Ausgabe:", body)
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert([
+        {
+          title: body.title,
+          amount: body.amount,
+          vendor: body.vendor,
+          category: body.category,
+          note: body.note,
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.error("Supabase Fehler:", error);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: body
-    })
+      data,
+    });
   } catch (error) {
-    console.error(error)
+    console.error("Fehler beim Speichern:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: "Fehler beim Speichern"
+        error: "Fehler beim Speichern",
       },
       { status: 500 }
-    )
+    );
   }
 }
