@@ -2,10 +2,6 @@
 
 import { useState } from "react"
 
-interface ReceiptUploadProps {
-  onScanSuccess?: (data: { title: string; amount: number; vendor: string; category: string }) => void
-}
-
 export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) => void }) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusText, setStatusText] = useState("")
@@ -14,21 +10,24 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
     if (!file) return
     
     setIsScanning(true)
-    setStatusText("Mila liest Beleg...")
+    setStatusText("Komprimiere Bild...")
 
     try {
-      const base64 = await fileToBase64(file)
+      // 1. Bild vor dem Upload herunterskalieren (schont Vercel-Limits & beschleunigt Groq)
+      const optimizedBase64 = await resizeAndConvertToBase64(file, 1024)
 
+      setStatusText("Mila liest Beleg...")
+
+      // 2. Aufruf der Next.js Route
       const res = await fetch("/api/mila/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64: optimizedBase64 }),
       })
 
-      // Abfangen, falls der Server kein JSON zurückgibt (z.B. bei 500er HTML-Fehlern)
       const contentType = res.headers.get("content-type")
       if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server antwortete mit einem Fehler (Kein JSON). Bitte prüfe deine Logfiles.")
+        throw new Error("Server-Timeout oder Konfigurationsfehler (Kein JSON).")
       }
 
       const json = await res.json()
@@ -50,7 +49,7 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
       setTimeout(() => {
         setIsScanning(false)
         setStatusText("")
-      }, 3000)
+      }, 3500)
     }
   }
 
@@ -77,17 +76,45 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
   )
 }
 
-function fileToBase64(file: File): Promise<string> {
+// Hilfsfunktion: Komprimiert das Bild im Browser über ein HTML5 Canvas auf max-width/max-height
+function resizeAndConvertToBase64(file: File, maxSize: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result)
-      } else {
-        reject(new Error("Datei konnte nicht verarbeitet werden."))
-      }
-    }
-    reader.onerror = (error) => reject(error)
     reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        let width = img.width
+        let height = img.height
+
+        // Proportionen beibehalten
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width
+            width = maxSize
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height
+            height = maxSize
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return reject(new Error("Canvas Kontext nicht verfügbar"))
+        
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Als JPEG mit 80% Qualität exportieren (spart enorm viel Platz!)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8)
+        resolve(dataUrl)
+      }
+      img.onerror = (err) => reject(err)
+    }
+    reader.onerror = (err) => reject(err)
   })
 }
