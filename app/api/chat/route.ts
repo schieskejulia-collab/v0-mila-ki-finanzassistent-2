@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getMilaReplyLive } from "../../../lib/mila";
+// Hier importieren wir den korrekten Funktionsnamen, den wir in lib/mila.ts festgelegt haben
+import { getMilaChatResponse } from "../../../lib/mila"; 
 
 export async function POST(req: Request) {
   try {
@@ -9,12 +10,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nachricht fehlt" }, { status: 400 });
     }
 
-    // Ruft die Funktion exakt so auf, wie sie in lib/mila.ts steht
-    const reply = await getMilaReplyLive(
+    // Wir nutzen hier den exakten Funktionsnamen aus deiner lib/mila.ts
+    // Wir passen die Parameter an die Signatur an, die wir in lib/mila.ts gebaut haben
+    const reply = await getMilaChatResponse(
       message, 
-      context || {}, 
-      userStatus || "selbstständig", 
-      userName || "Nutzer"
+      [], // history
+      context // contextData
     );
 
     return NextResponse.json({ reply });
