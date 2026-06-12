@@ -16,7 +16,7 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
       // 1. Datei in Base64 konvertieren
       const base64 = await fileToBase64(file)
 
-      // 2. Aufruf deines echten Hono-Backends (/api/mila/scan-receipt)
+      // 2. Aufruf unserer neuen Next.js Route
       const res = await fetch("/api/mila/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,30 +29,31 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
         throw new Error(json.error || "Scan fehlgeschlagen")
       }
 
-      // 3. Ausgelesene KI-Daten vorbereiten
-      const rawData = typeof json.data === "string" ? JSON.parse(json.data) : json.data
+      // Die von Groq zurückgegebenen Daten
+      const rawData = json.data
 
-      // 4. Direkt in deine echte Cloudflare D1-Datenbank via API speichern
-      setStatusText("Speichere in Datenbank...")
+      // 3. Speichern direkt in unsere Supabase-Route mit den korrekten Feldern!
+      setStatusText("Speichere in Supabase...")
       const saveRes = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parseFloat(rawData.amount) || 0,
-          category_id: rawData.category_id || 1, // Ordnet die echte DB-Kategorie zu
+          title: rawData.title || "Belegscan",
+          amount: Number(rawData.amount) || 0,
           vendor: rawData.vendor || "Unbekannter Händler",
-          date: rawData.date || new Date().toISOString().split('T')[0],
-          vat: rawData.vat || 19,
-          description: "Mila Belegscan",
-          is_deductible: 1
+          category: rawData.category || "Sonstiges",
+          date: new Date().toISOString().slice(0, 10),
+          note: "Automatisch erfasst von Mila via Groq 📸"
         }),
       })
 
-      if (saveRes.ok) {
+      const saveJson = await saveRes.json()
+
+      if (saveRes.ok && saveJson.success) {
         setStatusText("Erfolgreich erfasst! 🎉")
         if (onScanSuccess) onScanSuccess()
       } else {
-        throw new Error("Fehler beim Speichern der Ausgabe")
+        throw new Error(saveJson.error || "Fehler beim Speichern der Ausgabe")
       }
 
     } catch (err: any) {
@@ -68,7 +69,7 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
 
   return (
     <div className="w-full space-y-2">
-      <label className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-rose-300 rounded-2xl bg-rose-50/50 cursor-pointer hover:bg-rose-50 transition-all text-center">
+      <label className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-purple-300 rounded-2xl bg-purple-50/50 cursor-pointer hover:bg-purple-50 transition-all text-center">
         <div className="flex flex-col items-center justify-center pt-3 pb-3">
           <span className="text-3xl mb-1">{isScanning ? "⏳" : "📸"}</span>
           <p className="text-sm font-bold text-slate-700">
@@ -76,7 +77,6 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: () => void })
           </p>
           <p className="text-xs text-slate-400 mt-0.5">Mila bestimmt Betrag & Kategorie automatisch</p>
         </div>
-        {/* capture="environment" öffnet auf iPhone/Tablet sofort die Rückkamera! */}
         <input
           type="file"
           accept="image/*"
