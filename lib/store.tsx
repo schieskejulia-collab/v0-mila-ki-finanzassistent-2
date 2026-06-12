@@ -234,6 +234,9 @@ ${tip}
   const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
   const profit = income - expensesTotal
 
+useEffect(() => {
+  refreshMorningBriefing()
+}, [incomes, expenses, userName])
 
   const mountedRef = useRef(true)
   useEffect(() => {
