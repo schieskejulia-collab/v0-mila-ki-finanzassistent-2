@@ -55,7 +55,18 @@ export async function POST(req: Request) {
 
     console.log("GROQ CONTENT:", content);
 
-    const parsed = JSON.parse(content);
+    let parsed;
+
+try {
+  parsed = JSON.parse(content);
+} catch (e) {
+  console.error("JSON PARSE FEHLER:", content);
+
+  return NextResponse.json({
+    success: false,
+    error: content
+  });
+}
 
     console.log("PARSED:", parsed);
 
