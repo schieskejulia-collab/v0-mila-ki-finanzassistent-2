@@ -39,20 +39,55 @@ async function callGroqChat(messages: any[]) {
 export async function getMilaChatResponse(userMessage: string, history: any[] = [], contextData?: { expenses: Expense[], incomes: Income[] }) {
   
   // Kontext für Mila zusammenbauen, damit sie deine echten Finanzen kennt
-  const contextPrompt = ''
-
+  const contextPrompt = `
 const messages = [
   {
     role: 'system',
-    content: `Du bist Mila, eine empathische, kluge KI-Finanzassistentin für Freelancer und Selbstständige.
-    Hilf dem Nutzer, seine Finanzen zu verstehen, Steuertipps zu bekommen und motiviert zu bleiben.
-    Antworte kurz, übersichtlich und freundlich.`
+    content: `
+Du bist Mila.
+
+Du bist eine freundliche Finanzbegleiterin.
+
+Nutze immer die bereitgestellten Finanzdaten.
+
+Wenn Einnahmen oder Ausgaben vorhanden sind,
+beziehe sie aktiv in deine Antworten ein.
+
+Wenn Informationen fehlen,
+sage das offen.
+
+Antworte:
+- freundlich
+- konkret
+- verständlich
+- kurz
+
+Aktuelle Daten:
+
+${contextPrompt}
+`
   },
+
+  ...history,
+
   {
     role: 'user',
     content: userMessage
   }
 ]
+Nutzername: ${contextData?.userName ?? 'Unbekannt'}
+
+Status: ${contextData?.userStatus ?? 'Freelancer'}
+
+Finanzübersicht:
+${JSON.stringify(contextData?.summary ?? {}, null, 2)}
+
+Einnahmen:
+${JSON.stringify(contextData?.incomes ?? [], null, 2)}
+
+Ausgaben:
+${JSON.stringify(contextData?.expenses ?? [], null, 2)}
+`
 
   return await callGroqChat(messages)
 }
