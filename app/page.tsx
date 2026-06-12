@@ -49,25 +49,6 @@ export default function HomePage() {
     )
   }
 
-  const addDemoExpense = () => {
-    addExpense({
-      title: 'Canva Pro',
-      vendor: 'Canva',
-      amount: 14.99,
-      category: 'software', // FIX: Jetzt kleingeschrieben passend zur DB & Store!
-      date: new Date().toISOString().slice(0, 10),
-    })
-  }
-
-  const addDemoIncome = () => {
-    addIncome({
-      title: 'Kundenprojekt',
-      client: 'Demo Kundin',
-      amount: 450.00,
-      date: new Date().toISOString().slice(0, 10),
-    })
-  }
-
   return (
     <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 text-slate-950">
       <section className="flex items-center justify-between pt-2">
