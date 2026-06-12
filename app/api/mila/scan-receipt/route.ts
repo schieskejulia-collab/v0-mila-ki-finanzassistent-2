@@ -11,14 +11,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Kein Bild empfangen' }, { status: 400 })
     }
 
-    // Falls das Base64-Präfix (data:image/jpeg;base64,) mitkommt, isolieren wir den reinen String
+    // Falls das Base64-Präfix mitgegeben wurde, filtern wir es heraus
     const cleanBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64
 
     if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ success: false, error: 'Groq API Key fehlt' }, { status: 500 })
+      console.error('❌ GROQ_API_KEY fehlt in den Umgebungsvariablen!')
+      return NextResponse.json({ success: false, error: 'Konfigurationsfehler auf dem Server' }, { status: 500 })
     }
 
-    // Wir rufen die Groq API mit dem Vision-Modell auf
+    // Anfrage an Groq mit dem Llama 3.2 Vision Modell
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,15 +27,15 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.2-11b-vision-preview', // Groqs ultraschnelles Vision-Modell
-        response_format: { type: 'json_object' }, // Zwingt Groq zu sauberem JSON
+        model: 'llama-3.2-11b-vision-preview',
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Du bist Mila, eine smarte Finanz-Assistentin. Analysiere diesen Beleg. Extrahiere den Gesamtbetrag (als reine Zahl mit Punkt, z.B. 12.50), den Händler (vendor) und kategorisiere die Ausgabe in eine dieser Kategorien: "Software", "Marketing", "Bewirtung", "Reisen", "Sonstiges". Antworte AUSSCHLIESSLICH im folgenden JSON-Format: {"amount": 12.50, "vendor": "Händlername", "category": "Kategorie", "title": "Kurzer prägnanter Titel für die Ausgabe"}'
+                text: 'Du bist Mila, eine smarte Finanz-Assistentin. Analysiere diesen Beleg. Extrahiere den Gesamtbetrag (als reine Zahl mit Punkt, z.B. 14.99), den Händler (vendor) und ordne es einer dieser Kategorien zu: "Software", "Marketing", "Bewirtung", "Reisen", "Sonstiges". Antworte AUSSCHLIESSLICH als JSON-Objekt in diesem Format: {"amount": 14.99, "vendor": "Händlername", "category": "Kategorie", "title": "Kurzer Titel"}'
               },
               {
                 type: 'image_url',
@@ -51,18 +52,17 @@ export async function POST(req: Request) {
     const groqData = await response.json()
 
     if (!response.ok) {
-      console.error('❌ Groq Vision API Error:', groqData)
-      return NextResponse.json({ success: false, error: groqData.error?.message || 'Groq-Fehler' }, { status: 500 })
+      console.error('❌ Groq Vision API Fehler:', groqData)
+      return NextResponse.json({ success: false, error: groqData.error?.message || 'Fehler bei der Beleganalyse' }, { status: 500 })
     }
 
-    // Extrahiere das generierte JSON-Objekt aus der Antwort
     const rawContent = groqData.choices[0].message.content
     const parsedData = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent
 
     return NextResponse.json({ success: true, data: parsedData })
 
   } catch (err: any) {
-    console.error('❌ Crash in Scan-Receipt Route:', err.message)
+    console.error('❌ Crash in Scan-Receipt Route:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
