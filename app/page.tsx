@@ -128,53 +128,60 @@ export default function HomePage() {
       </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-          Kontostand
-        </p>
-        <p
-          className={
-            summary.balance >= 0
-              ? 'mt-2 text-4xl font-black text-emerald-700'
-              : 'mt-2 text-4xl font-black text-rose-700'
-          }
-        >
-          {formatEuro(summary.balance)}
-        </p>
-      </section>
+  <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+    Budget-Ampel
+  </h2>
 
+  {(() => {
+    const totalLimit = budgetStatus.reduce(
+      (sum, b) => sum + b.limit,
+      0
+    )
 
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-          Budget-Check
-        </h2>
+    const totalSpent = budgetStatus.reduce(
+      (sum, b) => sum + b.spent,
+      0
+    )
 
-        <div className="space-y-4">
-          {budgetStatus.map((budget) => (
-            <div key={budget.category} className="space-y-2">
-              <div className="flex justify-between text-xs font-bold">
-                <span>{budget.category}</span>
-                <span className={budget.remaining < 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                  {formatEuro(budget.remaining)} {budget.remaining < 0 ? 'überzogen' : 'übrig'}
-                </span>
-              </div>
+    const remaining = totalLimit - totalSpent
+    const percent = totalLimit > 0
+      ? (totalSpent / totalLimit) * 100
+      : 0
 
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={
-                    budget.remaining < 0
-                      ? 'h-full rounded-full bg-rose-500'
-                      : 'h-full rounded-full bg-violet-600'
-                  }
-                  style={{
-                    width: `${Math.min(100, Math.max(0, budget.percent))}%`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+    const ampel =
+      percent >= 100
+        ? '🔴 Budget überschritten'
+        : percent >= 80
+        ? '🟡 Kategorien beobachten'
+        : '🟢 Alles im grünen Bereich'
+
+    return (
+      <div className="space-y-3">
+        <div className="text-xl font-black">
+          {ampel}
         </div>
-      </section>
 
+        <div className="text-sm text-slate-600">
+          Verwendet: {formatEuro(totalSpent)}
+        </div>
+
+        <div className="text-sm text-slate-600">
+          Verfügbar: {formatEuro(remaining)}
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-violet-600"
+            style={{
+              width: `${Math.min(100, percent)}%`,
+            }}
+          />
+        </div>
+      </div>
+    )
+  })()}
+</section>
+       
       <section className="grid grid-cols-2 gap-3 pb-4">
         {/* FIX: Zeigt jetzt auf das korrekte Verzeichnis deines neuen Formulars ohne Plural-S-Fehler */}
         <Link
