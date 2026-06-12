@@ -13,10 +13,14 @@ export async function POST(req: Request) {
     // Wir nutzen hier den exakten Funktionsnamen aus deiner lib/mila.ts
     // Wir passen die Parameter an die Signatur an, die wir in lib/mila.ts gebaut haben
     const reply = await getMilaChatResponse(
-      message, 
-      [], // history
-      context // contextData
-    );
+  message,
+  [],
+  {
+    ...context,
+    userName,
+    userStatus,
+  }
+);
 
     return NextResponse.json({ reply });
   } catch (error) {
