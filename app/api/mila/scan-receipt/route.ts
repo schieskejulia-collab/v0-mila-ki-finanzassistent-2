@@ -54,12 +54,18 @@ export async function POST(req: Request) {
       data?.choices?.[0]?.message?.content || "{}";
 
     console.log("GROQ CONTENT:", content);
+const cleanedContent = content
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
 
-    let parsed;
+let parsed;
 
 try {
-  parsed = JSON.parse(content);
-} catch (e) {
+  parsed = JSON.parse(cleanedContent);
+}
+
+    catch (e) {
   console.error("JSON PARSE FEHLER:", content);
 
   return NextResponse.json({
