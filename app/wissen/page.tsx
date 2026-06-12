@@ -1,37 +1,79 @@
 "use client"
 
 import { useState } from "react"
-import { STEUER_TIPPS } from "@/lib/store"
+
+// Die Steuertipps direkt hier in der Datei definiert, damit lib/store.tsx frei bleibt
+const STEUER_TIPPS = [
+  {
+    titel: 'Software absetzen',
+    kategorie: 'Software',
+    status_info: 'Selbstständig',
+    beschreibung: 'Software und digitale Tools (wie KI-Assistenten, Buchhaltungstools oder Abos) können oft sofort oder über die Nutzungsdauer komplett als Betriebsausgabe abgesetzt werden.'
+  },
+  {
+    titel: 'Bewirtung korrekt buchen',
+    kategorie: 'Bewirtung',
+    status_info: 'Freelancer',
+    beschreibung: 'Geschäftsessen sind nur teilweise (meist zu 70%) abziehbar. Achte penibel auf einen ordnungsgemäßen Bewirtungsbeleg mit Anlass und Teilnehmern.'
+  },
+  {
+    titel: 'Reisen und Verpflegung',
+    kategorie: 'Reisen',
+    status_info: 'Alle',
+    beschreibung: 'Bei geschäftlichen Reisen kannst du die Pauschalen für Verpflegungsmehraufwand und die tatsächlichen Fahrtkosten (z.B. 0,30 € pro km) geltend machen.'
+  },
+  {
+    titel: 'Weiterbildung',
+    kategorie: 'Weiterbildung',
+    status_info: 'Alle',
+    beschreibung: 'Fachliteratur, Kurse und Coachings, die dich in deinem Business direkt voranbringen, sind zu 100% steuerlich absetzbar.'
+  }
+]
 
 export default function WissenPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredTipps = STEUER_TIPPS.filter(tipp => 
+  const filteredTipps = STEUER_TIPPS.filter(tipp =>
     tipp.titel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tipp.beschreibung.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tipp.kategorie.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  )
 
   return (
-    <div className="p-4 space-y-6 pb-24 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">💡 Milas Wissen</h1>
-        <p className="text-muted-foreground mt-1">Was du absetzen kannst – und Milas Geheimtipps.</p>
+    <div className="container mx-auto p-4 max-w-2xl pb-24">
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Mila Steuerwissen</h1>
+      
+      {/* Suchfeld */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Nach Steuertipps suchen..."
+          className="w-full p-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-800"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2">🔍</span>
-        <input type="text" placeholder="Suche..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-muted/50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/20" />
-      </div>
-      <div className="grid gap-4">
-        {filteredTipps.map((tipp, index) => (
-          <div key={index} className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-3">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded-md">{tipp.status_info}</span>
-              <span className="text-sm font-medium text-muted-foreground">{tipp.kategorie}</span>
+
+      {/* Liste der Tipps */}
+      <div className="space-y-4">
+        {filteredTipps.length > 0 ? (
+          filteredTipps.map((tipp, index) => (
+            <div key={index} className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex justify-between items-start mb-2">
+                <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-semibold">
+                  {tipp.kategorie}
+                </span>
+                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                  {tipp.status_info}
+                </span>
+              </div>
+              <h2 className="text-lg font-bold text-gray-800 mb-2">{tipp.titel}</h2>
+              <p className="text-sm text-gray-600 leading-relaxed">{tipp.beschreibung}</p>
             </div>
-            <h3 className="text-xl font-bold">{tipp.titel}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{tipp.beschreibung}</p>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-center text-gray-400 py-8">Keine passenden Steuertipps gefunden.</p>
+        )}
       </div>
     </div>
   )
