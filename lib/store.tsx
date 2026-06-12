@@ -431,7 +431,8 @@ Behalte deine Steuerrücklage im Auge.
   }, [categories, expenses])
 
   const value = useMemo<FinanceContextValue>(() => ({
-    expenses, incomes, categories, milaFeedback, triggerMilaFeedback,
+    expenses, incomes, categories, milaFeedback, morningBriefing,
+refreshMorningBriefing, triggerMilaFeedback,
     addExpense, deleteExpense, addIncome, deleteIncome,
     userName, setUserName, userStatus, setUserStatus,
     isLoggedIn, login, logout, summary, budgetStatus,
