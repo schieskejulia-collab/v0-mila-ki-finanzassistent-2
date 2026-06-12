@@ -16,7 +16,7 @@ async function callGroqChat(messages: any[]) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-specdec', // Das offizielle, superschnelle Textmodell auf Groq
+        model:  model: 'llama-3.3-70b-versatile',// Das offizielle, superschnelle Textmodell auf Groq
         messages: messages,
         temperature: 0.7,
       }),
