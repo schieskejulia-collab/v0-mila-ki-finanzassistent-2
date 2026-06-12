@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 
-// GEÄNDERT: onScanSuccess übergibt jetzt die ausgelesenen Daten direkt an das Formular
 export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) => void }) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusText, setStatusText] = useState("")
@@ -14,8 +13,10 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
     setStatusText("Mila liest Beleg...")
 
     try {
+      // 1. Datei in Base64 konvertieren
       const base64 = await fileToBase64(file)
 
+      // 2. Aufruf der Next.js Route mit Groq Vision
       const res = await fetch("/api/mila/scan-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,9 +37,9 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
       }
 
     } catch (err: any) {
-      console.error(err)
+      console.error("Scanner Error:", err)
       setStatusText("Fehler: " + err.message)
-    } {
+    } finally {
       setTimeout(() => {
         setIsScanning(false)
         setStatusText("")
@@ -72,7 +73,13 @@ export function ReceiptUpload({ onScanSuccess }: { onScanSuccess?: (data: any) =
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result)
+      } else {
+        reject(new Error("Datei konnte nicht gelesen werden"))
+      }
+    }
     reader.onerror = (error) => reject(error)
     reader.readAsDataURL(file)
   })
