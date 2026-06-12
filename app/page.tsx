@@ -16,17 +16,15 @@ function formatEuro(value: number) {
 
 export default function HomePage() {
   const {
-    summary,
-    userStatus,
-    setUserStatus,
-    milaFeedback,
-    expenses,
-    incomes,
-    userName,
-    budgetStatus,
-    addExpense,
-    addIncome,
-  } = useFinance()
+  summary,
+  userStatus,
+  setUserStatus,
+  milaFeedback,
+  expenses,
+  incomes,
+  userName,
+  budgetStatus,
+} = useFinance()
 
   const [isMounted, setIsMounted] = useState(false)
 
