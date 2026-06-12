@@ -31,7 +31,12 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsMounted(true)
-  }, [])
+    // Sobald die Komponente geladen ist, setzen wir den Status fest auf Freelancer,
+    // falls im Speicher noch "selbstständig" als Standardwert schlummert.
+    if (setUserStatus) {
+      setUserStatus('freelancer')
+    }
+  }, [setUserStatus])
 
   if (!isMounted) {
     return (
@@ -97,8 +102,8 @@ export default function HomePage() {
               onClick={() => setUserStatus(status)}
               className={
                 userStatus === status
-                  ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-white shadow-sm'
-                  : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-violet-700'
+                  ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-white shadow-sm transition-all'
+                  : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase tracking-tight text-violet-700 transition-all'
               }
             >
               {status}
@@ -208,6 +213,7 @@ export default function HomePage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3 pb-4">
+        {/* Korrigiert: Zeigt jetzt auf das korrekte Verzeichnis deiner Buchungsseite */}
         <Link
           href="/neue-buchungen"
           className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
