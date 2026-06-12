@@ -1,8 +1,7 @@
 "use client"
 
-import { ReceiptUpload } from "@/components/ui/receipt-upload"
-<ReceiptUpload />
 import React, { useState } from 'react'
+import { ReceiptUpload } from "@/components/ui/receipt-upload"
 import { formatEuro } from '@/lib/utils'
 import { useFinance } from '@/lib/store'
 
@@ -15,10 +14,8 @@ export function TransactionForm({
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [title, setTitle] = useState('')
-const {
-  addExpense,
-  addIncome,
-} = useFinance()
+  
+  const { addExpense, addIncome } = useFinance()
 
   // Dynamische Kategorien je nachdem, ob der User angestellt oder selbstständig ist
   const categories = userStatus === 'angestellt' 
@@ -30,60 +27,71 @@ const {
         income: ['Kunden-Projekt', 'Dienstleistung', 'Produktverkauf', 'Sonstiges'],
         expense: ['Software & Tools', 'Büro & Coworking', 'Reisekosten', 'Bewirtung', 'Marketing']
       }
-const normalizeCategory = (label: string) => {
-  const map: Record<string, string> = {
-    "Software & Tools": "software",
-    "Büro & Coworking": "miete",
-    "Reisekosten": "reisen",
-    "Bewirtung": "bewirtung",
-    "Marketing": "marketing",
 
-    "Arbeitsmittel": "buerobedarf",
-    "Fahrtkosten / Pendeln": "reisen",
-    "Homeoffice": "miete",
-    "Fachbücher / Kurse": "weiterbildung",
-    "Miete / Wohnen": "miete",
-    "Freizeit & Abo": "abo",
+  // Mappt die angezeigten Labels auf deine Datenbank-Werte
+  const normalizeCategory = (label: string) => {
+    const map: Record<string, string> = {
+      "Software & Tools": "software",
+      "Büro & Coworking": "miete",
+      "Reisekosten": "reisen",
+      "Bewirtung": "bewirtung",
+      "Marketing": "marketing",
+
+      "Arbeitsmittel": "buerobedarf",
+      "Fahrtkosten / Pendeln": "reisen",
+      "Homeoffice": "miete",
+      "Fachbücher / Kurse": "weiterbildung",
+      "Miete / Wohnen": "miete",
+      "Freizeit & Abo": "abo",
+    }
+
+    return map[label] || "sonstiges"
   }
 
-  return map[label] || "sonstiges"
-}
+  // Hilfsfunktion: Sucht das passende Label für ein von der KI geliefertes Kürzel (z.B. "software" -> "Software & Tools")
+  const findLabelByNormalized = (normalizedValue: string) => {
+    const currentExpenseCategories = categories.expense
+    const found = currentExpenseCategories.find(cat => normalizeCategory(cat) === normalizedValue.toLowerCase())
+    return found || ""
+  }
+
+  // Wird aufgerufen, wenn Mila den Beleg erfolgreich ausgelesen hat
+  const handleScanSuccess = (data: { amount: number; vendor: string; category: string; title: string }) => {
+    setType('expense') // Belege sind immer Ausgaben
+    setAmount(data.amount.toString())
+    setTitle(data.vendor || data.title)
+    
+    // Versuche die von Groq erkannte Kategorie direkt zuzuordnen
+    const matchedLabel = findLabelByNormalized(data.category)
+    setCategory(matchedLabel)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!amount || !category || !title) return
+    e.preventDefault()
+    if (!amount || !category || !title) return
 
-  const value = parseFloat(amount)
-  const normalized = normalizeCategory(category)
+    const value = parseFloat(amount)
+    const normalized = normalizeCategory(category)
 
-  if (type === 'expense') {
-    addExpense({
-      amount: value,
-      category: normalized,
-      date: new Date().toISOString(),
-      vendor: title,
-      vat: 19,
-      hasReceipt: false,
-    })
-  } else {
-    addIncome({
-      amount: value,
-      date: new Date().toISOString(),
-      client: title,
-      vat: 19,
-      status: 'offen',
-      source: normalized,
-    })
-  }
-
-  setAmount('')
-  setTitle('')
-  setCategory('')
-}
-
-  // ← WICHTIG!
-    })
-  }
+    if (type === 'expense') {
+      addExpense({
+        amount: value,
+        category: normalized,
+        date: new Date().toISOString(),
+        vendor: title,
+        vat: 19,
+        hasReceipt: true, // Da wir es gescannt haben
+      })
+    } else {
+      addIncome({
+        amount: value,
+        date: new Date().toISOString(),
+        client: title,
+        vat: 19,
+        status: 'offen',
+        source: normalized,
+      })
+    }
 
     // Formular zurücksetzen
     setAmount('')
@@ -92,74 +100,86 @@ const normalizeCategory = (label: string) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full p-4 bg-card rounded-xl border border-border space-y-4">
-      <h3 className="text-lg font-semibold text-foreground">Neue Buchung erfassen</h3>
+    <div className="w-full space-y-4">
       
-      {/* Switcher zwischen Einnahme und Ausgabe */}
-      <div className="flex bg-muted p-1 rounded-lg">
+      {/* Der Beleg-Scanner wird nur bei Ausgaben oben eingeblendet */}
+      {type === 'expense' && (
+        <ReceiptUpload onScanSuccess={handleScanSuccess} />
+      )}
+
+      <form onSubmit={handleSubmit} className="w-full p-4 bg-card rounded-xl border border-border space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">
+          {type === 'expense' ? 'Ausgabe manuell erfassen' : 'Neue Einnahme erfassen'}
+        </h3>
+        
+        {/* Switcher zwischen Einnahme und Ausgabe */}
+        <div className="flex bg-muted p-1 rounded-lg">
+          <button
+            type="button"
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === 'expense' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            onClick={() => { setType('expense'); setCategory(''); }}
+          >
+            Ausgabe / Beleg
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === 'income' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            onClick={() => { setType('income'); setCategory(''); }}
+          >
+            Einnahme / Gehalt
+          </button>
+        </div>
+
+        {/* Titel / Beschreibung */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            {type === 'expense' ? 'Händler / Geschäft' : 'Beschreibung'}
+          </label>
+          <input
+            type="text"
+            placeholder={type === 'expense' ? 'z.B. Adobe Abo, Supermarkt' : 'z.B. Gehalt Mai, Projekt X'}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
+          />
+        </div>
+
+        {/* Betrag */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Betrag in €</label>
+          <input
+            type="number"
+            step="0.01"
+            placeholder="0,00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
+          />
+        </div>
+
+        {/* Kategorie-Auswahl */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Kategorie</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
+          >
+            <option value="">-- Bitte wählen --</option>
+            {categories[type].map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Absenden Button */}
         <button
-          type="button"
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === 'expense' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
-          onClick={() => { setType('expense'); setCategory(''); }}
+          type="submit"
+          className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg text-sm shadow-md hover:opacity-90 transition-all"
         >
-          Ausgabe / Beleg
+          Eintrag speichern
         </button>
-        <button
-          type="button"
-          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === 'income' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
-          onClick={() => { setType('income'); setCategory(''); }}
-        >
-          Einnahme / Gehalt
-        </button>
-      </div>
-
-      {/* Titel / Beschreibung */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Beschreibung</label>
-        <input
-          type="text"
-          placeholder={type === 'expense' ? 'z.B. Adobe Abo, Zugticket' : 'z.B. Gehalt Mai, Projekt X'}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      {/* Betrag */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Betrag in €</label>
-        <input
-          type="number"
-          step="0.01"
-          placeholder="0,00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      {/* Kategorie-Auswahl */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground">Kategorie</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
-        >
-          <option value="">-- Bitte wählen --</option>
-          {categories[type].map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Absenden Button */}
-      <button
-        type="submit"
-        className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg text-sm shadow-md hover:opacity-90 transition-all"
-      >
-        Eintrag speichern
-      </button>
-    </form>
+      </form>
+    </div>
   )
 }
