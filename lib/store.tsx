@@ -189,9 +189,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [incomes, setIncomes] = useState<Income[]>([])
   const [categories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [milaFeedback, setMilaFeedback] = useState(
-    'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.',
+  'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.'
+)
+
 const [morningBriefing, setMorningBriefing] = useState('')
-  )
   const [userName, setUserName] = useState('Julia')
   
   // Voreinstellung direkt auf "freelancer" für den perfekten Start
