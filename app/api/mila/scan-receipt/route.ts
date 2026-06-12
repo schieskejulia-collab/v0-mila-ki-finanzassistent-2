@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Konfigurationsfehler auf dem Server' }, { status: 500 })
     }
 
-    // JETZT MIT DEM AKTUELLEN 90B-VISION-MODELL STATT DEM ABGESCHALTETEN 11B-PREVIEW
+    // JETZT MIT DEM AKTUELLEN PRODUKTIONSMODELL: llama-3.2-90b-vision-instruct
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.2-90b-vision-preview', 
+        model: 'llama-3.2-90b-vision-instruct', 
         response_format: { type: 'json_object' },
         messages: [
           {
