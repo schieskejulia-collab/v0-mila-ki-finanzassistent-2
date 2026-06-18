@@ -128,7 +128,7 @@ Aktuelle Daten:
 ${contextPrompt}
 `,
     },
-    ...safeHistory.slice(-20)
+    ...safeHistory.slice(-20),
     {
       role: "user",
       content: userMessage,
