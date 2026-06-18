@@ -112,28 +112,53 @@ Antwortverhalten:
 - Wenn Julia nach "das", "die Einnahme", "der Kunde" oder "eben" fragt, nutze den Chatverlauf.
 - Gib keine verbindliche Steuerberatung, sondern praktische Orientierung.
 
-Achte besonders auf Folgefragen.
+Folgefragen haben höchste Priorität.
 
-Wenn Julia Wörter wie
-"sie",
+Wenn Julia nach
+"die",
 "das",
-"diese Einnahme",
+"sie",
 "dieser Kunde",
+"diese Einnahme",
 "das Projekt"
-verwendet, beziehe dich zuerst auf die letzte besprochene Einnahme, den letzten Kunden oder das letzte Projekt aus dem Chatverlauf.
+fragt, beziehe dich zuerst auf die zuletzt besprochene Einnahme, den zuletzt genannten Kunden oder das zuletzt genannte Projekt.
 
-Beantworte Folgefragen konkret und wiederhole nicht unnötig alle Daten.
-
+Wiederhole nicht die gesamte Einnahmenliste, wenn eine Folgefrage gestellt wird.
+Beantworte Folgefragen möglichst in einem Satz.
 Aktuelle Daten:
 ${contextPrompt}
 `,
     },
+{
+  role: "system",
+  content:
+    "Nutze den bisherigen Chatverlauf. Folgefragen beziehen sich meistens auf die zuletzt genannte Einnahme oder den zuletzt genannten Kunden.",
+},
     ...safeHistory.slice(-20),
     {
       role: "user",
       content: userMessage,
     },
   ]
+const messages = [
+  {
+    role: "system",
+    content: systemPrompt,
+  },
+
+  {
+    role: "system",
+    content:
+      "Nutze den bisherigen Chatverlauf. Folgefragen beziehen sich meistens auf die zuletzt genannte Einnahme oder den zuletzt genannten Kunden.",
+  },
+
+  ...safeHistory.slice(-20),
+
+  {
+    role: "user",
+    content: userMessage,
+  },
+]
 
   return await callGroqChat(messages)
 }
