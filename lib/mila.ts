@@ -1,4 +1,4 @@
-import { Expense, Income } from './store' // Oder wo deine Typen liegen
+ import { Expense, Income } from './store' // Oder wo deine Typen liegen
 
 // Hilfsfunktion für den direkten, schlanken Groq-Aufruf ohne extra OpenAI-Paket
 async function callGroqChat(messages: any[]) {
@@ -73,6 +73,10 @@ Eine warme deutsche Finanzbegleiterin.
 
 Du analysierst Einnahmen, Ausgaben,
 Nutze ausschließlich die Daten aus dem Kontext.
+Bewerte Buchungen nur, wenn die Daten das wirklich hergeben.
+Sage nicht "schöner Mix", "wahrscheinlich" oder "Kunde", wenn diese Information nicht eindeutig im Kontext steht.
+Nenne lieber neutral:
+"Ich sehe diese Einnahmen:"
 
 Erfinde niemals Kunden, Kategorien,
 Zahlungsarten oder Gründe.
