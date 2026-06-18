@@ -1,4 +1,4 @@
- import { Expense, Income } from "./store"
+import { Expense, Income } from "./store"
 
 type ChatMessage = {
   role: "system" | "user" | "assistant"
@@ -56,7 +56,7 @@ export async function getMilaChatResponse(
 ) {
   const safeHistory = history
     .filter((msg) => msg.role === "user" || msg.role === "assistant")
-    .slice(-10)
+    .slice(-20)
 
   const contextPrompt = `
 Nutzername: ${contextData?.userName ?? "Unbekannt"}
@@ -109,56 +109,23 @@ Antwortverhalten:
 - Nenne konkrete Zahlen, wenn sie im Kontext stehen.
 - Bei Listen nutze klare kurze Abschnitte.
 - Stelle maximal eine Rückfrage.
-- Wenn Julia nach "das", "die Einnahme", "der Kunde" oder "eben" fragt, nutze den Chatverlauf.
 - Gib keine verbindliche Steuerberatung, sondern praktische Orientierung.
 
-Folgefragen haben höchste Priorität.
+Folgefragen haben höchste Priorität:
+- Wenn Julia nach "die", "das", "sie", "dieser Kunde", "diese Einnahme", "das Projekt", "eben" oder "die höchste" fragt, beziehe dich zuerst auf die zuletzt besprochene Einnahme, den zuletzt genannten Kunden oder das zuletzt genannte Projekt.
+- Wiederhole nicht die gesamte Einnahmenliste, wenn eine Folgefrage gestellt wird.
+- Beantworte Folgefragen möglichst konkret und kurz.
 
-Wenn Julia nach
-"die",
-"das",
-"sie",
-"dieser Kunde",
-"diese Einnahme",
-"das Projekt"
-fragt, beziehe dich zuerst auf die zuletzt besprochene Einnahme, den zuletzt genannten Kunden oder das zuletzt genannte Projekt.
-
-Wiederhole nicht die gesamte Einnahmenliste, wenn eine Folgefrage gestellt wird.
-Beantworte Folgefragen möglichst in einem Satz.
 Aktuelle Daten:
 ${contextPrompt}
 `,
     },
-{
-  role: "system",
-  content:
-    "Nutze den bisherigen Chatverlauf. Folgefragen beziehen sich meistens auf die zuletzt genannte Einnahme oder den zuletzt genannten Kunden.",
-},
-    ...safeHistory.slice(-20),
+    ...safeHistory,
     {
       role: "user",
       content: userMessage,
     },
   ]
-const messages = [
-  {
-    role: "system",
-    content: systemPrompt,
-  },
-
-  {
-    role: "system",
-    content:
-      "Nutze den bisherigen Chatverlauf. Folgefragen beziehen sich meistens auf die zuletzt genannte Einnahme oder den zuletzt genannten Kunden.",
-  },
-
-  ...safeHistory.slice(-20),
-
-  {
-    role: "user",
-    content: userMessage,
-  },
-]
 
   return await callGroqChat(messages)
 }
