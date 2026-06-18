@@ -66,15 +66,17 @@ export function MilaChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: userMessage.content,
-          context: {
-            summary,
-          },
-          userName,
-          userStatus,
-        }),
-      })
-
+  message: userMessage.content,
+  context: {
+    summary,
+    incomes,
+    expenses,
+    budgetStatus,
+    milaFeedback,
+  },
+  userName,
+  userStatus,
+})
       const data = await response.json()
 
       const milaMessage: Message = {
