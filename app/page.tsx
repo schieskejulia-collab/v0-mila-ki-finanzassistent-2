@@ -183,21 +183,24 @@ export default function HomePage() {
 </section>
        
       <section className="grid grid-cols-2 gap-3 pb-4">
-        {/* FIX: Zeigt jetzt auf das korrekte Verzeichnis deines neuen Formulars ohne Plural-S-Fehler */}
-        <Link
-          href="/neue-buchung"
-          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
-        >
-          + Neue Buchung
-        </Link>
+  <Link
+    href="/neue-buchung"
+    className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
+  >
+    + Neue Buchung
+  </Link>
 
-        <Link
-          href="/buchungen"
-          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
-        >
-          📒 Buchungen
-        </Link>
-      </section>
-    </main>
-  )
-}
+  <Link
+    href="/buchungen"
+    className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
+  >
+    📒 Buchungen
+  </Link>
+
+  <Link
+    href="/chat"
+    className="col-span-2 flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
+  >
+    💬 Mit Mila sprechen
+  </Link>
+</section>
