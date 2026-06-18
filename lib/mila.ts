@@ -54,9 +54,19 @@ export async function getMilaChatResponse(
     milaFeedback?: string
   }
 ) {
-  const safeHistory = history
-    .filter((msg) => msg.role === "user" || msg.role === "assistant")
-    .slice(-20)
+  const safeHistory = Array.isArray(history)
+  ? history
+      .filter(
+        (msg) =>
+          (msg.role === "user" || msg.role === "assistant") &&
+          typeof msg.content === "string"
+      )
+      .map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+      .slice(-10)
+  : []
 
   const contextPrompt = `
 Nutzername: ${contextData?.userName ?? "Unbekannt"}
