@@ -25,7 +25,6 @@ export default function HomePage() {
     budgetStatus,
   } = useFinance()
 
-  const [isMounted, setIsMounted] = useState(false)
 
   const [isMounted, setIsMounted] = useState(false)
 
