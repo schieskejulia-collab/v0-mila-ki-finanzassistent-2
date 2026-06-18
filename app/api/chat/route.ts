@@ -5,11 +5,11 @@ export async function POST(req: Request) {
   try {
     const {
   message,
-  messages,
+  messages = [],
   context,
-  userStatus,
   userName,
-} = await req.json();
+  userStatus,
+} = await req.json()
 
     if (!message) {
       return NextResponse.json({ error: "Nachricht fehlt" }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     userName,
     userStatus,
   }
-);
+)
 
     return NextResponse.json({ reply });
   } catch (error) {
