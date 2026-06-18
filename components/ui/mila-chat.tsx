@@ -11,14 +11,14 @@ interface Message {
 
 export function MilaChat() {
   const {
-  summary,
-  incomes,
-  expenses,
-  budgetStatus,
-  milaFeedback,
-  userName,
-  userStatus,
-} = useFinance()
+    summary,
+    incomes,
+    expenses,
+    budgetStatus,
+    milaFeedback,
+    userName,
+    userStatus,
+  } = useFinance()
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -57,7 +57,9 @@ export function MilaChat() {
       content: input,
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    const nextMessages = [...messages, userMessage]
+
+    setMessages(nextMessages)
     setInput("")
     setIsLoading(true)
 
@@ -66,18 +68,20 @@ export function MilaChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-  message: userMessage.content,
-  messages: messages,
-  context: {
-    summary,
-    incomes,
-    expenses,
-    budgetStatus,
-    milaFeedback,
-  },
-  userName,
-  userStatus,
-})
+          message: userMessage.content,
+          messages: nextMessages,
+          context: {
+            summary,
+            incomes,
+            expenses,
+            budgetStatus,
+            milaFeedback,
+          },
+          userName,
+          userStatus,
+        }),
+      })
+
       const data = await response.json()
 
       const milaMessage: Message = {
@@ -91,6 +95,7 @@ export function MilaChat() {
       setMessages((prev) => [...prev, milaMessage])
     } catch (error) {
       console.error("Fehler beim Chatten:", error)
+
       setMessages((prev) => [
         ...prev,
         {
