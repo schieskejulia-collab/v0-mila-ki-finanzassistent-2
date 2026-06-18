@@ -3,13 +3,7 @@ import { getMilaChatResponse } from "../../../lib/mila";
 
 export async function POST(req: Request) {
   try {
-    const {
-      message,
-      messages,
-      context,
-      userStatus,
-      userName,
-    } = await req.json();
+    const { message, context, userStatus, userName } = await req.json();
 
     if (!message) {
       return NextResponse.json({ error: "Nachricht fehlt" }, { status: 400 });
@@ -17,7 +11,7 @@ export async function POST(req: Request) {
 
     const reply = await getMilaChatResponse(
       message,
-      messages || [],
+      [],
       {
         ...context,
         userName,
