@@ -17,13 +17,13 @@ export async function POST(req: Request) {
 
     const reply = await getMilaChatResponse(
   message,
-  messages || [],
+  messages,
   {
     ...context,
     userName,
     userStatus,
   }
-)
+);
 
     return NextResponse.json({ reply });
   } catch (error) {
