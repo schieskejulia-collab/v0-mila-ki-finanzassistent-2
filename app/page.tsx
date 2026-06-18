@@ -204,3 +204,6 @@ export default function HomePage() {
     💬 Mit Mila sprechen
   </Link>
 </section>
+    </main>
+  )
+}
