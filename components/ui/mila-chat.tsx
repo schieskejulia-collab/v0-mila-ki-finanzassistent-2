@@ -34,10 +34,9 @@ export function MilaChat() {
 
   useEffect(() => {
     const saved = localStorage.getItem("mila-chat")
-    if (saved) {
-      setMessages(JSON.parse(saved))
-    }
-  }, [])
+    useEffect(() => {
+  localStorage.removeItem("mila-chat")
+}, [])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
