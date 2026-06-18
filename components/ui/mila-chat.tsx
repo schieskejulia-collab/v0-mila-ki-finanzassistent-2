@@ -33,8 +33,6 @@ export function MilaChat() {
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem("mila-chat")
-    useEffect(() => {
   localStorage.removeItem("mila-chat")
 }, [])
 
