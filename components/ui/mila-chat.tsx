@@ -108,13 +108,13 @@ export function MilaChat() {
   }
 
   return (
-    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden min-h-[520px] mb-28">
+    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden h-[70vh] max-h-[650px]">
       <div className="bg-primary p-3 text-primary-foreground font-semibold text-sm flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
         Mila — Deine Finanzbegleiterin
       </div>
 
-      <div className="flex-1 p-3 overflow-y-auto space-y-3 text-sm">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -146,9 +146,9 @@ export function MilaChat() {
       </div>
 
       <form
-        onSubmit={handleSend}
-        className="p-2 border-t border-border flex gap-2 bg-background"
-      >
+  onSubmit={handleSend}
+  className="sticky bottom-0 border-t border-border bg-background p-2 flex gap-2"
+>
         <input
           type="text"
           value={input}
