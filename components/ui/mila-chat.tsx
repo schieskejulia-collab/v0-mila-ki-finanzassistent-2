@@ -67,6 +67,7 @@ export function MilaChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
   message: userMessage.content,
+  messages: messages,
   context: {
     summary,
     incomes,
@@ -76,7 +77,6 @@ export function MilaChat() {
   },
   userName,
   userStatus,
-  }),
 })
       const data = await response.json()
 
