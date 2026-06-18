@@ -14,17 +14,17 @@ function formatEuro(value: number) {
   })
 }
 
-export default function HomePage() {
-  const {
-  summary,
-  userStatus,
-  setUserStatus,
-  milaFeedback,
-  expenses,
-  incomes,
-  userName,
-  budgetStatus,
-} = useFinance()
+"use client"
+
+import { MilaChat } from "../../components/ui/mila-chat"
+
+export default function ChatPage() {
+  return (
+    <div className="p-4">
+      <MilaChat />
+    </div>
+  )
+}
 
   const [isMounted, setIsMounted] = useState(false)
 
