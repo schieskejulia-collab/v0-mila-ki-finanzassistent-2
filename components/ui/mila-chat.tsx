@@ -11,10 +11,14 @@ interface Message {
 
 export function MilaChat() {
   const {
-    summary,
-    userName,
-    userStatus,
-  } = useFinance()
+  summary,
+  incomes,
+  expenses,
+  budgetStatus,
+  milaFeedback,
+  userName,
+  userStatus,
+} = useFinance()
 
   const [messages, setMessages] = useState<Message[]>([
     {
