@@ -9,15 +9,14 @@ interface Message {
 }
 
 export function MilaChat() {
-const {
-  summary,
+body: JSON.stringify({
+  message: userMessage.content,
+  context: {
+    summary,
+  },
   userName,
   userStatus,
-  incomes,
-  expenses,
-  budgetStatus,
-  milaFeedback,
-} = useFinance()
+})
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?' }
   ])
