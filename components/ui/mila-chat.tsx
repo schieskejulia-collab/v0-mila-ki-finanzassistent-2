@@ -13,6 +13,10 @@ const {
   summary,
   userName,
   userStatus,
+  incomes,
+  expenses,
+  budgetStatus,
+  milaFeedback,
 } = useFinance()
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: 'Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?' }
@@ -54,18 +58,19 @@ useEffect(() => {
 
     try {
       // Hier feuern wir die Frage live an deine Groq-Route!
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+     body: JSON.stringify({
   message: userMessage.content,
+  messages,
   context: {
     summary,
+    incomes,
+    expenses,
+    budgetStatus,
+    milaFeedback,
   },
   userName,
   userStatus,
 })
-      })
 
       const data = await response.json()
 
