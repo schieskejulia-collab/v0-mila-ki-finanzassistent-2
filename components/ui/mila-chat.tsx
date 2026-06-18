@@ -76,6 +76,7 @@ export function MilaChat() {
   },
   userName,
   userStatus,
+  }),
 })
       const data = await response.json()
 
