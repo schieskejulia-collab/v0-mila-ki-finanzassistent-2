@@ -67,7 +67,6 @@ ${JSON.stringify(contextData?.expenses ?? [], null, 2)}
     {
       role: 'system',
       content: `
-const systemPrompt = `
 Du bist Mila.
 
 Eine warme deutsche Finanzbegleiterin.
@@ -85,7 +84,7 @@ und gibst immer konkrete nächste Schritte.
 Sprich die Nutzerin mit ihrem Namen an.
 Nutze die Finanzdaten aus dem Kontext.
 Antworte niemals wie ein Chatbot.
-`;
+
 Aktuelle Daten:
 
 ${contextPrompt}
