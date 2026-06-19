@@ -81,6 +81,26 @@ const insights = getMilaInsights(
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
             Steuerlicher Status
           </h2>
+<div className="mt-4">
+  <label className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+    Branche
+  </label>
+
+  <select
+    value={industry}
+    onChange={(e) => setIndustry(e.target.value as any)}
+    className="w-full rounded-2xl border border-violet-100 bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
+  >
+    <option value="webdesigner">🎨 Webdesigner</option>
+    <option value="fotograf">📸 Fotograf</option>
+    <option value="coach">🎓 Coach</option>
+    <option value="handwerker">🧰 Handwerker</option>
+    <option value="restaurant">🍽️ Gastronomie</option>
+    <option value="ecommerce">🛒 E-Commerce</option>
+    <option value="berater">💼 Berater</option>
+    <option value="sonstiges">✨ Sonstiges</option>
+  </select>
+</div>
           <span className="rounded-full bg-violet-100 px-3 py-1 text-[10px] font-black text-violet-700">
             Live
           </span>
