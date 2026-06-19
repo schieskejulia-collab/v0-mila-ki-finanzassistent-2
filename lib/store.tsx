@@ -394,27 +394,28 @@ useEffect(() => {
     }
   }, [])
 
-  const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
-    return
-  }
-
   const payload = {
-    title: income.title?.trim() || 'Einnahme',
-    client: income.client?.trim() || '',
-    amount: toNumber(income.amount),
-    date: income.date || new Date().toISOString().slice(0, 10),
-    note: income.note?.trim() || '',
-    vat: income.vat ?? 19,
-    status: income.status || 'offen',
-    source: income.source || 'sonstiges',
-    user_id: user.id,
-  }
+  title: income.title?.trim() || 'Einnahme',
+  client: income.client?.trim() || '',
+  amount: toNumber(income.amount),
+  date: income.date || new Date().toISOString().slice(0, 10),
+  note: income.note?.trim() || '',
+  vat: income.vat ?? 19,
+  status: income.status || 'offen',
+  source: income.source || 'sonstiges',
+  user_id: user.id,
+}
+  const payload = {
+  title,
+  vendor,
+  amount: toNumber(expense.amount),
+  date: expense.date || new Date().toISOString().slice(0, 10),
+  category,
+  note: expense.note?.trim() || '',
+  vat: expense.vat ?? 19,
+  hasReceipt: expense.hasReceipt ?? false,
+  user_id: user.id,
+}
 
   try {
     const res = await fetch('/api/incomes', {
