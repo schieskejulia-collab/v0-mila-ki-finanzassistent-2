@@ -71,12 +71,16 @@ export default function HomePage() {
             <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
               Mila Finanz-Cockpit
             </p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">
-              Hallo {userName || 'Julia'} 👋
-            </h1>
+          <h1 className="text-3xl font-black tracking-tight">
+  Hallo {userName || 'Julia'} 👋
+</h1>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              {userStatus} · {industry || 'Branche wählen'}
-            </p>
+  {userStatus.charAt(0).toUpperCase() + userStatus.slice(1)}
+  {' · '}
+  {industry
+    ? industry.charAt(0).toUpperCase() + industry.slice(1)
+    : 'Branche wählen'}
+</p>
           </div>
 
           <div className="rounded-3xl bg-emerald-50 px-4 py-3 text-right">
