@@ -374,7 +374,24 @@ useEffect(() => {
     }
   }
 }, [userStatus])
+const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
+  try {
+    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const data = await res.json()
 
+    if (!data.success) {
+      console.error('Supabase Fehler (Delete Expense):', data)
+      return
+    }
+
+    if (mountedRef.current) {
+      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
+      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Delete Expense):', e)
+  }
+}, [])
   const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
   const {
     data: { user },
