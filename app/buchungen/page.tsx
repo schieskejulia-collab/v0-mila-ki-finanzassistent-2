@@ -5,7 +5,10 @@ import { useState } from 'react'
 import { useFinance } from '@/lib/store'
 
 function formatEuro(value: number | string) {
-  const number = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
+  const number =
+    typeof value === 'number'
+      ? value
+      : Number(String(value).replace(',', '.'))
 
   return (Number.isFinite(number) ? number : 0).toLocaleString('de-DE', {
     style: 'currency',
@@ -23,8 +26,37 @@ function formatDate(value?: string) {
 }
 
 export default function BuchungenPage() {
-  const { expenses, incomes, deleteExpense, deleteIncome, summary } = useFinance()
+  const { expenses, incomes, deleteExpense, deleteIncome, summary } =
+    useFinance()
+
   const [openId, setOpenId] = useState<string | number | null>(null)
+  const [deletingId, setDeletingId] = useState<string | number | null>(null)
+
+  async function handleDeleteIncome(id: string | number) {
+    if (!confirm('Diese Einnahme wirklich löschen?')) return
+
+    setDeletingId(id)
+
+    try {
+      await deleteIncome(id)
+      setOpenId(null)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  async function handleDeleteExpense(id: string | number) {
+    if (!confirm('Diese Ausgabe wirklich löschen?')) return
+
+    setDeletingId(id)
+
+    try {
+      await deleteExpense(id)
+      setOpenId(null)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
@@ -46,21 +78,27 @@ export default function BuchungenPage() {
 
       <section className="grid grid-cols-3 gap-2">
         <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Einnahmen</p>
+          <p className="text-[9px] font-black uppercase text-slate-400">
+            Einnahmen
+          </p>
           <p className="mt-1 text-xs font-black text-emerald-700">
             {formatEuro(summary.totalIncomes)}
           </p>
         </div>
 
         <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Ausgaben</p>
+          <p className="text-[9px] font-black uppercase text-slate-400">
+            Ausgaben
+          </p>
           <p className="mt-1 text-xs font-black text-rose-700">
             {formatEuro(summary.totalExpenses)}
           </p>
         </div>
 
         <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Saldo</p>
+          <p className="text-[9px] font-black uppercase text-slate-400">
+            Saldo
+          </p>
           <p className="mt-1 text-xs font-black text-violet-700">
             {formatEuro(summary.balance)}
           </p>
@@ -80,11 +118,13 @@ export default function BuchungenPage() {
           incomes.map((income) => {
             const id = `income-${income.id}`
             const isOpen = openId === id
+            const isDeleting = deletingId === income.id
 
             return (
-              <button
+              <div
                 key={id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setOpenId(isOpen ? null : id)}
                 className="w-full rounded-3xl bg-white p-4 text-left shadow-sm"
               >
@@ -92,7 +132,8 @@ export default function BuchungenPage() {
                   <div>
                     <p className="font-black">{income.title || 'Einnahme'}</p>
                     <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {income.client || 'Kein Kunde'} · {formatDate(income.date)}
+                      {income.client || 'Kein Kunde'} ·{' '}
+                      {formatDate(income.date)}
                     </p>
                   </div>
 
@@ -107,20 +148,20 @@ export default function BuchungenPage() {
                     <p>Datum: {formatDate(income.date)}</p>
                     {income.note && <p>Notiz: {income.note}</p>}
 
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
+                      disabled={isDeleting}
                       onClick={(e) => {
                         e.stopPropagation()
-                        deleteIncome(income.id)
+                        handleDeleteIncome(income.id)
                       }}
-                      className="mt-3 inline-block text-sm font-black text-rose-600"
+                      className="mt-3 rounded-2xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-600 disabled:opacity-50"
                     >
-                      Löschen
-                    </span>
+                      {isDeleting ? 'Lösche...' : 'Löschen'}
+                    </button>
                   </div>
                 )}
-              </button>
+              </div>
             )
           })
         )}
@@ -139,19 +180,24 @@ export default function BuchungenPage() {
           expenses.map((expense) => {
             const id = `expense-${expense.id}`
             const isOpen = openId === id
+            const isDeleting = deletingId === expense.id
 
             return (
-              <button
+              <div
                 key={id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setOpenId(isOpen ? null : id)}
                 className="w-full rounded-3xl bg-white p-4 text-left shadow-sm"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-black">{expense.title || expense.vendor || 'Ausgabe'}</p>
+                    <p className="font-black">
+                      {expense.title || expense.vendor || 'Ausgabe'}
+                    </p>
                     <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {expense.category || 'Sonstiges'} · {formatDate(expense.date)}
+                      {expense.category || 'Sonstiges'} ·{' '}
+                      {formatDate(expense.date)}
                     </p>
                   </div>
 
@@ -167,20 +213,20 @@ export default function BuchungenPage() {
                     <p>Datum: {formatDate(expense.date)}</p>
                     {expense.note && <p>Notiz: {expense.note}</p>}
 
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
+                      disabled={isDeleting}
                       onClick={(e) => {
                         e.stopPropagation()
-                        deleteExpense(expense.id)
+                        handleDeleteExpense(expense.id)
                       }}
-                      className="mt-3 inline-block text-sm font-black text-rose-600"
+                      className="mt-3 rounded-2xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-600 disabled:opacity-50"
                     >
-                      Löschen
-                    </span>
+                      {isDeleting ? 'Lösche...' : 'Löschen'}
+                    </button>
                   </div>
                 )}
-              </button>
+              </div>
             )
           })
         )}
