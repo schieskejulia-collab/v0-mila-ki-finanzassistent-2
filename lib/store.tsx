@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import {
   createContext,
@@ -393,6 +393,7 @@ useEffect(() => {
     console.error('Netzwerkfehler (Delete Expense):', e)
   }
 }, [])
+
 const summary = useMemo<Summary>(() => {
     const totalExpenses = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
     const totalIncomes  = incomes.reduce((sum,  i) => sum + toNumber(i.amount), 0)
