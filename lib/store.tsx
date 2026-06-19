@@ -344,7 +344,7 @@ useEffect(() => {
     category,
     note: expense.note?.trim() || '',
     vat: expense.vat ?? 19,
-    hasReceipt: expense.hasReceipt ?? false,
+    
     user_id: user.id,
   }
 
