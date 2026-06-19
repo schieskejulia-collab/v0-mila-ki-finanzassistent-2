@@ -13,6 +13,17 @@ export type MilaInsight = {
     | 'business'
 }
 
+function money(value: number) {
+  return value.toLocaleString('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+  })
+}
+
+function getText(entry: any) {
+  return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${entry.category || ''} ${entry.note || ''}`.toLowerCase()
+}
+
 export function getMilaInsights(
   incomes: any[],
   expenses: any[],
@@ -20,148 +31,115 @@ export function getMilaInsights(
 ): MilaInsight[] {
   const insights: MilaInsight[] = []
 
-  const incomeTotal = incomes.reduce(
-    (sum, i) => sum + Number(i.amount || 0),
-    0
-  )
-
-  const expenseTotal = expenses.reduce(
-    (sum, e) => sum + Number(e.amount || 0),
-    0
-  )
-
+  const incomeTotal = incomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+  const expenseTotal = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
   const profit = incomeTotal - expenseTotal
 
-  // Steuer-Rücklage
-  if (profit > 0) {
-    const tax = profit * 0.3
+  const taxRate =
+    userStatus === 'angestellt'
+      ? 0.15
+      : userStatus === 'kleinunternehmer'
+      ? 0.25
+      : 0.3
 
+  if (profit > 0) {
     insights.push({
       id: 'tax',
       title: '💰 Steuerrücklage',
-      message: `Empfohlene Rücklage: ${tax.toFixed(
-        2
-      )} €`,
+      message: `Lege aktuell ca. ${money(profit * taxRate)} zurück. Grundlage ist dein Überschuss von ${money(profit)}.`,
       type: 'tax',
     })
   }
 
-  // Liquiditätswarnung
   if (profit < 0) {
     insights.push({
-      id: 'warning',
-      title: '⚠️ Liquidität',
-      message:
-        'Deine Ausgaben sind aktuell höher als deine Einnahmen.',
+      id: 'liquidity-warning',
+      title: '⚠️ Liquidität prüfen',
+      message: `Deine Ausgaben liegen aktuell ${money(Math.abs(profit))} über deinen Einnahmen.`,
       type: 'warning',
     })
   }
 
-  // Wiederkehrende Kosten erkennen
-  const vendors: Record<string, number> = {}
+  const vendors: Record<string, { count: number; total: number }> = {}
 
   expenses.forEach((e) => {
-    const vendor =
-      e.vendor ||
-      e.title ||
-      ''
-
+    const vendor = String(e.vendor || e.title || '').trim()
     if (!vendor) return
 
-    vendors[vendor] =
-      (vendors[vendor] || 0) + 1
+    if (!vendors[vendor]) {
+      vendors[vendor] = { count: 0, total: 0 }
+    }
+
+    vendors[vendor].count += 1
+    vendors[vendor].total += Number(e.amount || 0)
   })
 
-  Object.entries(vendors).forEach(
-    ([vendor, count]) => {
-      if (count >= 3) {
-        const total = expenses
-          .filter(
-            (e) =>
-              (e.vendor ||
-                e.title) === vendor
-          )
-          .reduce(
-            (sum, e) =>
-              sum +
-              Number(e.amount || 0),
-            0
-          )
-
-        insights.push({
-          id: `sub-${vendor}`,
-          title:
-            '💡 Wiederkehrende Ausgabe',
-          message: `${vendor} wurde ${count}x gebucht (${total.toFixed(
-            2
-          )} € gesamt). Möchtest du das als Abo markieren?`,
-          type: 'subscription',
-        })
-      }
+  Object.entries(vendors).forEach(([vendor, data]) => {
+    if (data.count >= 3) {
+      insights.push({
+        id: `sub-${vendor}`,
+        title: '🔁 Wiederkehrende Ausgabe',
+        message: `${vendor} wurde ${data.count}x gebucht (${money(data.total)} gesamt). Prüfe, ob das ein Abo oder Fixkostenblock ist.`,
+        type: 'subscription',
+      })
     }
+  })
+
+  const softwareExpenses = expenses.filter((e) =>
+    /hetzner|adobe|figma|canva|openai|chatgpt|notion|slack|software|hosting|domain|tool/.test(
+      getText(e)
+    )
   )
 
-  // Kleinunternehmer
-  if (
-    userStatus ===
-      'kleinunternehmer' &&
-    incomeTotal >= 22000
-  ) {
-    insights.push({
-      id: 'ku',
-      title:
-        '⚠️ Kleinunternehmergrenze',
-      message:
-        'Du näherst dich der Umsatzgrenze.',
-      type: 'warning',
-    })
-  }
+  if (userStatus === 'freelancer' && softwareExpenses.length >= 2) {
+    const total = softwareExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
 
-  // Freelancer
-  if (
-    userStatus ===
-      'freelancer' &&
-    profit > 1000
-  ) {
     insights.push({
-      id: 'freelancer',
-      title:
-        '🚀 Freelancer-Entwicklung',
-      message:
-        'Dein Geschäft entwickelt sich positiv.',
+      id: 'freelancer-software',
+      title: '💻 Freelancer-Tools',
+      message: `Du hast ${softwareExpenses.length} Software-/Tool-Kosten erkannt (${money(total)}). Das sind oft wichtige Betriebsausgaben.`,
       type: 'business',
     })
   }
 
-  // Angestellte
-  if (
-    userStatus ===
-      'angestellt' &&
-    expenseTotal >
-      incomeTotal * 0.8
-  ) {
+  if (userStatus === 'freelancer' && profit > 0) {
     insights.push({
-      id: 'employee',
-      title:
-        '💡 Sparpotenzial',
+      id: 'freelancer-profit',
+      title: '📈 Freelancer-Gewinn',
+      message: `Dein aktueller Überschuss liegt bei ${money(profit)}. Mila beobachtet daraus Steuer, Rücklagen und laufende Kosten.`,
+      type: 'business',
+    })
+  }
+
+  if (userStatus === 'kleinunternehmer') {
+    const remaining = 22000 - incomeTotal
+
+    insights.push({
+      id: 'ku-limit',
+      title: '⚠️ Kleinunternehmergrenze',
       message:
-        'Du verwendest über 80 % deines Einkommens.',
+        remaining > 0
+          ? `Bis zur 22.000 € Grenze bleiben dir aktuell noch ${money(remaining)} Umsatz-Spielraum.`
+          : 'Du liegst über 22.000 € Umsatz. Prüfe dringend, ob die Kleinunternehmerregelung noch passt.',
+      type: 'warning',
+    })
+  }
+
+  if (userStatus === 'selbstständig' && expenseTotal > incomeTotal * 0.6) {
+    insights.push({
+      id: 'business-costs',
+      title: '📉 Kostenquote prüfen',
+      message: 'Deine Ausgaben sind im Verhältnis zu deinen Einnahmen hoch. Prüfe fixe Kosten, Abos und größere Betriebsausgaben.',
       type: 'budget',
     })
   }
 
-  // Familienmodus
-  if (
-    userStatus ===
-      'familie'
-  ) {
+  if (userStatus === 'angestellt' && expenseTotal > incomeTotal * 0.8) {
     insights.push({
-      id: 'family',
-      title:
-        '👨‍👩‍👧‍👦 Familienbudget',
-      message:
-        'Prüfe deine Rücklagen für Kinder- und Haushaltskosten.',
-      type: 'family',
+      id: 'employee-budget',
+      title: '💡 Haushaltsbudget',
+      message: 'Du verwendest über 80 % deiner Einnahmen. Prüfe Fixkosten, Abos und Sparziel.',
+      type: 'budget',
     })
   }
 
