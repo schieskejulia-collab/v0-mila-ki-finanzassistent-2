@@ -153,12 +153,12 @@ const insights = getMilaInsights(
         </div>
       </section>
 <section className="pb-4">
-  <TaxCard />
+  <BookingForm />
 </section>
 
-      <section className="pb-4">
-        <BookingForm />
-      </section>
+<section className="pb-4">
+  <TaxCard />
+</section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
