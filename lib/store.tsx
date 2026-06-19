@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 
+import { supabase } from '@/lib/supabase'
 export type UserStatus =
   | 'angestellt'
   | 'selbstständig'
@@ -309,56 +310,70 @@ useEffect(() => {
   }, [userStatus])
 
   const addExpense: FinanceContextValue['addExpense'] = useCallback(async (expense) => {
-    const title   = expense.title?.trim()  || 'Ausgabe'
-    const vendor  = expense.vendor?.trim() || ''
-    const autoCategory = inferCategory(`${title} ${vendor} ${expense.note ?? ''}`)
-    const category =
-      expense.category && expense.category !== 'Automatisch'
-        ? expense.category
-        : autoCategory
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    const payload = {
-      title,
-      vendor,
-      amount:   toNumber(expense.amount),
-      date:     expense.date || new Date().toISOString().slice(0, 10),
-      category,
-      note:     expense.note?.trim() || '',
-      vat:      expense.vat ?? 19,
-      hasReceipt: expense.hasReceipt ?? false
+  if (!user) {
+    setMilaFeedback('Bitte zuerst einloggen, bevor du Buchungen speicherst.')
+    return
+  }
+
+  const title = expense.title?.trim() || 'Ausgabe'
+  const vendor = expense.vendor?.trim() || ''
+  const autoCategory = inferCategory(`${title} ${vendor} ${expense.note ?? ''}`)
+  const category =
+    expense.category && expense.category !== 'Automatisch'
+      ? expense.category
+      : autoCategory
+
+  const payload = {
+    title,
+    vendor,
+    amount: toNumber(expense.amount),
+    date: expense.date || new Date().toISOString().slice(0, 10),
+    category,
+    note: expense.note?.trim() || '',
+    vat: expense.vat ?? 19,
+    hasReceipt: expense.hasReceipt ?? false,
+    user_id: user.id,
+  }
+
+  try {
+    const res = await fetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+
+    if (!data.success) {
+      console.error('Supabase Fehler (Expense):', data)
+      setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
+      return
     }
 
-    try {
-      const res  = await fetch('/api/expenses', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      })
-      const data = await res.json()
+    const saved: Expense | undefined = data.data?.[0]
 
-      if (!data.success) {
-        console.error('Supabase Fehler (Expense):', data)
-        setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
-        return
-      }
-
-      const saved: Expense | undefined = data.data?.[0]
-      if (!saved) {
-        console.error('Keine gespeicherte Expense zurückerhalten:', data)
-        setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
-        return
-      }
-
-      if (mountedRef.current) {
-        setExpenses((prev) => [saved, ...prev])
-        setMilaFeedback(getMilaTip(category, userStatus))
-      }
-    } catch (e) {
-      console.error('Netzwerkfehler (Expense):', e)
-      if (mountedRef.current)
-        setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    if (!saved) {
+      console.error('Keine gespeicherte Expense zurückerhalten:', data)
+      setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
+      return
     }
-  }, [userStatus])
+
+    if (mountedRef.current) {
+      setExpenses((prev) => [saved, ...prev])
+      setMilaFeedback(getMilaTip(category, userStatus))
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Expense):', e)
+    if (mountedRef.current) {
+      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    }
+  }
+}, [userStatus])
+
 
   const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
     try {
@@ -380,49 +395,68 @@ useEffect(() => {
   }, [])
 
   const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
-    const payload = {
-      title:  income.title?.trim()  || 'Einnahme',
-      client: income.client?.trim() || '',
-      amount: toNumber(income.amount),
-      date:   income.date || new Date().toISOString().slice(0, 10),
-      note:   income.note?.trim() || '',
-      vat:    income.vat ?? 19,
-      status: income.status || 'offen',
-      source: income.source || 'sonstiges'
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
+    return
+  }
+
+  const payload = {
+    title: income.title?.trim() || 'Einnahme',
+    client: income.client?.trim() || '',
+    amount: toNumber(income.amount),
+    date: income.date || new Date().toISOString().slice(0, 10),
+    note: income.note?.trim() || '',
+    vat: income.vat ?? 19,
+    status: income.status || 'offen',
+    source: income.source || 'sonstiges',
+    user_id: user.id,
+  }
+
+  try {
+    const res = await fetch('/api/incomes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+
+    if (!data.success) {
+      console.error('Supabase Fehler (Income):', data)
+      setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
+      return
     }
 
-    try {
-      const res  = await fetch('/api/incomes', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      })
-      const data = await res.json()
+    const saved: Income | undefined = data.data?.[0]
 
-      if (!data.success) {
-        console.error('Supabase Fehler (Income):', data)
-        setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
-        return
-      }
-
-      const saved: Income | undefined = data.data?.[0]
-      if (!saved) {
-        console.error('Keine gespeicherte Income zurückerhalten:', data)
-        setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
-        return
-      }
-
-      if (mountedRef.current) {
-        setIncomes((prev) => [saved, ...prev])
-        setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
-      }
-    } catch (e) {
-      console.error('Netzwerkfehler (Income):', e)
-      if (mountedRef.current)
-        setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    if (!saved) {
+      console.error('Keine gespeicherte Income zurückerhalten:', data)
+      setMilaFeedback(
+        'Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.'
+      )
+      return
     }
-  }, [])
 
+    if (mountedRef.current) {
+      setIncomes((prev) => [saved, ...prev])
+      setMilaFeedback(
+        '💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.'
+      )
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Income):', e)
+
+    if (mountedRef.current) {
+      setMilaFeedback(
+        'Die Verbindung war kurz weg. Versuch es gleich nochmal.'
+      )
+    }
+  }
+}, [])
   const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
     try {
       const res  = await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' })
