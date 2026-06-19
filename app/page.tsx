@@ -49,8 +49,7 @@ export default function HomePage() {
 
   return (
   <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 text-slate-950">
-    ...
-  </main>
+    <section className="flex items-center justify-between pt-2">
 )
       <section className="flex items-center justify-between pt-2">
         <div>
