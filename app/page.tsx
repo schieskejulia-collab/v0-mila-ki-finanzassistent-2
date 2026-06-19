@@ -48,9 +48,6 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-[100dvh] overflow-hidden bg-[#fbf9ff] p-4">
-  <MilaChat />
-</div>
       <section className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-3xl font-black tracking-tight">
