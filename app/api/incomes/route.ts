@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   amount: Number(body.amount),
   date: body.date || new Date().toISOString().slice(0, 10),
   note: body.note || '',
-  user_id: body.user_id,
+  user_id: body.user_id || null,
   created_at: new Date().toISOString(),
 }
 
