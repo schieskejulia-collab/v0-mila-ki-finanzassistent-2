@@ -19,38 +19,65 @@ function detectCategory(text: string) {
   const value = text.toLowerCase()
 
   if (
-  value.includes('hetzner') ||
-  value.includes('herzner') ||
-  value.includes('hosting') ||
-  value.includes('software') ||
-  value.includes('openai') ||
-  value.includes('chatgpt')
-) {
-  return 'Software & IT'
-}
+    value.includes('hetzner') ||
+    value.includes('herzner') ||
+    value.includes('hosting') ||
+    value.includes('software') ||
+    value.includes('openai') ||
+    value.includes('chatgpt')
+  ) {
+    return 'Software & IT'
   }
 
-  if (value.includes('instagram') || value.includes('facebook') || value.includes('werbung') || value.includes('canva')) {
+  if (
+    value.includes('instagram') ||
+    value.includes('facebook') ||
+    value.includes('werbung') ||
+    value.includes('canva')
+  ) {
     return 'Marketing'
   }
 
-  if (value.includes('restaurant') || value.includes('café') || value.includes('bewirtung')) {
+  if (
+    value.includes('restaurant') ||
+    value.includes('café') ||
+    value.includes('bewirtung')
+  ) {
     return 'Bewirtung'
   }
 
-  if (value.includes('tank') || value.includes('bahn') || value.includes('fahrt') || value.includes('reise')) {
+  if (
+    value.includes('tank') ||
+    value.includes('bahn') ||
+    value.includes('fahrt') ||
+    value.includes('reise')
+  ) {
     return 'Reisen/Fahrtkosten'
   }
 
-  if (value.includes('papier') || value.includes('stift') || value.includes('drucker') || value.includes('büro')) {
+  if (
+    value.includes('papier') ||
+    value.includes('stift') ||
+    value.includes('drucker') ||
+    value.includes('büro')
+  ) {
     return 'Bürobedarf'
   }
 
-  if (value.includes('telefon') || value.includes('internet') || value.includes('vodafone') || value.includes('telekom')) {
+  if (
+    value.includes('telefon') ||
+    value.includes('internet') ||
+    value.includes('vodafone') ||
+    value.includes('telekom')
+  ) {
     return 'Telefon & Internet'
   }
 
-  if (value.includes('kurs') || value.includes('seminar') || value.includes('weiterbildung')) {
+  if (
+    value.includes('kurs') ||
+    value.includes('seminar') ||
+    value.includes('weiterbildung')
+  ) {
     return 'Weiterbildung'
   }
 
