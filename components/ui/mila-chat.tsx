@@ -1,13 +1,19 @@
-"use client"
+'use client'
 
-import React, { useState, useRef, useEffect } from "react"
-import { useFinance } from "../../lib/store"
+import React, { useEffect, useRef, useState } from 'react'
+import { useFinance } from '../../lib/store'
 
 interface Message {
   id: string
-  role: "user" | "assistant"
+  role: 'user' | 'assistant'
   content: string
 }
+
+const starterMessages = [
+  'Was ist heute finanziell wichtig?',
+  'Wie viel sollte ich zurücklegen?',
+  'Welche Ausgaben sollte ich prüfen?',
+]
 
 export function MilaChat() {
   const {
@@ -22,48 +28,60 @@ export function MilaChat() {
 
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "1",
-      role: "assistant",
-      content: "Hi! Ich bin Mila. Wie kann ich dir heute mit deinen Finanzen helfen?",
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        'Hi, ich bin Mila 🌸 Frag mich zu deinen Einnahmen, Ausgaben, Rücklagen oder nächsten Schritten.',
     },
   ])
 
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-  localStorage.removeItem("mila-chat")
-}, [])
+    try {
+      const saved = localStorage.getItem('mila-chat')
+      if (!saved) return
+
+      const parsed = JSON.parse(saved)
+
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setMessages(parsed)
+      }
+    } catch {
+      localStorage.removeItem('mila-chat')
+    }
+  }, [])
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isLoading])
 
   useEffect(() => {
-    localStorage.setItem("mila-chat", JSON.stringify(messages))
+    localStorage.setItem('mila-chat', JSON.stringify(messages.slice(-30)))
   }, [messages])
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
+  async function sendMessage(text?: string) {
+    const content = (text ?? input).trim()
+    if (!content || isLoading) return
 
     const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
     }
 
     const nextMessages = [...messages, userMessage]
 
     setMessages(nextMessages)
-    setInput("")
+    setInput('')
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           messages: nextMessages,
@@ -82,24 +100,24 @@ export function MilaChat() {
       const data = await response.json()
 
       const milaMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
         content:
           data.reply ||
-          "Ich habe dich leider nicht verstanden. Kannst du das nochmal sagen?",
+          'Ich konnte gerade keine klare Antwort erzeugen. Versuch es bitte nochmal.',
       }
 
       setMessages((prev) => [...prev, milaMessage])
     } catch (error) {
-      console.error("Fehler beim Chatten:", error)
+      console.error('Fehler beim Chatten:', error)
 
       setMessages((prev) => [
         ...prev,
         {
-          id: Date.now().toString(),
-          role: "assistant",
+          id: `error-${Date.now()}`,
+          role: 'assistant',
           content:
-            "Upps, mein Gehirn hat gerade Schluckauf. Prüf mal deine Internetverbindung!",
+            'Meine Verbindung hakt gerade. Deine Daten sind nicht weg — versuch es gleich nochmal.',
         },
       ])
     } finally {
@@ -107,27 +125,79 @@ export function MilaChat() {
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    sendMessage()
+  }
+
+  function clearChat() {
+    const ok = confirm('Chatverlauf wirklich löschen?')
+    if (!ok) return
+
+    const fresh: Message[] = [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content:
+          'Chat gelöscht. Ich bin wieder bereit 🌸 Was möchtest du als Nächstes prüfen?',
+      },
+    ]
+
+    setMessages(fresh)
+    localStorage.setItem('mila-chat', JSON.stringify(fresh))
+  }
+
   return (
-    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden h-[calc(100dvh-180px)]">
-      <div className="bg-primary p-3 text-primary-foreground font-semibold text-sm flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        Mila — Deine Finanzbegleiterin
+    <div className="mx-4 my-2 flex h-[calc(100dvh-180px)] flex-col overflow-hidden rounded-[2rem] border border-violet-100 bg-white shadow-sm">
+      <div className="flex items-center justify-between bg-violet-600 p-4 text-white">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-black">
+            <span className="h-2 w-2 rounded-full bg-emerald-300" />
+            Mila Chat
+          </div>
+          <p className="mt-1 text-xs font-semibold text-white/80">
+            Deine Finanzbegleiterin
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={clearChat}
+          className="rounded-full bg-white/15 px-3 py-2 text-xs font-black text-white"
+        >
+          Reset
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-[#fbf9ff] p-4">
+        {messages.length <= 1 && (
+          <div className="space-y-2">
+            {starterMessages.map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => sendMessage(text)}
+                className="block w-full rounded-2xl bg-white p-3 text-left text-sm font-bold text-slate-700 shadow-sm"
+              >
+                {text}
+              </button>
+            ))}
+          </div>
+        )}
+
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
+              msg.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
-              className={`max-w-[85%] px-3 py-2 rounded-xl leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-br-none"
-                  : "bg-muted text-foreground rounded-bl-none"
-              }`}
+              className={
+                msg.role === 'user'
+                  ? 'max-w-[85%] rounded-2xl rounded-br-none bg-violet-600 px-4 py-3 text-sm font-semibold leading-relaxed text-white'
+                  : 'max-w-[85%] rounded-2xl rounded-bl-none bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-700 shadow-sm'
+              }
             >
               {msg.content}
             </div>
@@ -136,8 +206,8 @@ export function MilaChat() {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-muted text-muted-foreground px-3 py-2 rounded-xl rounded-bl-none animate-pulse">
-              Mila überlegt...
+            <div className="rounded-2xl rounded-bl-none bg-white px-4 py-3 text-sm font-bold text-slate-400 shadow-sm">
+              Mila denkt nach...
             </div>
           </div>
         )}
@@ -146,21 +216,21 @@ export function MilaChat() {
       </div>
 
       <form
-  onSubmit={handleSend}
-  className="sticky bottom-0 border-t border-border bg-background p-2 flex gap-2"
->
+        onSubmit={handleSubmit}
+        className="flex gap-2 border-t border-violet-100 bg-white p-3"
+      >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Frag Mila etwas..."
-          className="flex-1 px-3 py-1.5 bg-muted border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
+          placeholder="Frag Mila..."
+          className="min-w-0 flex-1 rounded-2xl bg-violet-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
         />
 
         <button
           type="submit"
-          disabled={isLoading}
-          className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
+          disabled={isLoading || !input.trim()}
+          className="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
         >
           Senden
         </button>
