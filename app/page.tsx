@@ -105,14 +105,22 @@ const insights = getMilaInsights(
            <MorningBriefing />
 {insights.length > 0 && (
   <section className="space-y-3">
-    <h2 className="text-sm font-black text-slate-700">
-      Ich habe etwas für dich gefunden 👀
+    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+      ✨ Mila Insights
     </h2>
 
     {insights.map((item) => (
-      <div key={item.id} className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="font-black">{item.title}</div>
-        <div className="mt-1 text-sm text-slate-600">{item.message}</div>
+      <div
+        key={item.id}
+        className="rounded-[2rem] bg-white p-5 shadow-sm"
+      >
+        <div className="text-lg font-black text-slate-900">
+          {item.title}
+        </div>
+
+        <div className="mt-2 text-sm leading-relaxed text-slate-600">
+          {item.message}
+        </div>
       </div>
     ))}
   </section>
