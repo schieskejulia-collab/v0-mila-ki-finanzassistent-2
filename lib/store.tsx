@@ -202,10 +202,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [milaFeedback, setMilaFeedback] = useState(
   'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.'
 )
-
+const [industry, setIndustry] = useState<Industry>('webdesigner')
 const [morningBriefing, setMorningBriefing] = useState('')
   const [userName, setUserName] = useState('Julia')
-  
+  userName, setUserName, userStatus, setUserStatus, industry, setIndustry,
   // Voreinstellung direkt auf "freelancer" für den perfekten Start
   const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
