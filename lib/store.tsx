@@ -175,6 +175,11 @@ export function inferCategory(input: string): string {
   if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'bewirtung'
   if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'versicherung'
   if (/maus|funkmaus|tastatur|keyboard|monitor|bildschirm|headset|webcam|usb|adapter|kabel|dock|drucker|scanner|mikrofon|macbook|iphone|laptop|pc|computer|hardware|kamera/.test(text)) return 'hardware'
+ if (
+  /mediamarkt|saturn|laptop|notebook|computer|pc|monitor|maus|funkmaus|tastatur|keyboard|drucker|scanner|kamera|webcam|headset|usb|adapter|kabel|hardware|technik|elektronik/.test(text)
+) {
+  return 'hardware'
+ }
   if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'telefon & internet'
   if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
   if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
