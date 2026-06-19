@@ -377,46 +377,28 @@ useEffect(() => {
 
 
   const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
-    try {
-      const res  = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
-      const data = await res.json()
+  try {
+    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const data = await res.json()
 
-      if (!data.success) {
-        console.error('Supabase Fehler (Delete Expense):', data)
-        return
-      }
-
-      if (mountedRef.current) {
-        setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
-        setMilaFeedback('Die Ausgabe wurde gelöscht.')
-      }
-    } catch (e) {
-      console.error('Netzwerkfehler (Delete Expense):', e)
+    if (!data.success) {
+      console.error('Supabase Fehler (Delete Expense):', data)
+      return
     }
-  }, [])
 
-  const payload = {
-  title: income.title?.trim() || 'Einnahme',
-  client: income.client?.trim() || '',
-  amount: toNumber(income.amount),
-  date: income.date || new Date().toISOString().slice(0, 10),
-  note: income.note?.trim() || '',
-  vat: income.vat ?? 19,
-  status: income.status || 'offen',
-  source: income.source || 'sonstiges',
-  user_id: user.id,
-}
-  const payload = {
-  title,
-  vendor,
-  amount: toNumber(expense.amount),
-  date: expense.date || new Date().toISOString().slice(0, 10),
-  category,
-  note: expense.note?.trim() || '',
-  vat: expense.vat ?? 19,
-  hasReceipt: expense.hasReceipt ?? false,
-  user_id: user.id,
-}
+    if (mountedRef.current) {
+      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
+      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Delete Expense):', e)
+  }
+}, [])
+
+const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
@@ -436,10 +418,12 @@ useEffect(() => {
   }
 
   try {
+    const res = await fetch('/api/incomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    
+    })
+
     const data = await res.json()
 
     if (!data.success) {
@@ -452,26 +436,39 @@ useEffect(() => {
 
     if (!saved) {
       console.error('Keine gespeicherte Income zurückerhalten:', data)
-      setMilaFeedback(
-        'Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.'
-      )
+      setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
       return
     }
 
     if (mountedRef.current) {
       setIncomes((prev) => [saved, ...prev])
-      setMilaFeedback(
-        '💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.'
-      )
+      setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
     }
   } catch (e) {
     console.error('Netzwerkfehler (Income):', e)
 
     if (mountedRef.current) {
-      setMilaFeedback(
-        'Die Verbindung war kurz weg. Versuch es gleich nochmal.'
-      )
+      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
     }
+  }
+}, [])
+
+const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
+  try {
+    const res = await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' })
+    const data = await res.json()
+
+    if (!data.success) {
+      console.error('Supabase Fehler (Delete Income):', data)
+      return
+    }
+
+    if (mountedRef.current) {
+      setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
+      setMilaFeedback('Die Einnahme wurde gelöscht.')
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Delete Income):', e)
   }
 }, [])
   const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
