@@ -251,5 +251,14 @@ if (industry === 'ecommerce') {
     type: 'business',
   })
 }
+if (industry === 'webdesigner') {
+  insights.push({
+    id: 'industry-webdesigner',
+    title: '🎨 Webdesigner',
+    message:
+      'Domains, Hosting, Canva, Figma und KI-Tools sind häufig wichtige Betriebsausgaben. Mila achtet besonders auf diese Kosten.',
+    type: 'business',
+  })
+}
   return insights
 }
