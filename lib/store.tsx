@@ -377,6 +377,41 @@ useEffect(() => {
     }
   }
 }, [])
+  try {
+    const res = await fetch('/api/incomes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+
+    if (!data.success) {
+      console.error('Supabase Fehler (Income):', data)
+      setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
+      return
+    }
+
+    const saved: Income | undefined = data.data?.[0]
+
+    if (!saved) {
+      console.error('Keine gespeicherte Income zurückerhalten:', data)
+      setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
+      return
+    }
+
+    if (mountedRef.current) {
+      setIncomes((prev) => [saved, ...prev])
+      setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Income):', e)
+
+    if (mountedRef.current) {
+      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
+    }
+  }
+}, [])
 
   const title = expense.title?.trim() || 'Ausgabe'
   const vendor = expense.vendor?.trim() || ''
