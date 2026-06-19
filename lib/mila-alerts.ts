@@ -37,8 +37,8 @@ export function getMilaAlerts(
       id: "tax",
       type: "info",
       title: "💰 Steuerrücklage",
-      message: `Empfohlene Rücklage: ${money(totalIncomes * 0.3)}`,
-    })
+      const taxReserve = balance > 0 ? balance * 0.3 : 0
+message: `Empfohlene Rücklage: ${money(taxReserve)}`
   }
 
   const openIncomes = incomes.filter(
