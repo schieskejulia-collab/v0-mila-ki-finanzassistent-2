@@ -7,6 +7,7 @@ import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaAlerts } from "@/lib/mila-alerts"
 import { BookingForm } from '@/components/ui/booking-form'
 import { getMilaInsights } from '@/lib/mila-insights'
+import { TaxCard } from '@/components/ui/tax-card'
 
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
@@ -160,6 +161,9 @@ const insights = getMilaInsights(
           </p>
         </div>
       </section>
+<section className="pb-4">
+  <TaxCard />
+</section>
 
       <section className="pb-4">
         <BookingForm />
