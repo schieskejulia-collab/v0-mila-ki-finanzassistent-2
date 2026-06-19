@@ -1,95 +1,186 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server'
+
+function cleanJson(content: string) {
+  return content
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim()
+}
+
+function inferCategory(text: string) {
+  const value = text.toLowerCase()
+
+  if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app|tool|saas/.test(value)) {
+    return 'software'
+  }
+
+  if (/hotel|bahn|db|flug|reise|airbnb|booking/.test(value)) {
+    return 'reisen'
+  }
+
+  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(value)) {
+    return 'weiterbildung'
+  }
+
+  if (/instagram|meta|facebook|google ads|werbung|marketing/.test(value)) {
+    return 'marketing'
+  }
+
+  if (/büro|buero|papier|stift|drucker|toner/.test(value)) {
+    return 'buerobedarf'
+  }
+
+  if (/restaurant|cafe|café|essen|bewirtung|lunch|dinner/.test(value)) {
+    return 'bewirtung'
+  }
+
+  if (/maus|tastatur|monitor|bildschirm|headset|webcam|usb|adapter|kabel|drucker|scanner|mikrofon|laptop|pc|computer|hardware|kamera/.test(value)) {
+    return 'hardware'
+  }
+
+  if (/telefon|internet|mobilfunk|vodafone|telekom|o2/.test(value)) {
+    return 'telefon & internet'
+  }
+
+  if (/taxi|uber|bolt|tank|parken|fahrt/.test(value)) {
+    return 'fahrtkosten'
+  }
+
+  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(value)) {
+    return 'bankgebühren'
+  }
+
+  return 'sonstiges'
+}
+
+function normalizeAmount(value: any) {
+  const normalized = String(value ?? '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '')
+
+  const number = Number(normalized)
+  return Number.isFinite(number) ? number : 0
+}
 
 export async function POST(req: Request) {
   try {
-    const { imageBase64 } = await req.json();
+    const apiKey = process.env.GROQ_API_KEY
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Scanner ist noch nicht verbunden. API-Key fehlt.',
+        },
+        { status: 500 }
+      )
+    }
+
+    const { imageBase64 } = await req.json()
+
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Kein Belegbild erhalten.',
+        },
+        { status: 400 }
+      )
+    }
 
     const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
+      'https://api.groq.com/openai/v1/chat/completions',
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-4-scout-17b-16e-instruct",
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [
             {
-              role: "user",
+              role: 'user',
               content: [
                 {
-                  type: "text",
-                  text: 'Analysiere diesen Beleg. Gib NUR JSON zurück: {"amount":0,"vendor":"","category":"","title":""}'
+                  type: 'text',
+                  text:
+                    'Analysiere diesen deutschen Beleg oder Kassenzettel. Gib ausschließlich valides JSON zurück. Kein Markdown. Kein Erklärungstext. Format: {"amount":0,"vendor":"","category":"","title":""}. amount ist der zu zahlende Gesamtbetrag als Zahl. vendor ist der Händler. title ist eine kurze Beschreibung. category ist eine von: software, reisen, weiterbildung, marketing, buerobedarf, bewirtung, versicherung, hardware, telefon & internet, miete, fahrtkosten, bankgebühren, sonstiges.',
                 },
                 {
-                  type: "image_url",
+                  type: 'image_url',
                   image_url: {
-                    url: imageBase64
-                  }
-                }
-              ]
-            }
+                    url: imageBase64,
+                  },
+                },
+              ],
+            },
           ],
-          temperature: 0.1
+          temperature: 0.1,
+          max_tokens: 300,
         }),
       }
-    );
+    )
 
-    const data = await response.json();
+    const data = await response.json()
 
     if (!response.ok) {
-      console.error("Groq Fehler:", data);
+      console.error('Groq Fehler:', data)
 
       return NextResponse.json(
         {
           success: false,
-          error: "Groq API Fehler"
+          error: 'Mila konnte den Beleg gerade nicht lesen.',
         },
         { status: 500 }
-      );
+      )
     }
 
-    const content =
-      data?.choices?.[0]?.message?.content || "{}";
+    const content = data?.choices?.[0]?.message?.content || '{}'
+    const cleanedContent = cleanJson(content)
 
-    console.log("GROQ CONTENT:", content);
-const cleanedContent = content
-  .replace(/```json/g, "")
-  .replace(/```/g, "")
-  .trim();
+    let parsed: any
 
-let parsed;
+    try {
+      parsed = JSON.parse(cleanedContent)
+    } catch {
+      console.error('JSON PARSE FEHLER:', content)
 
-try {
-  parsed = JSON.parse(cleanedContent);
-}
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Mila konnte die Belegdaten nicht sicher erkennen.',
+        },
+        { status: 422 }
+      )
+    }
 
-    catch (e) {
-  console.error("JSON PARSE FEHLER:", content);
-
-  return NextResponse.json({
-    success: false,
-    error: content
-  });
-}
-
-    console.log("PARSED:", parsed);
+    const vendor = String(parsed.vendor || '').trim()
+    const title = String(parsed.title || vendor || 'Beleg').trim()
+    const amount = normalizeAmount(parsed.amount)
+    const category =
+      parsed.category && String(parsed.category).trim()
+        ? String(parsed.category).trim()
+        : inferCategory(`${title} ${vendor}`)
 
     return NextResponse.json({
       success: true,
-      data: parsed
-    });
-
+      data: {
+        amount,
+        vendor,
+        title,
+        category,
+      },
+    })
   } catch (error) {
-    console.error("Scan Fehler:", error);
+    console.error('Scan Fehler:', error)
 
     return NextResponse.json(
       {
         success: false,
-        error: "Serverfehler"
+        error: 'Serverfehler beim Belegscan.',
       },
       { status: 500 }
-    );
+    )
   }
 }
