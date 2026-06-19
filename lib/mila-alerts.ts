@@ -70,7 +70,15 @@ message: `Empfohlene Rücklage: ${money(taxReserve)}`
     if (!vendorMap[vendor]) {
       vendorMap[vendor] = { count: 0, total: 0 }
     }
-
+expenses.forEach((expense, index) => {
+  if (!expense.hasReceipt) {
+    alerts.push({
+      id: `receipt-${index}`,
+      type: "warning",
+      title: "📸 Beleg fehlt",
+      message: `${expense.title || "Diese Ausgabe"} hat aktuell keinen Beleg hinterlegt.`,
+    })
+  }
     vendorMap[vendor].count += 1
     vendorMap[vendor].total += Number(expense.amount || 0)
   })
