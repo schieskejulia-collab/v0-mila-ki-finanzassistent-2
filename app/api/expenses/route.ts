@@ -49,8 +49,7 @@ export async function POST(req: Request) {
           note: body.note || "",
           user_id: body.user_id || null,
           date: body.date || new Date().toISOString().split("T")[0],
-          vat: body.vat ?? 19,
-          hasReceipt: body.hasReceipt ?? false,
+          
         },
       ])
       .select();
