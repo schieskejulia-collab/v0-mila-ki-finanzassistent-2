@@ -31,7 +31,11 @@ export default function BuchungenPage() {
 
   const [openId, setOpenId] = useState<string | number | null>(null)
   const [deletingId, setDeletingId] = useState<string | number | null>(null)
-
+const [search, setSearch] = useState('')
+const [selectedYear, setSelectedYear] = useState(
+  new Date().getFullYear().toString()
+)
+const [selectedMonth, setSelectedMonth] = useState('alle')
   async function handleDeleteIncome(id: string | number) {
     if (!confirm('Diese Einnahme wirklich löschen?')) return
 
