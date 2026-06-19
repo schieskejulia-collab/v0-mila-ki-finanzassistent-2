@@ -1,23 +1,28 @@
-// lib/mila-tips.ts
+export const getMilaTip = (
+  category: string,
+  userStatus: string
+): string => {
+  const cat = category.toLowerCase()
 
-export const getMilaTip = (category: string, userStatus: string): string => {
-  const cat = category.toLowerCase();
-  
-  if (cat.includes("software")) {
-    return "💻 Voll absetzbar! Da Software meist unter 800€ kostet, ziehen wir das sofort im selben Jahr ab. Praktisch, oder?";
+  if (cat.includes('software')) {
+    return '💻 Software erkannt. Beruflich genutzte Software und digitale Tools können steuerlich relevant sein. Prüfe, ob die Kosten ausschließlich oder überwiegend beruflich genutzt werden.'
   }
-  if (cat.includes("bewirtung")) {
-    return "🍽️ Geschäftsessen! Ich buche 70% für dich ab. Kleiner Tipp: Schreib mir kurz die Namen der Gäste in die Notizen, dann ist das Finanzamt glücklich.";
+
+  if (cat.includes('bewirtung')) {
+    return '🍽️ Bewirtung erkannt. Dokumentiere Anlass und Teilnehmer direkt in der Notiz. Das kann später wichtig sein.'
   }
-  if (cat.includes("reisen")) {
-    return "✈️ Auf Achse? Denk an die Verpflegungspauschale! Wenn du länger als 8 Std. weg bist, schenkt dir der Staat extra Geld.";
+
+  if (cat.includes('reisen')) {
+    return '✈️ Reise erkannt. Fahrtkosten, Übernachtungen und Verpflegungspauschalen können je nach Situation relevant sein.'
   }
-  if (cat.includes("homeoffice") || cat.includes("miete")) {
-    return "🏠 Home-Office-Hero! Auch ohne eigenes Zimmer holen wir uns 6€ pro Tag zurück. Ich tracke deine Tage für dich.";
+
+  if (cat.includes('homeoffice') || cat.includes('miete')) {
+    return '🏠 Homeoffice erkannt. Je nach persönlicher Situation können bestimmte Kosten oder Pauschalen relevant sein. Mila hilft dir beim Sammeln der Informationen.'
   }
-  if (cat.includes("weiterbildung")) {
-    return "🎓 Investment in dich! Das setzen wir voll ab. Sogar die Fahrt zum Kurs zählt.";
+
+  if (cat.includes('weiterbildung')) {
+    return '🎓 Weiterbildung erkannt. Beruflich veranlasste Kurse, Seminare und Fachliteratur können steuerlich relevant sein.'
   }
-  
-  return "📦 Alles klar, ich hab das kategorisiert. Soll ich mal prüfen, ob wir hier noch was optimieren können?";
-};
+
+  return '✨ Ich habe die Buchung eingeordnet. Wenn du möchtest, prüfe ich gemeinsam mit dir mögliche Optimierungspotenziale.'
+}
