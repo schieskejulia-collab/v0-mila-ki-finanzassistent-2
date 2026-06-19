@@ -148,7 +148,7 @@ if (industry === 'webdesigner') {
     id: 'webdesigner',
     title: '🎨 Webdesigner',
     message:
-      'Domains, Hosting und Software-Abos wurden erkannt. Prüfe deine laufenden Betriebskosten.',
+  'Webdesigner haben häufig Ausgaben für Domains, Hosting, Design-Tools und KI-Anwendungen. Mila achtet besonders auf wiederkehrende Softwarekosten und Projektmargen.'
     type: 'business',
   })
 }
