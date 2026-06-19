@@ -393,7 +393,7 @@ const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (i
   }
 }, [])
 
-  const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
+const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -469,7 +469,6 @@ const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id)
     console.error('Netzwerkfehler (Delete Income):', e)
   }
 }, [])
-
 const summary = useMemo<Summary>(() => {
     const totalExpenses = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
     const totalIncomes  = incomes.reduce((sum,  i) => sum + toNumber(i.amount), 0)
