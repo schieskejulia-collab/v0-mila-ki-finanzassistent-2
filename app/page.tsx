@@ -23,13 +23,14 @@ export default function HomePage() {
   summary,
   userStatus,
   setUserStatus,
-  industry,
-  userName,
-  budgetStatus,
+  milaFeedback,
   expenses,
   incomes,
+  userName,
+  budgetStatus,
+  industry,
+  setIndustry,
 } = useFinance()
-
 const insights = getMilaInsights(
   incomes,
   expenses,
