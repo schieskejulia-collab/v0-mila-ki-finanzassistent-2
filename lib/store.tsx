@@ -392,6 +392,7 @@ const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (i
     console.error('Netzwerkfehler (Delete Expense):', e)
   }
 }, [])
+
   const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
   const {
     data: { user },
