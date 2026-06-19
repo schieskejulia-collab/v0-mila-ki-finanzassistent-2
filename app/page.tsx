@@ -9,11 +9,30 @@ import { TaxCard } from '@/components/ui/tax-card'
 
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
+const industries = [
+  ['webdesigner', '🎨 Webdesigner'],
+  ['fotograf', '📸 Fotograf'],
+  ['coach', '🎓 Coach'],
+  ['handwerker', '🧰 Handwerker'],
+  ['restaurant', '🍽️ Gastronomie'],
+  ['ecommerce', '🛒 E-Commerce'],
+  ['berater', '💼 Berater'],
+  ['sonstiges', '✨ Sonstiges'],
+] as const
+
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', {
     style: 'currency',
     currency: 'EUR',
   })
+}
+
+function niceStatus(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function niceIndustry(value: string) {
+  return industries.find(([key]) => key === value)?.[1] || '✨ Sonstiges'
 }
 
 export default function HomePage() {
@@ -30,13 +49,11 @@ export default function HomePage() {
   } = useFinance()
 
   const [isMounted, setIsMounted] = useState(false)
-const [showSettings, setShowSettings] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+
   useEffect(() => {
     setIsMounted(true)
-    if (setUserStatus && userStatus !== 'freelancer') {
-      setUserStatus('freelancer')
-    }
-  }, [setUserStatus, userStatus])
+  }, [])
 
   if (!isMounted) {
     return (
@@ -65,98 +82,123 @@ const [showSettings, setShowSettings] = useState(false)
 
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
-      <section className="rounded-[2rem] bg-white p-4 shadow-sm">
-  <button
-    type="button"
-    onClick={() => setShowSettings(!showSettings)}
-    className="flex w-full items-center justify-between rounded-2xl bg-violet-50 px-4 py-3 text-left"
-  >
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-500">
-        Profil & Branche
-      </p>
-      <p className="mt-1 text-sm font-black text-slate-800">
-        {userStatus.charAt(0).toUpperCase() + userStatus.slice(1)} ·{' '}
-        {industry
-          ? industry.charAt(0).toUpperCase() + industry.slice(1)
-          : 'Branche wählen'}
-      </p>
-    </div>
-
-    <span className="text-xl font-black text-violet-700">
-      {showSettings ? '⌃' : '⌄'}
-    </span>
-  </button>
-
-  {showSettings && (
-    <div className="mt-4 space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        {statuses.map((status) => (
-          <button
-            key={status}
-            type="button"
-            onClick={() => setUserStatus(status)}
-            className={
-              userStatus === status
-                ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase text-white shadow-sm'
-                : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase text-violet-700'
-            }
-          >
-            {status}
-          </button>
-        ))}
-      </div>
-
-      <select
-        value={industry}
-        onChange={(e) => setIndustry(e.target.value as any)}
-        className="w-full rounded-2xl border border-violet-100 bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
-      >
-        <option value="webdesigner">🎨 Webdesigner</option>
-        <option value="fotograf">📸 Fotograf</option>
-        <option value="coach">🎓 Coach</option>
-        <option value="handwerker">🧰 Handwerker</option>
-        <option value="restaurant">🍽️ Gastronomie</option>
-        <option value="ecommerce">🛒 E-Commerce</option>
-        <option value="berater">💼 Berater</option>
-        <option value="sonstiges">✨ Sonstiges</option>
-      </select>
-    </div>
-  )}
-</section>
-
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-2 gap-3">
-          {statuses.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setUserStatus(status)}
-              className={
-                userStatus === status
-                  ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase text-white shadow-sm'
-                  : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase text-violet-700'
-              }
-            >
-              {status}
-            </button>
-          ))}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-500">
+              Mila Finanz-Cockpit
+            </p>
+
+            <h1 className="mt-3 text-4xl font-black leading-tight">
+              Hallo {userName || 'Julia'} 👋
+            </h1>
+
+            <p className="mt-2 text-sm font-bold text-slate-500">
+              {niceStatus(userStatus)} · {niceIndustry(industry)}
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-emerald-50 px-5 py-4 text-center">
+            <p className="text-[10px] font-black uppercase text-emerald-700">
+              Score
+            </p>
+            <p className="text-2xl font-black text-emerald-800">
+              {score}/100
+            </p>
+          </div>
         </div>
 
-        <select
-          value={industry}
-          onChange={(e) => setIndustry(e.target.value as any)}
-          className="mt-4 w-full rounded-2xl border border-violet-100 bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
+        <div className="mt-6 rounded-[2rem] bg-violet-600 p-5 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.25em]">
+            Überschuss
+          </p>
+          <p className="mt-2 text-4xl font-black">
+            {formatEuro(summary.balance)}
+          </p>
+          <p className="mt-2 text-sm font-bold text-white/80">
+            Empfohlene Rücklage: {formatEuro(taxReserve)}
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-3xl bg-emerald-50 p-4">
+            <p className="text-[10px] font-black uppercase text-emerald-700">
+              Einnahmen
+            </p>
+            <p className="mt-1 text-xl font-black text-emerald-800">
+              {formatEuro(summary.totalIncomes)}
+            </p>
+            <p className="text-xs font-bold text-emerald-600">
+              {incomes.length} Buchungen
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-rose-50 p-4">
+            <p className="text-[10px] font-black uppercase text-rose-700">
+              Ausgaben
+            </p>
+            <p className="mt-1 text-xl font-black text-rose-800">
+              {formatEuro(summary.totalExpenses)}
+            </p>
+            <p className="text-xs font-bold text-rose-600">
+              {expenses.length} Belege
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setShowSettings(!showSettings)}
+          className="flex w-full items-center justify-between rounded-2xl bg-violet-50 px-4 py-3 text-left"
         >
-          <option value="webdesigner">🎨 Webdesigner</option>
-          <option value="fotograf">📸 Fotograf</option>
-          <option value="coach">🎓 Coach</option>
-          <option value="handwerker">🧰 Handwerker</option>
-          <option value="restaurant">🍽️ Gastronomie</option>
-          <option value="ecommerce">🛒 E-Commerce</option>
-          <option value="berater">💼 Berater</option>
-          <option value="sonstiges">✨ Sonstiges</option>
-        </select>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-500">
+              Profil & Branche
+            </p>
+            <p className="mt-1 text-sm font-black text-slate-800">
+              {niceStatus(userStatus)} · {niceIndustry(industry)}
+            </p>
+          </div>
+
+          <span className="text-xl font-black text-violet-700">
+            {showSettings ? '⌃' : '⌄'}
+          </span>
+        </button>
+
+        {showSettings && (
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {statuses.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setUserStatus(status)}
+                  className={
+                    userStatus === status
+                      ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase text-white shadow-sm'
+                      : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase text-violet-700'
+                  }
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value as any)}
+              className="w-full rounded-2xl border border-violet-100 bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
+            >
+              {industries.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </section>
 
       {topInsights.length > 0 && (
