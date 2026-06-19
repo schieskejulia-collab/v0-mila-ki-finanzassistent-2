@@ -192,5 +192,64 @@ if (industry === 'restaurant') {
     type: 'business',
   })
 }
+if (industry === 'webdesigner') {
+  insights.push({
+    id: 'industry-web',
+    title: '🎨 Webdesigner',
+    message:
+      'Domains, Hosting, Canva, Figma und KI-Tools sind häufig wichtige Betriebsausgaben. Mila achtet besonders auf diese Kosten.',
+    type: 'business',
+  })
+}
+
+if (industry === 'fotograf') {
+  insights.push({
+    id: 'industry-photo',
+    title: '📸 Fotograf',
+    message:
+      'Kamera, Objektive, Speicherkarten, Adobe und Fahrtkosten zu Shootings können relevante Betriebsausgaben sein.',
+    type: 'business',
+  })
+}
+
+if (industry === 'coach') {
+  insights.push({
+    id: 'industry-coach',
+    title: '🎓 Coach',
+    message:
+      'Weiterbildungen, Videotools, Marketing und Online-Plattformen sind oft wichtige Kostenblöcke für Coaches.',
+    type: 'business',
+  })
+}
+
+if (industry === 'handwerker') {
+  insights.push({
+    id: 'industry-craft',
+    title: '🧰 Handwerker',
+    message:
+      'Werkzeug, Material, Fahrzeug- und Fahrtkosten spielen bei Handwerksbetrieben häufig eine große Rolle.',
+    type: 'business',
+  })
+}
+
+if (industry === 'restaurant') {
+  insights.push({
+    id: 'industry-food',
+    title: '🍽️ Gastronomie',
+    message:
+      'Wareneinkauf, Lieferdienste, Personal- und Energiekosten sollten regelmäßig beobachtet werden.',
+    type: 'business',
+  })
+}
+
+if (industry === 'ecommerce') {
+  insights.push({
+    id: 'industry-shop',
+    title: '🛒 E-Commerce',
+    message:
+      'Versand, Werbung, Shopify, Zahlungsgebühren und Retouren beeinflussen häufig die Gewinnmarge.',
+    type: 'business',
+  })
+}
   return insights
 }
