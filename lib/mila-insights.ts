@@ -27,7 +27,8 @@ function getText(entry: any) {
 export function getMilaInsights(
   incomes: any[],
   expenses: any[],
-  userStatus: string
+  userStatus: string,
+  industry?: string
 ): MilaInsight[] {
   const insights: MilaInsight[] = []
 
@@ -142,6 +143,54 @@ export function getMilaInsights(
       type: 'budget',
     })
   }
+if (industry === 'webdesigner') {
+  insights.push({
+    id: 'webdesigner',
+    title: '🎨 Webdesigner',
+    message:
+      'Domains, Hosting und Software-Abos wurden erkannt. Prüfe deine laufenden Betriebskosten.',
+    type: 'business',
+  })
+}
 
+if (industry === 'fotograf') {
+  insights.push({
+    id: 'photographer',
+    title: '📸 Fotograf',
+    message:
+      'Kamera-, Software- und Fahrtkosten sollten als Betriebsausgaben dokumentiert werden.',
+    type: 'business',
+  })
+}
+
+if (industry === 'coach') {
+  insights.push({
+    id: 'coach',
+    title: '🎓 Coach',
+    message:
+      'Achte auf Kursplattformen, Videotools und Werbekosten für deine Kundengewinnung.',
+    type: 'business',
+  })
+}
+
+if (industry === 'handwerker') {
+  insights.push({
+    id: 'handwerker',
+    title: '🧰 Handwerker',
+    message:
+      'Werkzeug-, Material- und Fahrzeugkosten können erhebliche Betriebsausgaben darstellen.',
+    type: 'business',
+  })
+}
+
+if (industry === 'restaurant') {
+  insights.push({
+    id: 'restaurant',
+    title: '🍽️ Gastronomie',
+    message:
+      'Behalte Wareneinsatz, Lieferkosten und wiederkehrende Einkäufe besonders im Blick.',
+    type: 'business',
+  })
+}
   return insights
 }
