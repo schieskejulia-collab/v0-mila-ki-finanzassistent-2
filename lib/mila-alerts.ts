@@ -5,6 +5,13 @@ export type MilaAlert = {
   message: string
 }
 
+function money(value: number) {
+  return value.toLocaleString("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  })
+}
+
 export function getMilaAlerts(
   incomes: any[],
   expenses: any[],
@@ -12,27 +19,74 @@ export function getMilaAlerts(
 ): MilaAlert[] {
   const alerts: MilaAlert[] = []
 
-  if (summary.totalExpenses > summary.totalIncomes) {
+  const totalIncomes = summary?.totalIncomes || 0
+  const totalExpenses = summary?.totalExpenses || 0
+  const balance = totalIncomes - totalExpenses
+
+  if (totalExpenses > totalIncomes) {
     alerts.push({
       id: "liquidity",
       type: "danger",
       title: "🚨 Liquiditätswarnung",
-      message:
-        "Deine Ausgaben liegen aktuell über deinen Einnahmen."
+      message: "Deine Ausgaben liegen aktuell über deinen Einnahmen.",
     })
   }
 
-  if (summary.totalIncomes > 0) {
-    const reserve = summary.totalIncomes * 0.3
-
+  if (balance > 0) {
     alerts.push({
       id: "tax",
       type: "info",
       title: "💰 Steuerrücklage",
-      message:
-        `Empfohlene Rücklage: ${reserve.toFixed(2)} €`
+      message: `Empfohlene Rücklage: ${money(totalIncomes * 0.3)}`,
     })
   }
+
+  const openIncomes = incomes.filter(
+    (income) =>
+      income.status === "offen" ||
+      income.status === "pending" ||
+      income.status === "unbezahlt"
+  )
+
+  openIncomes.forEach((income, index) => {
+    alerts.push({
+      id: `open-income-${index}`,
+      type: "warning",
+      title: "📄 Offene Rechnung",
+      message: `${income.title || "Rechnung"} über ${money(
+        Number(income.amount || 0)
+      )} ist noch offen.`,
+    })
+  })
+
+  const vendorMap: Record<string, { count: number; total: number }> = {}
+
+  expenses.forEach((expense) => {
+    const vendor =
+      expense.vendor || expense.client || expense.title || expense.category
+
+    if (!vendor) return
+
+    if (!vendorMap[vendor]) {
+      vendorMap[vendor] = { count: 0, total: 0 }
+    }
+
+    vendorMap[vendor].count += 1
+    vendorMap[vendor].total += Number(expense.amount || 0)
+  })
+
+  Object.entries(vendorMap).forEach(([vendor, data]) => {
+    if (data.count >= 2) {
+      alerts.push({
+        id: `recurring-${vendor}`,
+        type: "info",
+        title: "💡 Wiederkehrende Ausgabe",
+        message: `${vendor} wurde ${data.count}x gebucht (${money(
+          data.total
+        )} gesamt). Möchtest du das als Abo markieren?`,
+      })
+    }
+  })
 
   return alerts
 }
