@@ -28,14 +28,14 @@ export async function POST(req: Request) {
   .from("expenses")
   .insert([
     {
-      title: body.title,
-      amount: body.amount,
-      vendor: body.vendor,
-      category: body.category,
-      note: body.note,
-      user_id: body.user_id,
-      date: new Date().toISOString().split("T")[0],
-    },
+  title: body.title,
+  amount: Number(body.amount),
+  vendor: body.vendor,
+  category: body.category,
+  note: body.note || '',
+  user_id: body.user_id || null,
+  date: body.date || new Date().toISOString().split("T")[0],
+}
   ])
   .select();
 
