@@ -20,18 +20,6 @@ export async function GET() {
   });
 }
 
-export async function DELETE(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'id fehlt' },
-        { status: 400 }
-      )
-    }
-
     const { error } = await supabase
       .from('expenses')
       .delete()
