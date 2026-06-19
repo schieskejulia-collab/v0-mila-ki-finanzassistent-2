@@ -132,6 +132,9 @@ const alerts = getMilaAlerts(
       <section className="grid grid-cols-2 gap-4">
         <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+<section className="pb-4">
+  <BookingForm />
+</section>
             Einnahmen
           </p>
           <p className="mt-2 text-2xl font-black text-emerald-700">
