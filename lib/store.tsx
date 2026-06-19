@@ -219,6 +219,9 @@ const [morningBriefing, setMorningBriefing] = useState('')
   // Voreinstellung direkt auf "freelancer" für den perfekten Start
   const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
+const [taxClass, setTaxClass] = useState('')
+const [annualGross, setAnnualGross] = useState('')
+const [vatStatus, setVatStatus] = useState('kleinunternehmer')
 const refreshMorningBriefing = async () => {
   const income = incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
   const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
