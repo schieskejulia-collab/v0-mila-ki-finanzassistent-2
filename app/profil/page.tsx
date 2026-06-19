@@ -56,9 +56,9 @@ export default function ProfilPage() {
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
   const [assemblyWork, setAssemblyWork] = useState('nein')
-
+const [vatStatus, setVatStatus] = useState('kleinunternehmer')
   const missing: string[] = []
-
+if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
   if (!userName) missing.push('Name')
   if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
   if (!federalState) missing.push('Bundesland')
@@ -218,7 +218,17 @@ export default function ProfilPage() {
               className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
             />
           )}
-
+{userStatus !== 'angestellt' && (
+  <select
+    value={vatStatus}
+    onChange={(e) => setVatStatus(e.target.value)}
+    className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+  >
+    <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
+    <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
+    <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
+  </select>
+)}
           <input
             value={federalState}
             onChange={(e) => setFederalState(e.target.value)}
