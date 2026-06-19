@@ -20,50 +20,36 @@ export async function GET() {
   });
 }
 
-export async function POST(req: Request) {
+export async function DELETE(req: Request) {
   try {
-    const body = await req.json();
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
 
-    const { data, error } = await supabase
-  .from("expenses")
-  .insert([
-    {
-  title: body.title,
-  amount: Number(body.amount),
-  vendor: body.vendor,
-  category: body.category,
-  note: body.note || '',
-  user_id: body.user_id || null,
-  date: body.date || new Date().toISOString().split("T")[0],
-}
-  ])
-  .select();
-
-    if (error) {
-      console.error("Supabase Fehler:", error);
-
+    if (!id) {
       return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
-        { status: 500 }
-      );
+        { success: false, error: 'id fehlt' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({
-      success: true,
-      data,
-    });
-  } catch (error) {
-    console.error("Fehler beim Speichern:", error);
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id)
 
+    if (error) {
+      console.error('Supabase Expenses DELETE Error:', error.message)
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Fehler beim Speichern",
-      },
+      { success: false, error: err.message || 'Fehler beim Löschen' },
       { status: 500 }
-    );
+    )
   }
 }
