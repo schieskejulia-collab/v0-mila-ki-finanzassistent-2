@@ -73,7 +73,7 @@ export default function NeueBuchungPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 space-y-4 max-w-md mx-auto pb-24">
+    <main className="min-h-screen p-6 space-y-4 max-w-md mx-auto pb-40">
       <h1 className="text-3xl font-bold mb-2 text-gray-800">Neue Buchung</h1>
 
       {/* 📸 DER BELEGSCANNER GANZ OBEN – Jetzt korrekt verknüpft! */}
@@ -85,27 +85,32 @@ export default function NeueBuchungPage() {
         <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Oder manuell eintragen</p>
       </div>
 
-      {/* Umschalter zwischen Ausgabe und Einnahme */}
-      <div className="flex bg-gray-100 p-1 rounded-xl">
-        <button
-          type="button"
-          onClick={() => setType('expense')}
-          className={`flex-1 py-2 text-center rounded-lg font-medium text-sm transition-all ${
-            type === 'expense' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
-          }`}
-        >
-          💸 Ausgabe
-        </button>
-        <button
-          type="button"
-          onClick={() => setType('income')}
-          className={`flex-1 py-2 text-center rounded-lg font-medium text-sm transition-all ${
-            type === 'income' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500'
-          }`}
-        >
-          💰 Einnahme
-        </button>
-      </div>
+    {/* Umschalter zwischen Ausgabe und Einnahme */}
+<div className="flex bg-gray-100 p-1 rounded-xl">
+  <button
+    type="button"
+    onClick={() => setType('expense')}
+    className={`relative z-10 flex-1 py-3 text-center rounded-xl font-bold text-sm transition-all ${
+      type === 'expense'
+        ? 'bg-white text-gray-900 shadow-sm'
+        : 'text-gray-500'
+    }`}
+  >
+    💸 Ausgabe
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setType('income')}
+    className={`relative z-10 flex-1 py-3 text-center rounded-xl font-bold text-sm transition-all ${
+      type === 'income'
+        ? 'bg-purple-600 text-white shadow-sm'
+        : 'text-gray-500'
+    }`}
+  >
+    💰 Einnahme
+  </button>
+</div>
 
       {/* Eingabefelder */}
       <div className="space-y-3">
