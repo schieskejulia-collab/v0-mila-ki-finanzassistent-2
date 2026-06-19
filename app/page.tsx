@@ -109,6 +109,15 @@ const insights = getMilaInsights(
       Ich habe etwas für dich gefunden 👀
     </h2>
 
+    {insights.map((item) => (
+      <div key={item.id} className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="font-black">{item.title}</div>
+        <div className="mt-1 text-sm text-slate-600">{item.message}</div>
+      </div>
+    ))}
+  </section>
+)}
+
       <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
           Mila denkt mit
