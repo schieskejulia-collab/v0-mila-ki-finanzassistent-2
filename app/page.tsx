@@ -26,7 +26,11 @@ export default function HomePage() {
     userName,
     budgetStatus,
   } = useFinance()
-
+const alerts = getMilaAlerts(
+  incomes,
+  expenses,
+  summary
+)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -93,6 +97,28 @@ export default function HomePage() {
 
       <MorningBriefing />
 
+{alerts.length > 0 && (
+  <section className="space-y-3">
+    <h2 className="text-sm font-black text-slate-700">
+      Ich habe etwas für dich gefunden 👀
+    </h2>
+
+    {alerts.map((alert) => (
+      <div
+        key={alert.id}
+        className="rounded-2xl bg-white p-4 shadow-sm border"
+      >
+        <div className="font-black">
+          {alert.title}
+        </div>
+
+        <div className="mt-1 text-sm text-slate-600">
+          {alert.message}
+        </div>
+      </div>
+    ))}
+  </section>
+)}
       <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
           Mila denkt mit
