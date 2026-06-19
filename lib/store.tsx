@@ -183,69 +183,6 @@ export function toNumber(value: number | string | undefined | null): number {
   return Number.isFinite(number) ? number : 0
 }
 
-export function inferCategory(input: string): string {
-  const text = input.toLowerCase()
-
-  if (/laptop|notebook|computer|pc|macbook|monitor|bildschirm|maus|funkmaus|tastatur|keyboard|drucker|scanner|webcam|headset|usb|adapter|kabel|dock|hardware/.test(text)) {
-    return 'hardware'
-  }
-
-  if (/mediamarkt|saturn|elektronik|technik/.test(text)) {
-    return 'elektronik'
-  }
-
-  if (/werkzeug|bohrer|akkuschrauber|maschine|schrauben|zange|hammer/.test(text)) {
-    return 'werkzeug'
-  }
-
-  if (/material|farbe|holz|metall|rohr|kabelkanal|baustoff/.test(text)) {
-    return 'material'
-  }
-
-  if (/arbeitskleidung|arbeitsschuhe|schutzbrille|handschuhe|helm/.test(text)) {
-    return 'arbeitskleidung'
-  }
-
-  if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) {
-    return 'software'
-  }
-
-  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) {
-    return 'telefon & internet'
-  }
-
-  if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'reisen'
-  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'weiterbildung'
-  if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'marketing'
-  if (/büro|buero|papier|stift|toner/.test(text)) return 'buerobedarf'
-  if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'bewirtung'
-  if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'versicherung'
-  if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
-  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
-  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'bankgebühren'
-
-  return 'sonstiges'
-}
-  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'telefon & internet'
-  if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
-  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
-  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'bankgebühren'
-  return 'sonstiges'
-}
-
-function getMilaTip(category: string, status: UserStatus): string {
-  const displayLabel = CATEGORY_LABELS[category] || category
-  const tips: Partial<Record<string, string>> = {
-    software:            '💻 Software erkannt. Das kann oft sehr gut als Betriebsausgabe verbucht werden.',
-    bewirtung:           '🍽️ Bewirtung erkannt. Notiere am besten Anlass und Teilnehmer.',
-    reisen:              '✈️ Reise erkannt. Fahrt, Hotel und Verpflegung können steuerlich relevant sein.',
-    weiterbildung:       '🎓 Weiterbildung erkannt. Sehr stark, das ist oft beruflich gut begründbar.',
-    marketing:           '📣 Marketing erkannt. Ich ordne das deinen Akquise-Ausgaben zu.',
-    hardware:            '🖥️ Hardware erkannt. Je nach Preis kann Abschreibung wichtig sein.',
-    'telefon & internet':'📱 Telefon & Internet erkannt. Achte auf berufliche Nutzung.',
-  }
-  return tips[category] ?? `✨ Ich habe die Buchung als ${displayLabel} eingeordnet. Status: ${status}.`
-}
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([])
