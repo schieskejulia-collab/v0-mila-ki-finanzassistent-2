@@ -16,6 +16,15 @@ export type UserStatus =
   | 'selbstständig'
   | 'freelancer'
   | 'kleinunternehmer'
+export type Industry =
+  | 'webdesigner'
+  | 'fotograf'
+  | 'coach'
+  | 'handwerker'
+  | 'restaurant'
+  | 'ecommerce'
+  | 'berater'
+  | 'sonstiges'
 
 export type Expense = {
   id: string | number
@@ -84,6 +93,8 @@ refreshMorningBriefing: () => Promise<void>
   setUserName: (name: string) => void
   userStatus: UserStatus
   setUserStatus: (status: UserStatus) => void
+industry: Industry
+setIndustry: (industry: Industry) => void
   isLoggedIn: boolean
   login: (name: string, status: UserStatus) => void
   logout: () => void
