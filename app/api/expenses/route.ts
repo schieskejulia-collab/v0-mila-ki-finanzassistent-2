@@ -5,64 +5,69 @@ export async function GET() {
   const { data, error } = await supabase
     .from("expenses")
     .select("*")
+    .order("date", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({
-      success: false,
-      error: error.message,
-    });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({
-    success: true,
-    data,
-  });
+  return NextResponse.json({ success: true, data: data ?? [] });
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    const amount = Number(body.amount);
+
+    if (!body.title && !body.vendor) {
+      return NextResponse.json(
+        { success: false, error: "Titel oder Händler fehlt" },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Ungültiger Betrag" },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("expenses")
       .insert([
         {
-          title: body.title,
-          amount: Number(body.amount),
+          title: body.title || body.vendor || "Ausgabe",
+          amount,
           vendor: body.vendor || "",
           category: body.category || "sonstiges",
           note: body.note || "",
           user_id: body.user_id || null,
           date: body.date || new Date().toISOString().split("T")[0],
+          vat: body.vat ?? 19,
+          hasReceipt: body.hasReceipt ?? false,
         },
       ])
       .select();
 
     if (error) {
       console.error("Supabase Fehler:", error);
-
       return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
+        { success: false, error: error.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data,
-    });
+    return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error("Fehler beim Speichern:", error);
-
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Fehler beim Speichern",
-      },
+      { success: false, error: error.message || "Fehler beim Speichern" },
       { status: 500 }
     );
   }
@@ -80,14 +85,10 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const { error } = await supabase
-      .from("expenses")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
 
     if (error) {
       console.error("Supabase Delete Fehler:", error);
-
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -97,14 +98,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Fehler beim Löschen:", error);
-
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Fehler beim Löschen",
-      },
+      { success: false, error: error.message || "Fehler beim Löschen" },
       { status: 500 }
     );
   }
 }
-
