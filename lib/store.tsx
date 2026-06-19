@@ -469,9 +469,11 @@ refreshMorningBriefing, triggerMilaFeedback,
     addExpense, deleteExpense, addIncome, deleteIncome,
     userName, setUserName, userStatus, setUserStatus,
     isLoggedIn, login, logout, summary, budgetStatus,
-  }), [
+  }), 
+{
   expenses,
   incomes,
+  categories,
   milaFeedback,
   morningBriefing,
   refreshMorningBriefing,
@@ -481,15 +483,17 @@ refreshMorningBriefing, triggerMilaFeedback,
   addIncome,
   deleteIncome,
   userName,
+  setUserName,
   userStatus,
+  setUserStatus,
+  industry,
+  setIndustry,
   isLoggedIn,
   login,
   logout,
   summary,
   budgetStatus,
-userName,
-budgetStatus,
-])
+  }
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }
