@@ -143,23 +143,35 @@ const alerts = getMilaAlerts(
   <BookingForm />
 </section>
 
-<section className="rounded-[2rem] bg-white p-5 shadow-sm">
-  ...
-</section>
-            Einnahmen
-          </p>
-          <p className="mt-2 text-2xl font-black text-emerald-700">
-            {formatEuro(summary.totalIncomes)}
-          </p>
-          <p className="mt-1 text-[11px] font-semibold text-emerald-600/70">
-            {incomes.length} Buchungen
-          </p>
-        </div>
+<section className="grid grid-cols-2 gap-4">
+  <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+      Einnahmen
+    </p>
+    <p className="mt-2 text-2xl font-black text-emerald-700">
+      {formatEuro(summary.totalIncomes)}
+    </p>
+    <p className="mt-1 text-[11px] font-semibold text-emerald-600/70">
+      {incomes.length} Buchungen
+    </p>
+  </div>
 
-        <div className="rounded-[2rem] bg-rose-50 p-5 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
-            Ausgaben
-          </p>
+  <div className="rounded-[2rem] bg-rose-50 p-5 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
+      Ausgaben
+    </p>
+    <p className="mt-2 text-2xl font-black text-rose-700">
+      {formatEuro(summary.totalExpenses)}
+    </p>
+    <p className="mt-1 text-[11px] font-semibold text-rose-600/70">
+      {expenses.length} Belege
+    </p>
+  </div>
+</section>
+
+<section className="pb-4">
+  <BookingForm />
+</section>
           <p className="mt-2 text-2xl font-black text-rose-700">
             {formatEuro(summary.totalExpenses)}
           </p>
