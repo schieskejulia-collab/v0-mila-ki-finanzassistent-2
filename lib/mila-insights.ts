@@ -76,73 +76,76 @@ export function getMilaInsights(
   })
 
   Object.entries(vendors).forEach(([vendor, data]) => {
-    if (data.count >= 3) {
-      insights.push({
-        id: `sub-${vendor}`,
-        title: '🔁 Wiederkehrende Ausgabe',
-        message: `${vendor} wurde ${data.count}x gebucht (${money(data.total)} gesamt). Prüfe, ob das ein Abo oder Fixkostenblock ist.`,
-        type: 'subscription',
-      })
-    }
-  })
+  if (data.count >= 3) {
+    insights.push({
+      id: `sub-${vendor}`,
+      title: '🔁 Wiederkehrende Ausgabe',
+      message: `${vendor} wurde ${data.count}x gebucht (${money(data.total)} gesamt). Mila hat ein wiederkehrendes Muster erkannt.`,
+      type: 'subscription',
+    })
+  }
+})
 
-  const softwareExpenses = expenses.filter((e) =>
-    /hetzner|adobe|figma|canva|openai|chatgpt|notion|slack|software|hosting|domain|tool/.test(
-      getText(e)
-    )
+const softwareExpenses = expenses.filter((e) =>
+  /hetzner|adobe|figma|canva|openai|chatgpt|notion|slack|software|hosting|domain|tool/.test(
+    getText(e)
   )
+)
 
-  if (userStatus === 'freelancer' && softwareExpenses.length >= 2) {
-    const total = softwareExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+if (userStatus === 'freelancer' && softwareExpenses.length >= 2) {
+  const total = softwareExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
 
-    insights.push({
-      id: 'freelancer-software',
-      title: '💻 Freelancer-Tools',
-      message: `Du hast ${softwareExpenses.length} Software-/Tool-Kosten erkannt (${money(total)}). Das sind oft wichtige Betriebsausgaben.`,
-      type: 'business',
-    })
-  }
+  insights.push({
+    id: 'freelancer-software',
+    title: '💻 Freelancer-Tools',
+    message: `Du hast ${softwareExpenses.length} Software-/Tool-Kosten erkannt (${money(total)}). Das sind oft wichtige Betriebsausgaben.`,
+    type: 'business',
+  })
+}
 
-  if (userStatus === 'freelancer' && profit > 0) {
-    insights.push({
-      id: 'freelancer-profit',
-      title: '📈 Freelancer-Gewinn',
-      message: `Dein aktueller Überschuss liegt bei ${money(profit)}. Mila beobachtet daraus Steuer, Rücklagen und laufende Kosten.`,
-      type: 'business',
-    })
-  }
+if (userStatus === 'freelancer' && profit > 0) {
+  insights.push({
+    id: 'freelancer-profit',
+    title: '📈 Freelancer-Gewinn',
+    message: `Dein aktueller Überschuss liegt bei ${money(profit)}. Mila beobachtet daraus Steuer, Rücklagen und laufende Kosten.`,
+    type: 'business',
+  })
+}
 
-  if (userStatus === 'kleinunternehmer') {
-    const remaining = 22000 - incomeTotal
+if (userStatus === 'kleinunternehmer') {
+  const remaining = 22000 - incomeTotal
 
-    insights.push({
-      id: 'ku-limit',
-      title: '⚠️ Kleinunternehmergrenze',
-      message:
-        remaining > 0
-          ? `Bis zur 22.000 € Grenze bleiben dir aktuell noch ${money(remaining)} Umsatz-Spielraum.`
-          : 'Du liegst über 22.000 € Umsatz. Prüfe dringend, ob die Kleinunternehmerregelung noch passt.',
-      type: 'warning',
-    })
-  }
+  insights.push({
+    id: 'ku-limit',
+    title: '⚠️ Kleinunternehmergrenze',
+    message:
+      remaining > 0
+        ? `Bis zur 22.000 € Grenze bleiben dir aktuell noch ${money(remaining)} Umsatz-Spielraum.`
+        : 'Du liegst über 22.000 € Umsatz. Prüfe dringend, ob die Kleinunternehmerregelung noch passt.',
+    type: 'warning',
+  })
+}
 
-  if (userStatus === 'selbstständig' && expenseTotal > incomeTotal * 0.6) {
-    insights.push({
-      id: 'business-costs',
-      title: '📉 Kostenquote prüfen',
-      message: 'Deine Ausgaben sind im Verhältnis zu deinen Einnahmen hoch. Prüfe fixe Kosten, Abos und größere Betriebsausgaben.',
-      type: 'budget',
-    })
-  }
+if (userStatus === 'selbstständig' && expenseTotal > incomeTotal * 0.6) {
+  insights.push({
+    id: 'business-costs',
+    title: '📉 Kostenquote prüfen',
+    message:
+      'Deine Ausgaben sind im Verhältnis zu deinen Einnahmen hoch. Prüfe fixe Kosten, Abos und größere Betriebsausgaben.',
+    type: 'budget',
+  })
+}
 
-  if (userStatus === 'angestellt' && expenseTotal > incomeTotal * 0.8) {
-    insights.push({
-      id: 'employee-budget',
-      title: '💡 Haushaltsbudget',
-      message: 'Du verwendest über 80 % deiner Einnahmen. Prüfe Fixkosten, Abos und Sparziel.',
-      type: 'budget',
-    })
-  }
+if (userStatus === 'angestellt' && expenseTotal > incomeTotal * 0.8) {
+  insights.push({
+    id: 'employee-budget',
+    title: '💡 Haushaltsbudget',
+    message:
+      'Du verwendest über 80 % deiner Einnahmen. Prüfe Fixkosten, Abos und Sparziel.',
+    type: 'budget',
+  })
+}
+
 if (industry === 'webdesigner') {
   insights.push({
     id: 'industry-webdesigner',
@@ -155,50 +158,10 @@ if (industry === 'webdesigner') {
 
 if (industry === 'fotograf') {
   insights.push({
-    id: 'photographer',
-    title: '📸 Fotograf',
-    message:
-      'Kamera-, Software- und Fahrtkosten sollten als Betriebsausgaben dokumentiert werden.',
-    type: 'business',
-  })
-}
-
-if (industry === 'coach') {
-  insights.push({
-    id: 'coach',
-    title: '🎓 Coach',
-    message:
-      'Achte auf Kursplattformen, Videotools und Werbekosten für deine Kundengewinnung.',
-    type: 'business',
-  })
-}
-
-if (industry === 'handwerker') {
-  insights.push({
-    id: 'handwerker',
-    title: '🧰 Handwerker',
-    message:
-      'Werkzeug-, Material- und Fahrzeugkosten können erhebliche Betriebsausgaben darstellen.',
-    type: 'business',
-  })
-}
-
-if (industry === 'restaurant') {
-  insights.push({
-    id: 'restaurant',
-    title: '🍽️ Gastronomie',
-    message:
-      'Behalte Wareneinsatz, Lieferkosten und wiederkehrende Einkäufe besonders im Blick.',
-    type: 'business',
-  })
-}
-
-if (industry === 'fotograf') {
-  insights.push({
     id: 'industry-photo',
     title: '📸 Fotograf',
     message:
-      'Kamera, Objektive, Speicherkarten, Adobe und Fahrtkosten zu Shootings können relevante Betriebsausgaben sein.',
+      'Fotografen sollten Kamera, Objektive, Speicherkarten, Adobe und Fahrtkosten zu Shootings sauber dokumentieren.',
     type: 'business',
   })
 }
@@ -208,7 +171,7 @@ if (industry === 'coach') {
     id: 'industry-coach',
     title: '🎓 Coach',
     message:
-      'Weiterbildungen, Videotools, Marketing und Online-Plattformen sind oft wichtige Kostenblöcke für Coaches.',
+      'Coaches haben häufig Kosten für Weiterbildungen, Videotools, Marketing und Online-Plattformen.',
     type: 'business',
   })
 }
@@ -218,7 +181,7 @@ if (industry === 'handwerker') {
     id: 'industry-craft',
     title: '🧰 Handwerker',
     message:
-      'Werkzeug, Material, Fahrzeug- und Fahrtkosten spielen bei Handwerksbetrieben häufig eine große Rolle.',
+      'Bei Handwerkern sind Werkzeug, Material, Fahrzeug- und Fahrtkosten besonders wichtige Kostenblöcke.',
     type: 'business',
   })
 }
@@ -228,7 +191,7 @@ if (industry === 'restaurant') {
     id: 'industry-food',
     title: '🍽️ Gastronomie',
     message:
-      'Wareneinkauf, Lieferdienste, Personal- und Energiekosten sollten regelmäßig beobachtet werden.',
+      'In der Gastronomie solltest du Wareneinkauf, Lieferkosten, Personal und Energie regelmäßig im Blick behalten.',
     type: 'business',
   })
 }
@@ -238,10 +201,19 @@ if (industry === 'ecommerce') {
     id: 'industry-shop',
     title: '🛒 E-Commerce',
     message:
-      'Versand, Werbung, Shopify, Zahlungsgebühren und Retouren beeinflussen häufig die Gewinnmarge.',
+      'Im E-Commerce beeinflussen Versand, Werbung, Shopify, Zahlungsgebühren und Retouren häufig die Gewinnmarge.',
     type: 'business',
   })
 }
 
+if (industry === 'berater') {
+  insights.push({
+    id: 'industry-consultant',
+    title: '💼 Berater',
+    message:
+      'Berater sollten Reisekosten, Software, Weiterbildung und Projektmargen regelmäßig auswerten.',
+    type: 'business',
+  })
+}
   return insights
 }
