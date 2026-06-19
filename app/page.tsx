@@ -51,7 +51,7 @@ const alerts = getMilaAlerts(
   }
 
   return (
-    <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 text-slate-950">
+    <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-3xl font-black tracking-tight">
@@ -192,7 +192,7 @@ const alerts = getMilaAlerts(
         })()}
       </section>
 
-      <section className="grid grid-cols-2 gap-3 pb-4">
+      <section className="relative z-40 grid grid-cols-2 gap-3 pb-8">
         <Link
           href="/neue-buchungen"
           className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
