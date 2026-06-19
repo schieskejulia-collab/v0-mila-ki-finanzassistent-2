@@ -96,30 +96,28 @@ const alerts = getMilaAlerts(
         </div>
       </section>
 
-      <MorningBriefing />
+           <MorningBriefing />
 
-{alerts.length > 0 && (
-  <section className="space-y-3">
-    <h2 className="text-sm font-black text-slate-700">
-      Ich habe etwas für dich gefunden 👀
-    </h2>
+      {alerts.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-black text-slate-700">
+            Ich habe etwas für dich gefunden 👀
+          </h2>
 
-    {alerts.map((alert) => (
-      <div
-        key={alert.id}
-        className="rounded-2xl bg-white p-4 shadow-sm border"
-      >
-        <div className="font-black">
-          {alert.title}
-        </div>
+          {alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className="rounded-2xl border bg-white p-4 shadow-sm"
+            >
+              <div className="font-black">{alert.title}</div>
+              <div className="mt-1 text-sm text-slate-600">
+                {alert.message}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
-        <div className="mt-1 text-sm text-slate-600">
-          {alert.message}
-        </div>
-      </div>
-    ))}
-  </section>
-)}
       <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
           Mila denkt mit
@@ -129,49 +127,23 @@ const alerts = getMilaAlerts(
         </p>
       </section>
 
-     <section className="grid grid-cols-2 gap-4">
-  <div className="rounded-[2rem] bg-emerald-50">
-    ...
-  </div>
+      <section className="grid grid-cols-2 gap-4">
+        <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+            Einnahmen
+          </p>
+          <p className="mt-2 text-2xl font-black text-emerald-700">
+            {formatEuro(summary.totalIncomes)}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-emerald-600/70">
+            {incomes.length} Buchungen
+          </p>
+        </div>
 
-  <div className="rounded-[2rem] bg-rose-50">
-    ...
-  </div>
-</section>
-
-<section className="pb-4">
-  <BookingForm />
-</section>
-
-<section className="grid grid-cols-2 gap-4">
-  <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
-    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
-      Einnahmen
-    </p>
-    <p className="mt-2 text-2xl font-black text-emerald-700">
-      {formatEuro(summary.totalIncomes)}
-    </p>
-    <p className="mt-1 text-[11px] font-semibold text-emerald-600/70">
-      {incomes.length} Buchungen
-    </p>
-  </div>
-
-  <div className="rounded-[2rem] bg-rose-50 p-5 shadow-sm">
-    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
-      Ausgaben
-    </p>
-    <p className="mt-2 text-2xl font-black text-rose-700">
-      {formatEuro(summary.totalExpenses)}
-    </p>
-    <p className="mt-1 text-[11px] font-semibold text-rose-600/70">
-      {expenses.length} Belege
-    </p>
-  </div>
-</section>
-
-<section className="pb-4">
-  <BookingForm />
-</section>
+        <div className="rounded-[2rem] bg-rose-50 p-5 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
+            Ausgaben
+          </p>
           <p className="mt-2 text-2xl font-black text-rose-700">
             {formatEuro(summary.totalExpenses)}
           </p>
@@ -179,6 +151,10 @@ const alerts = getMilaAlerts(
             {expenses.length} Belege
           </p>
         </div>
+      </section>
+
+      <section className="pb-4">
+        <BookingForm />
       </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -221,13 +197,6 @@ const alerts = getMilaAlerts(
 
       <section className="relative z-40 grid grid-cols-2 gap-3 pb-8">
         <Link
-          href="/neue-buchungen"
-          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
-        >
-          + Neue Buchung
-        </Link>
-
-        <Link
           href="/buchungen"
           className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
         >
@@ -236,9 +205,9 @@ const alerts = getMilaAlerts(
 
         <Link
           href="/chat"
-          className="col-span-2 flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
+          className="flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
         >
-          💬 Mit Mila sprechen
+          💬 Mila Chat
         </Link>
       </section>
     </main>
