@@ -155,7 +155,7 @@ export function toNumber(value: number | string | undefined | null): number {
 
 export function inferCategory(input: string): string {
   const text = input.toLowerCase()
-  if (/canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'software'
+  if (/hetzner|herzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'software'
   if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'reisen'
   if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'weiterbildung'
   if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'marketing'
