@@ -1,36 +1,43 @@
-import { NextResponse } from "next/server";
-import { getMilaChatResponse } from "../../../lib/mila";
+import { NextResponse } from 'next/server'
+import { getMilaChatResponse } from '@/lib/mila'
 
 export async function POST(req: Request) {
   try {
-    const {
-  message,
-  messages = [],
-  context,
-  userName,
-  userStatus,
-} = await req.json()
+    const body = await req.json()
+
+    const message = String(body?.message || '').trim()
+    const messages = Array.isArray(body?.messages) ? body.messages : []
+    const context = body?.context || {}
+    const userName = body?.userName
+    const userStatus = body?.userStatus
 
     if (!message) {
-      return NextResponse.json({ error: "Nachricht fehlt" }, { status: 400 });
+      return NextResponse.json(
+        { reply: 'Bitte schreib mir kurz, wobei ich dir helfen soll.' },
+        { status: 400 }
+      )
     }
 
-    const reply = await getMilaChatResponse(
-  message,
-  messages,
-  {
-    ...context,
-    userName,
-    userStatus,
-  }
-)
+    const reply = await getMilaChatResponse(message, messages, {
+      ...context,
+      userName,
+      userStatus,
+    })
 
-    return NextResponse.json({ reply });
+    return NextResponse.json({
+      success: true,
+      reply,
+    })
   } catch (error) {
-    console.error("Fehler im Chat-Endpunkt:", error);
+    console.error('Fehler im Chat-Endpunkt:', error)
+
     return NextResponse.json(
-      { reply: "Mila hat gerade ein kleines Verbindungsproblem." },
+      {
+        success: false,
+        reply:
+          'Mila hat gerade ein kleines Verbindungsproblem. Bitte versuch es gleich nochmal.',
+      },
       { status: 500 }
-    );
+    )
   }
 }
