@@ -18,8 +18,16 @@ const categories = [
 function detectCategory(text: string) {
   const value = text.toLowerCase()
 
-  if (value.includes('hetzner') || value.includes('hosting') || value.includes('software') || value.includes('openai') || value.includes('chatgpt')) {
-    return 'Software & IT'
+  if (
+  value.includes('hetzner') ||
+  value.includes('herzner') ||
+  value.includes('hosting') ||
+  value.includes('software') ||
+  value.includes('openai') ||
+  value.includes('chatgpt')
+) {
+  return 'Software & IT'
+}
   }
 
   if (value.includes('instagram') || value.includes('facebook') || value.includes('werbung') || value.includes('canva')) {
