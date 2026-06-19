@@ -375,7 +375,24 @@ useEffect(() => {
   }
 }, [userStatus])
 
-  
+  const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
+  try {
+    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const data = await res.json()
+
+    if (!data.success) {
+      console.error('Supabase Fehler (Delete Expense):', data)
+      return
+    }
+
+    if (mountedRef.current) {
+      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
+      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+    }
+  } catch (e) {
+    console.error('Netzwerkfehler (Delete Expense):', e)
+  }
+}, [])
 const summary = useMemo<Summary>(() => {
     const totalExpenses = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
     const totalIncomes  = incomes.reduce((sum,  i) => sum + toNumber(i.amount), 0)
