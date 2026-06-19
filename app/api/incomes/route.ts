@@ -32,14 +32,14 @@ export async function POST(req: Request) {
     console.log("📡 Eingehender Incomes POST Body:", body)
 
     const insertPayload = {
-      title: body.title,
-      client: body.client || '',
-      amount: Number(body.amount),
-      date: body.date || new Date().toISOString().slice(0, 10),
-      // GEÄNDERT: Sendet einen leeren String statt null, um den Datenbank-Fehler zu umgehen
-      note: body.note || '', 
-      created_at: new Date().toISOString(),
-    }
+  title: body.title,
+  client: body.client || '',
+  amount: Number(body.amount),
+  date: body.date || new Date().toISOString().slice(0, 10),
+  note: body.note || '',
+  user_id: body.user_id,
+  created_at: new Date().toISOString(),
+}
 
     const { data, error } = await supabase
       .from('incomes')
