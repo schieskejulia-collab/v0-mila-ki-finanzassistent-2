@@ -61,7 +61,33 @@ const [selectedMonth, setSelectedMonth] = useState('alle')
       setDeletingId(null)
     }
   }
+const searchTerm = search.toLowerCase().trim()
 
+const filteredIncomes = incomes.filter((income) => {
+  const text = `${income.title || ''} ${income.client || ''} ${income.note || ''}`.toLowerCase()
+  const date = income.date ? new Date(income.date) : null
+
+  const matchesSearch = !searchTerm || text.includes(searchTerm)
+  const matchesYear =
+    !date || date.getFullYear().toString() === selectedYear
+  const matchesMonth =
+    selectedMonth === 'alle' || !date || date.getMonth().toString() === selectedMonth
+
+  return matchesSearch && matchesYear && matchesMonth
+})
+
+const filteredExpenses = expenses.filter((expense) => {
+  const text = `${expense.title || ''} ${expense.vendor || ''} ${expense.category || ''} ${expense.note || ''}`.toLowerCase()
+  const date = expense.date ? new Date(expense.date) : null
+
+  const matchesSearch = !searchTerm || text.includes(searchTerm)
+  const matchesYear =
+    !date || date.getFullYear().toString() === selectedYear
+  const matchesMonth =
+    selectedMonth === 'alle' || !date || date.getMonth().toString() === selectedMonth
+
+  return matchesSearch && matchesYear && matchesMonth
+})
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="flex items-center justify-between pt-2">
@@ -108,18 +134,57 @@ const [selectedMonth, setSelectedMonth] = useState('alle')
           </p>
         </div>
       </section>
+<section className="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
+  <input
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    placeholder="🔍 Suche nach Händler, Kunde, Kategorie..."
+    className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+  />
 
+  <div className="grid grid-cols-2 gap-3">
+    <select
+      value={selectedYear}
+      onChange={(e) => setSelectedYear(e.target.value)}
+      className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none"
+    >
+      <option value={new Date().getFullYear().toString()}>
+        {new Date().getFullYear()}
+      </option>
+    </select>
+
+    <select
+      value={selectedMonth}
+      onChange={(e) => setSelectedMonth(e.target.value)}
+      className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none"
+    >
+      <option value="alle">Alle Monate</option>
+      <option value="0">Januar</option>
+      <option value="1">Februar</option>
+      <option value="2">März</option>
+      <option value="3">April</option>
+      <option value="4">Mai</option>
+      <option value="5">Juni</option>
+      <option value="6">Juli</option>
+      <option value="7">August</option>
+      <option value="8">September</option>
+      <option value="9">Oktober</option>
+      <option value="10">November</option>
+      <option value="11">Dezember</option>
+    </select>
+  </div>
+</section>
       <section className="space-y-3">
         <h2 className="text-sm font-black text-slate-700">
-          Einnahmen ({incomes.length})
+          Einnahmen ({filteredIncomes.length})
         </h2>
 
-        {incomes.length === 0 ? (
+        {filteredIncomes.length === 0 ? (
           <div className="rounded-3xl bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">
             Noch keine Einnahmen erfasst.
           </div>
         ) : (
-          incomes.map((income) => {
+          filteredIncomes.map((income) => {
             const id = `income-${income.id}`
             const isOpen = openId === id
             const isDeleting = deletingId === income.id
@@ -173,15 +238,15 @@ const [selectedMonth, setSelectedMonth] = useState('alle')
 
       <section className="space-y-3">
         <h2 className="text-sm font-black text-slate-700">
-          Ausgaben ({expenses.length})
+          Ausgaben ({filteredExpenses.length})
         </h2>
 
-        {expenses.length === 0 ? (
+      {filteredExpenses.length === 0 ? (
           <div className="rounded-3xl bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">
             Noch keine Ausgaben erfasst.
           </div>
         ) : (
-          expenses.map((expense) => {
+          filteredExpenses.map((expense) => {
             const id = `expense-${expense.id}`
             const isOpen = openId === id
             const isDeleting = deletingId === expense.id
