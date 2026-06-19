@@ -108,7 +108,7 @@ export function MilaChat() {
   }
 
   return (
-    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden h-[70vh] max-h-[650px]">
+    <div className="flex flex-col bg-card border border-border rounded-xl shadow-lg mx-4 my-2 overflow-hidden h-[calc(100dvh-180px)]">
       <div className="bg-primary p-3 text-primary-foreground font-semibold text-sm flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
         Mila — Deine Finanzbegleiterin
