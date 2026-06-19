@@ -28,6 +28,7 @@ export default function HomePage() {
     incomes,
     userName,
     budgetStatus,
+  industry
   } = useFinance()
 // const alerts = getMilaAlerts(
 //   incomes,
