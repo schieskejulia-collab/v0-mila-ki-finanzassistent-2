@@ -145,10 +145,10 @@ export function getMilaInsights(
   }
 if (industry === 'webdesigner') {
   insights.push({
-    id: 'webdesigner',
+    id: 'industry-webdesigner',
     title: '🎨 Webdesigner',
     message:
-  'Webdesigner haben häufig Ausgaben für Domains, Hosting, Design-Tools und KI-Anwendungen. Mila achtet besonders auf wiederkehrende Softwarekosten und Projektmargen.'
+      'Webdesigner haben häufig Ausgaben für Domains, Hosting, Design-Tools und KI-Anwendungen. Mila achtet besonders auf wiederkehrende Softwarekosten und Projektmargen.',
     type: 'business',
   })
 }
