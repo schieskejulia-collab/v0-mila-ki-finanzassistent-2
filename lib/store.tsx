@@ -105,28 +105,46 @@ setIndustry: (industry: Industry) => void
 
 // Einheitliche, kleingeschriebene Keys passend zum Formular & der DB
 const DEFAULT_CATEGORIES = [
-  'software', 'reisen', 'weiterbildung', 'marketing', 'buerobedarf',
-  'bewirtung', 'versicherung', 'hardware', 'telefon & internet',
-  'miete', 'fahrtkosten', 'bankgebühren', 'sonstiges',
+  'software',
+  'hardware',
+  'elektronik',
+  'telefon & internet',
+  'marketing',
+  'buerobedarf',
+  'reisen',
+  'fahrtkosten',
+  'bewirtung',
+  'weiterbildung',
+  'versicherung',
+  'miete',
+  'bankgebühren',
+  'material',
+  'werkzeug',
+  'arbeitskleidung',
+  'sonstiges',
 ]
 
 // Schönes Mapping für die Anzeige im Budget-Check
+
 export const CATEGORY_LABELS: Record<string, string> = {
-  software: 'Software & Tools',
-  reisen: 'Reisekosten',
-  weiterbildung: 'Weiterbildung',
+  software: 'Software & IT',
+  hardware: 'Hardware',
+  elektronik: 'Elektronik',
+  'telefon & internet': 'Telefon & Internet',
   marketing: 'Marketing',
   buerobedarf: 'Büro & Arbeitsmittel',
-  bewirtung: 'Bewirtung',
-  versicherung: 'Versicherung',
-  hardware: 'Hardware',
-  'telefon & internet': 'Telefon & Internet',
-  miete: 'Miete & Coworking',
+  reisen: 'Reisekosten',
   fahrtkosten: 'Fahrtkosten',
+  bewirtung: 'Bewirtung',
+  weiterbildung: 'Weiterbildung',
+  versicherung: 'Versicherung',
+  miete: 'Miete & Coworking',
   bankgebühren: 'Bankgebühren',
+  material: 'Material',
+  werkzeug: 'Werkzeug',
+  arbeitskleidung: 'Arbeitskleidung',
   sonstiges: 'Sonstiges',
 }
-
 const BUDGET_LIMITS: Record<string, number> = {
   software: 200,
   reisen: 500,
@@ -167,19 +185,47 @@ export function toNumber(value: number | string | undefined | null): number {
 
 export function inferCategory(input: string): string {
   const text = input.toLowerCase()
-  if (/hetzner|herzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'software'
+
+  if (/laptop|notebook|computer|pc|macbook|monitor|bildschirm|maus|funkmaus|tastatur|keyboard|drucker|scanner|webcam|headset|usb|adapter|kabel|dock|hardware/.test(text)) {
+    return 'hardware'
+  }
+
+  if (/mediamarkt|saturn|elektronik|technik/.test(text)) {
+    return 'elektronik'
+  }
+
+  if (/werkzeug|bohrer|akkuschrauber|maschine|schrauben|zange|hammer/.test(text)) {
+    return 'werkzeug'
+  }
+
+  if (/material|farbe|holz|metall|rohr|kabelkanal|baustoff/.test(text)) {
+    return 'material'
+  }
+
+  if (/arbeitskleidung|arbeitsschuhe|schutzbrille|handschuhe|helm/.test(text)) {
+    return 'arbeitskleidung'
+  }
+
+  if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) {
+    return 'software'
+  }
+
+  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) {
+    return 'telefon & internet'
+  }
+
   if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'reisen'
   if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'weiterbildung'
   if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'marketing'
-  if (/büro|buero|papier|stift|drucker|toner/.test(text)) return 'buerobedarf'
+  if (/büro|buero|papier|stift|toner/.test(text)) return 'buerobedarf'
   if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'bewirtung'
   if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'versicherung'
-  if (/maus|funkmaus|tastatur|keyboard|monitor|bildschirm|headset|webcam|usb|adapter|kabel|dock|drucker|scanner|mikrofon|macbook|iphone|laptop|pc|computer|hardware|kamera/.test(text)) return 'hardware'
- if (
-  /mediamarkt|saturn|laptop|notebook|computer|pc|monitor|maus|funkmaus|tastatur|keyboard|drucker|scanner|kamera|webcam|headset|usb|adapter|kabel|hardware|technik|elektronik/.test(text)
-) {
-  return 'hardware'
- }
+  if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
+  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
+  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'bankgebühren'
+
+  return 'sonstiges'
+}
   if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'telefon & internet'
   if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
   if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
