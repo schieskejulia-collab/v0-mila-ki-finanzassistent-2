@@ -6,6 +6,7 @@ import { useFinance } from '@/lib/store'
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaAlerts } from "@/lib/mila-alerts"
 import { BookingForm } from '@/components/ui/booking-form'
+import { getMilaInsights } from '@/lib/mila-insights'
 
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
@@ -31,6 +32,11 @@ const alerts = getMilaAlerts(
   incomes,
   expenses,
   summary
+)
+const insights = getMilaInsights(
+  incomes,
+  expenses,
+  userStatus
 )
   const [isMounted, setIsMounted] = useState(false)
 
@@ -97,7 +103,28 @@ const alerts = getMilaAlerts(
       </section>
 
            <MorningBriefing />
+{insights.length > 0 && (
+  <section className="space-y-3">
+    <h2 className="text-sm font-black text-slate-700">
+      Ich habe etwas für dich gefunden 👀
+    </h2>
 
+    {insights.map((item) => (
+      <div
+        key={item.id}
+        className="rounded-2xl bg-white p-4 shadow-sm"
+      >
+        <div className="font-black">
+          {item.title}
+        </div>
+
+        <div className="mt-1 text-sm text-slate-600">
+          {item.message}
+        </div>
+      </div>
+    ))}
+  </section>
+)}
       {alerts.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-black text-slate-700">
