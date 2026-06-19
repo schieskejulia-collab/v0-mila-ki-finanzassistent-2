@@ -25,18 +25,19 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const { data, error } = await supabase
-      .from("expenses")
-      .insert([
-        {
-          title: body.title,
-          amount: body.amount,
-          vendor: body.vendor,
-          category: body.category,
-          note: body.note,
-date: new Date().toISOString().split("T")[0]
-        },
-      ])
-      .select();
+  .from("expenses")
+  .insert([
+    {
+      title: body.title,
+      amount: body.amount,
+      vendor: body.vendor,
+      category: body.category,
+      note: body.note,
+      user_id: body.user_id,
+      date: new Date().toISOString().split("T")[0],
+    },
+  ])
+  .select();
 
     if (error) {
       console.error("Supabase Fehler:", error);
