@@ -13,6 +13,7 @@ function formatEuro(value: number) {
     currency: 'EUR',
   })
 }
+
 export default function HomePage() {
   const {
     summary,
@@ -25,13 +26,10 @@ export default function HomePage() {
     budgetStatus,
   } = useFinance()
 
-
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
-    // Falls beim ersten Laden noch ein alter Status feststeckt, 
-    // setzen wir ihn einmalig sauber auf freelancer.
     if (setUserStatus && userStatus !== 'freelancer') {
       setUserStatus('freelancer')
     }
@@ -48,9 +46,7 @@ export default function HomePage() {
   }
 
   return (
-  <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 text-slate-950">
-    <section className="flex items-center justify-between pt-2">
-)
+    <main className="min-h-screen space-y-6 bg-[#fbf9ff] p-4 text-slate-950">
       <section className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-3xl font-black tracking-tight">
@@ -93,7 +89,9 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-<MorningBriefing />
+
+      <MorningBriefing />
+
       <section className="rounded-r-[2rem] border-l-4 border-violet-600 bg-violet-100 p-5 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-700">
           Mila denkt mit
@@ -130,82 +128,65 @@ export default function HomePage() {
       </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-  <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-    Budget-Ampel
-  </h2>
+        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+          Budget-Ampel
+        </h2>
 
-  {(() => {
-    const totalLimit = budgetStatus.reduce(
-      (sum, b) => sum + b.limit,
-      0
-    )
+        {(() => {
+          const totalLimit = budgetStatus.reduce((sum, b) => sum + b.limit, 0)
+          const totalSpent = budgetStatus.reduce((sum, b) => sum + b.spent, 0)
+          const remaining = totalLimit - totalSpent
+          const percent = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0
 
-    const totalSpent = budgetStatus.reduce(
-      (sum, b) => sum + b.spent,
-      0
-    )
+          const ampel =
+            percent >= 100
+              ? '🔴 Budget überschritten'
+              : percent >= 80
+              ? '🟡 Kategorien beobachten'
+              : '🟢 Alles im grünen Bereich'
 
-    const remaining = totalLimit - totalSpent
-    const percent = totalLimit > 0
-      ? (totalSpent / totalLimit) * 100
-      : 0
+          return (
+            <div className="space-y-3">
+              <div className="text-xl font-black">{ampel}</div>
+              <div className="text-sm text-slate-600">
+                Verwendet: {formatEuro(totalSpent)}
+              </div>
+              <div className="text-sm text-slate-600">
+                Verfügbar: {formatEuro(remaining)}
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-violet-600"
+                  style={{ width: `${Math.min(100, percent)}%` }}
+                />
+              </div>
+            </div>
+          )
+        })()}
+      </section>
 
-    const ampel =
-      percent >= 100
-        ? '🔴 Budget überschritten'
-        : percent >= 80
-        ? '🟡 Kategorien beobachten'
-        : '🟢 Alles im grünen Bereich'
-
-    return (
-      <div className="space-y-3">
-        <div className="text-xl font-black">
-          {ampel}
-        </div>
-
-        <div className="text-sm text-slate-600">
-          Verwendet: {formatEuro(totalSpent)}
-        </div>
-
-        <div className="text-sm text-slate-600">
-          Verfügbar: {formatEuro(remaining)}
-        </div>
-
-        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-violet-600"
-            style={{
-              width: `${Math.min(100, percent)}%`,
-            }}
-          />
-        </div>
-      </div>
-    )
-  })()}
-</section>
-       
       <section className="grid grid-cols-2 gap-3 pb-4">
-  <Link
-    href="/neue-buchung"
-    className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
-  >
-    + Neue Buchung
-  </Link>
+        <Link
+          href="/neue-buchung"
+          className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
+        >
+          + Neue Buchung
+        </Link>
 
-  <Link
-    href="/buchungen"
-    className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
-  >
-    📒 Buchungen
-  </Link>
+        <Link
+          href="/buchungen"
+          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
+        >
+          📒 Buchungen
+        </Link>
 
-  <Link
-    href="/chat"
-    className="col-span-2 flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
-  >
-    💬 Mit Mila sprechen
-  </Link>
-</section>
+        <Link
+          href="/chat"
+          className="col-span-2 flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
+        >
+          💬 Mit Mila sprechen
+        </Link>
+      </section>
     </main>
   )
 }
