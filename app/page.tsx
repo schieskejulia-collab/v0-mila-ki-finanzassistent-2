@@ -20,25 +20,21 @@ function formatEuro(value: number) {
 
 export default function HomePage() {
   const {
-    summary,
-    userStatus,
-    setUserStatus,
-    milaFeedback,
-    expenses,
-    incomes,
-    userName,
-    budgetStatus,
-  industry
-  } = useFinance()
-// const alerts = getMilaAlerts(
-//   incomes,
-//   expenses,
-//   summary
-// )
+  summary,
+  userStatus,
+  setUserStatus,
+  industry,
+  userName,
+  budgetStatus,
+  expenses,
+  incomes,
+} = useFinance()
+
 const insights = getMilaInsights(
   incomes,
   expenses,
-  userStatus
+  userStatus,
+  industry
 )
   const [isMounted, setIsMounted] = useState(false)
 
