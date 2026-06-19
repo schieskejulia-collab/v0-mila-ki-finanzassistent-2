@@ -487,6 +487,8 @@ refreshMorningBriefing, triggerMilaFeedback,
   logout,
   summary,
   budgetStatus,
+userName,
+budgetStatus,
 ])
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
