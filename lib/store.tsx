@@ -376,22 +376,22 @@ useEffect(() => {
 }, [userStatus])
 
 
-  const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
+  const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
   try {
-    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' })
     const data = await res.json()
 
     if (!data.success) {
-      console.error('Supabase Fehler (Delete Expense):', data)
+      console.error('Supabase Fehler (Delete Income):', data)
       return
     }
 
     if (mountedRef.current) {
-      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
-      setMilaFeedback('Die Ausgabe wurde gelöscht.')
+      setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
+      setMilaFeedback('Die Einnahme wurde gelöscht.')
     }
   } catch (e) {
-    console.error('Netzwerkfehler (Delete Expense):', e)
+    console.error('Netzwerkfehler (Delete Income):', e)
   }
 }, [])
 
