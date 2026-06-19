@@ -129,11 +129,22 @@ const alerts = getMilaAlerts(
         </p>
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
-        <div className="rounded-[2rem] bg-emerald-50 p-5 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
+     <section className="grid grid-cols-2 gap-4">
+  <div className="rounded-[2rem] bg-emerald-50">
+    ...
+  </div>
+
+  <div className="rounded-[2rem] bg-rose-50">
+    ...
+  </div>
+</section>
+
 <section className="pb-4">
   <BookingForm />
+</section>
+
+<section className="rounded-[2rem] bg-white p-5 shadow-sm">
+  ...
 </section>
             Einnahmen
           </p>
