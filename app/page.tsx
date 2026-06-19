@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaAlerts } from "@/lib/mila-alerts"
+import { BookingForm } from '@/components/ui/booking-form'
 
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
