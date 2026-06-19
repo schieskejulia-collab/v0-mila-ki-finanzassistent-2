@@ -86,13 +86,16 @@ export default function NeueBuchungPage() {
       </div>
 
     {/* Umschalter zwischen Ausgabe und Einnahme */}
-<div className="flex bg-gray-100 p-1 rounded-xl">
+<div className="relative z-50 grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-2">
   <button
     type="button"
-    onClick={() => setType('expense')}
-    className={`relative z-10 flex-1 py-3 text-center rounded-xl font-bold text-sm transition-all ${
+    onPointerDown={(e) => {
+      e.preventDefault()
+      setType('expense')
+    }}
+    className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
       type === 'expense'
-        ? 'bg-white text-gray-900 shadow-sm'
+        ? 'bg-white text-gray-900 shadow-md'
         : 'text-gray-500'
     }`}
   >
@@ -101,10 +104,13 @@ export default function NeueBuchungPage() {
 
   <button
     type="button"
-    onClick={() => setType('income')}
-    className={`relative z-10 flex-1 py-3 text-center rounded-xl font-bold text-sm transition-all ${
+    onPointerDown={(e) => {
+      e.preventDefault()
+      setType('income')
+    }}
+    className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
       type === 'income'
-        ? 'bg-purple-600 text-white shadow-sm'
+        ? 'bg-purple-600 text-white shadow-md'
         : 'text-gray-500'
     }`}
   >
