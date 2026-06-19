@@ -1,138 +1,260 @@
-import { Expense, Income } from "./store"
+import { Expense, Income } from './store'
 
 type ChatMessage = {
-  role: "system" | "user" | "assistant"
+  role: 'system' | 'user' | 'assistant'
   content: string
+}
+
+type MilaContextData = {
+  expenses?: Expense[]
+  incomes?: Income[]
+  userName?: string
+  userStatus?: string
+  summary?: any
+  budgetStatus?: any[]
+  milaFeedback?: string
+}
+
+function money(value: number) {
+  return value.toLocaleString('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+  })
+}
+
+function toNumber(value: any) {
+  const parsed = Number(String(value ?? '').replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function compactEntry(entry: any) {
+  return {
+    title: entry.title || '',
+    vendor: entry.vendor || '',
+    client: entry.client || '',
+    amount: toNumber(entry.amount),
+    date: entry.date || '',
+    category: entry.category || '',
+    status: entry.status || '',
+    note: entry.note || '',
+  }
+}
+
+function buildFinancialContext(contextData?: MilaContextData) {
+  const expenses = contextData?.expenses ?? []
+  const incomes = contextData?.incomes ?? []
+  const summary = contextData?.summary ?? {}
+
+  const expenseTotal =
+    toNumber(summary.totalExpenses) ||
+    expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
+
+  const incomeTotal =
+    toNumber(summary.totalIncomes) ||
+    incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
+
+  const balance =
+    typeof summary.balance !== 'undefined'
+      ? toNumber(summary.balance)
+      : incomeTotal - expenseTotal
+
+  const openIncomes = incomes.filter((income: any) => {
+    const status = String(income.status || '').toLowerCase()
+    return status === 'offen' || status === 'pending'
+  })
+
+  const openIncomeTotal = openIncomes.reduce(
+    (sum, income) => sum + toNumber(income.amount),
+    0
+  )
+
+  const recentExpenses = expenses.slice(0, 12).map(compactEntry)
+  const recentIncomes = incomes.slice(0, 12).map(compactEntry)
+
+  const categoryTotals: Record<string, number> = {}
+
+  expenses.forEach((expense: any) => {
+    const category = expense.category || 'sonstiges'
+    categoryTotals[category] =
+      (categoryTotals[category] || 0) + toNumber(expense.amount)
+  })
+
+  const topCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([category, total]) => ({ category, total }))
+
+  const vendorGroups: Record<string, { count: number; total: number }> = {}
+
+  expenses.forEach((expense: any) => {
+    const vendor = String(expense.vendor || expense.title || '').trim()
+    if (!vendor) return
+
+    const key = vendor.toLowerCase()
+    if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
+
+    vendorGroups[key].count += 1
+    vendorGroups[key].total += toNumber(expense.amount)
+  })
+
+  const recurring = Object.entries(vendorGroups)
+    .filter(([, data]) => data.count >= 2)
+    .slice(0, 6)
+    .map(([vendor, data]) => ({
+      vendor,
+      count: data.count,
+      total: data.total,
+      monthlyEstimate: data.total / data.count,
+    }))
+
+  const taxRate =
+    contextData?.userStatus === 'angestellt'
+      ? 0.1
+      : contextData?.userStatus === 'kleinunternehmer'
+      ? 0.25
+      : 0.3
+
+  const taxReserve = balance > 0 ? balance * taxRate : 0
+  const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
+
+  return {
+    user: {
+      name: contextData?.userName || 'Julia',
+      status: contextData?.userStatus || 'freelancer',
+    },
+    totals: {
+      incomeTotal,
+      expenseTotal,
+      balance,
+      taxReserve,
+      freeAfterReserve,
+      openIncomeCount: openIncomes.length,
+      openIncomeTotal,
+    },
+    counts: {
+      incomes: incomes.length,
+      expenses: expenses.length,
+    },
+    topCategories,
+    recurring,
+    recentIncomes,
+    recentExpenses,
+    budgetStatus: contextData?.budgetStatus ?? [],
+    milaFeedback: contextData?.milaFeedback || '',
+  }
 }
 
 async function callGroqChat(messages: ChatMessage[]) {
   const apiKey = process.env.GROQ_API_KEY
 
   if (!apiKey) {
-    console.error("❌ GROQ_API_KEY fehlt in den Umgebungsvariablen!")
-    return "Konfigurationsfehler: API-Key fehlt."
+    console.error('❌ GROQ_API_KEY fehlt in den Umgebungsvariablen!')
+    return 'Mila ist noch nicht vollständig verbunden. Der API-Schlüssel fehlt.'
   }
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: 'llama-3.3-70b-versatile',
         messages,
-        temperature: 0.4,
+        temperature: 0.35,
+        max_tokens: 700,
       }),
     })
 
     const data = await res.json()
 
     if (!res.ok) {
-      console.error("Groq Chat Fehler:", data)
-      return "Mila hat gerade Schwierigkeiten beim Nachdenken. Bitte versuch es gleich nochmal."
+      console.error('Groq Chat Fehler:', data)
+      return 'Mila hat gerade Schwierigkeiten beim Antworten. Bitte versuch es gleich nochmal.'
     }
 
-    return data.choices?.[0]?.message?.content || "Ich konnte keine Antwort generieren."
+    return (
+      data.choices?.[0]?.message?.content ||
+      'Ich konnte gerade keine sinnvolle Antwort erzeugen.'
+    )
   } catch (err) {
-    console.error("Netzwerkfehler zu Groq:", err)
-    return "Verbindung zu Mila unterbrochen."
+    console.error('Netzwerkfehler zu Groq:', err)
+    return 'Die Verbindung zu Mila ist gerade unterbrochen.'
   }
 }
 
 export async function getMilaChatResponse(
   userMessage: string,
   history: ChatMessage[] = [],
-  contextData?: {
-    expenses?: Expense[]
-    incomes?: Income[]
-    userName?: string
-    userStatus?: string
-    summary?: any
-    budgetStatus?: any
-    milaFeedback?: string
-  }
+  contextData?: MilaContextData
 ) {
-  const safeHistory = Array.isArray(history)
-  ? history
-      .filter(
-        (msg) =>
-          (msg.role === "user" || msg.role === "assistant") &&
-          typeof msg.content === "string"
-      )
-      .map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }))
-      .slice(-10)
-  : []
+  const safeHistory: ChatMessage[] = Array.isArray(history)
+    ? history
+        .filter(
+          (msg) =>
+            (msg.role === 'user' || msg.role === 'assistant') &&
+            typeof msg.content === 'string'
+        )
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content.slice(0, 1200),
+        }))
+        .slice(-8)
+    : []
 
-  const contextPrompt = `
-Nutzername: ${contextData?.userName ?? "Unbekannt"}
-Status: ${contextData?.userStatus ?? "Freelancer"}
-
-Finanzübersicht:
-${JSON.stringify(contextData?.summary ?? {}, null, 2)}
-
-Einnahmen:
-${JSON.stringify(contextData?.incomes ?? [], null, 2)}
-
-Ausgaben:
-${JSON.stringify(contextData?.expenses ?? [], null, 2)}
-
-Budgetstatus:
-${JSON.stringify(contextData?.budgetStatus ?? [], null, 2)}
-
-Aktuelles Mila-Feedback:
-${contextData?.milaFeedback ?? "Keine aktuelle Einschätzung vorhanden."}
-`
+  const context = buildFinancialContext(contextData)
 
   const messages: ChatMessage[] = [
     {
-      role: "system",
+      role: 'system',
       content: `
-Du bist Mila, eine warme deutsche Finanzbegleiterin.
+Du bist Mila, eine warme, klare deutsche Finanzbegleiterin.
 
-Du hilfst Julia dabei, Einnahmen, Ausgaben, Budgets, Rücklagen und finanzielle Entscheidungen besser zu verstehen.
+Deine Aufgabe:
+Du hilfst der Nutzerin, ihre Einnahmen, Ausgaben, Rücklagen, offenen Einnahmen, Budgets und finanziellen nächsten Schritte zu verstehen.
 
-Grundregeln:
-- Nutze ausschließlich die Daten aus dem Kontext und dem aktuellen Chatverlauf.
-- Erfinde niemals Kunden, Kategorien, Zahlungsarten, Gründe, Daten oder Beträge.
-- Wenn eine Information fehlt, sage: "Diese Information liegt mir nicht vor."
-- Trenne Fakten von Vermutungen.
-- Kennzeichne Vermutungen immer ausdrücklich.
-- Bewerte Buchungen nur, wenn die Daten das wirklich hergeben.
-- Sage nicht "wahrscheinlich", "schöner Mix" oder "Kunde", wenn diese Information nicht eindeutig im Kontext steht.
+Wichtig:
+- Nutze ausschließlich die Daten aus dem Kontext und Chatverlauf.
+- Erfinde niemals Beträge, Kunden, Händler, Kategorien, Rechnungen, Daten oder Gründe.
+- Wenn etwas nicht im Kontext steht, sage klar: "Diese Information liegt mir nicht vor."
+- Trenne Fakten und Vermutungen.
+- Keine verbindliche Steuerberatung. Nur Orientierung.
+- Keine langen Romane. Mobile Ansicht: kurz, klar, hilfreich.
+- Maximal eine Rückfrage.
+- Wenn die Nutzerin gestresst wirkt: beruhigend, aber konkret bleiben.
+- Wenn sie nach nächstem Schritt fragt: gib 1–3 konkrete Schritte.
 
-Dein Stil:
-- warm
-- klar
-- persönlich
+Antwortstil:
+- Deutsch
 - direkt
-- motivierend, aber nicht kitschig
-- keine langen Romane
-- ideal für mobile Ansicht
+- freundlich
+- nicht kitschig
+- kein unnötiges Fachchinesisch
+- keine erfundenen Erfolgsgeschichten
 
-Antwortverhalten:
-- Sprich Julia mit Namen an, wenn der Name vorhanden ist.
-- Nenne konkrete Zahlen, wenn sie im Kontext stehen.
-- Bei Listen nutze klare kurze Abschnitte.
-- Stelle maximal eine Rückfrage.
-- Gib keine verbindliche Steuerberatung, sondern praktische Orientierung.
+Besonders wichtig:
+Mila ist kein Tabellenbot. Mila soll Orientierung geben:
+- Was ist gerade wichtig?
+- Wo droht ein Problem?
+- Was kann warten?
+- Was sollte als Nächstes getan werden?
 
-Folgefragen haben höchste Priorität:
-- Wenn Julia nach "die", "das", "sie", "dieser Kunde", "diese Einnahme", "das Projekt", "eben" oder "die höchste" fragt, beziehe dich zuerst auf die zuletzt besprochene Einnahme, den zuletzt genannten Kunden oder das zuletzt genannte Projekt.
-- Wiederhole nicht die gesamte Einnahmenliste, wenn eine Folgefrage gestellt wird.
-- Beantworte Folgefragen möglichst konkret und kurz.
+Aktueller Finanzkontext:
+${JSON.stringify(context, null, 2)}
 
-Aktuelle Daten:
-${contextPrompt}
+Hilfreiche Orientierung:
+- Aktueller Überschuss: ${money(context.totals.balance)}
+- Grobe Rücklage: ${money(context.totals.taxReserve)}
+- Frei nach Rücklage: ${money(context.totals.freeAfterReserve)}
+- Offene Einnahmen: ${context.totals.openIncomeCount} (${money(
+        context.totals.openIncomeTotal
+      )})
 `,
     },
     ...safeHistory,
     {
-      role: "user",
+      role: 'user',
       content: userMessage,
     },
   ]
