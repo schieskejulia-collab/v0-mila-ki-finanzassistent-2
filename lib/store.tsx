@@ -418,13 +418,6 @@ useEffect(() => {
   user_id: user.id,
 }
 
-  try {
-    const res = await fetch('/api/incomes', {
-const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   if (!user) {
     setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
     return
