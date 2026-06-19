@@ -393,12 +393,6 @@ useEffect(() => {
   } catch (e) {
     console.error('Netzwerkfehler (Delete Income):', e)
   }
-}, [])
-
-const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
   if (!user) {
     setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
