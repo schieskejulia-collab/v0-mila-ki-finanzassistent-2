@@ -251,6 +251,6 @@ if (industry === 'ecommerce') {
     type: 'business',
   })
 }
-if
+
   return insights
 }
