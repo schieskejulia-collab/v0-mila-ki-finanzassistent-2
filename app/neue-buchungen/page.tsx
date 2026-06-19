@@ -102,7 +102,7 @@ export default function NeueBuchungPage() {
   const [partner, setPartner] = useState('')
   const [category, setCategory] = useState('Sonstiges')
   const [note, setNote] = useState('')
-
+const [isSaving, setIsSaving] = useState(false)
   const numericAmount = Number(amount || 0)
   const deductible = type === 'expense' && isDeductible(category)
   const taxReserve = type === 'income' ? numericAmount * 0.3 : 0
@@ -141,52 +141,83 @@ export default function NeueBuchungPage() {
   }
 
   async function speichern() {
-    if (!title || !amount) {
-      alert('Bitte zumindest Titel und Betrag ausfüllen! ⚠️')
-      return
-    }
+  if (isSaving) return
 
-    const apiPath = type === 'expense' ? '/api/expenses' : '/api/incomes'
+  if (!title || !amount) {
+    alert('Bitte zumindest Titel und Betrag ausfüllen! ⚠️')
+    return
+  }
 
-    const payload: any = {
-      title,
-      amount: numericAmount,
-      note: note || '',
-    }
+  setIsSaving(true)
 
-    if (type === 'expense') {
-      payload.vendor = partner || ''
-      payload.category = category
-      payload.tax_deductible = deductible
-      payload.tax_hint = taxHint
-    } else {
-      payload.client = partner || ''
-      payload.tax_reserve = taxReserve
-    }
+  const apiPath = type === 'expense' ? '/api/expenses' : '/api/incomes'
 
-    try {
-      const res = await fetch(apiPath, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+  const payload: any = {
+    title: title.trim(),
+    amount: numericAmount,
+    note: note || '',
+    date: new Date().toISOString().slice(0, 10),
+  }
+
+  if (type === 'expense') {
+    payload.vendor = partner || ''
+    payload.category = category
+    payload.tax_deductible = deductible
+    payload.tax_hint = taxHint
+  } else {
+    payload.client = partner || ''
+    payload.tax_reserve = taxReserve
+  }
+
+  try {
+    const checkRes = await fetch(apiPath)
+    const checkData = await checkRes.json()
+
+    if (checkData.success && Array.isArray(checkData.data)) {
+      const duplicate = checkData.data.find((item: any) => {
+        const sameTitle =
+          String(item.title || '').trim().toLowerCase() ===
+          String(payload.title || '').trim().toLowerCase()
+
+        const sameAmount = Number(item.amount) === Number(payload.amount)
+
+        const sameDate =
+          String(item.date || '').slice(0, 10) ===
+          String(payload.date || '').slice(0, 10)
+
+        return sameTitle && sameAmount && sameDate
       })
 
-      const data = await res.json()
-
-      if (data.success) {
-        alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
-        setTitle('')
-        setAmount('')
-        setPartner('')
-        setNote('')
-        setCategory('Sonstiges')
-      } else {
-        alert(`Fehler beim Speichern: ${data.error} ❌`)
+      if (duplicate) {
+        alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
+        return
       }
-    } catch (error: any) {
-      alert(`Netzwerkfehler: ${error.message} ❌`)
     }
+
+    const res = await fetch(apiPath, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
+      setTitle('')
+      setAmount('')
+      setPartner('')
+      setNote('')
+      setCategory('Sonstiges')
+    } else {
+      alert(`Fehler beim Speichern: ${data.error} ❌`)
+    }
+  } catch (error: any) {
+    alert(`Netzwerkfehler: ${error.message} ❌`)
+  } finally {
+    setIsSaving(false)
   }
+}
 
   return (
     <main className="min-h-screen max-w-md mx-auto p-6 pb-40 space-y-4">
@@ -306,17 +337,22 @@ export default function NeueBuchungPage() {
         </section>
       )}
 
-      <button
-        type="button"
-        onClick={speichern}
-        className={`w-full rounded-2xl py-4 font-black text-white shadow-md ${
-          type === 'expense'
-            ? 'bg-slate-900'
-            : 'bg-purple-600'
-        }`}
-      >
-        {type === 'expense' ? 'Ausgabe speichern' : 'Einnahme speichern'}
-      </button>
+     <button
+  type="button"
+  onClick={speichern}
+  disabled={isSaving}
+  className={`w-full rounded-2xl py-4 font-black text-white shadow-md disabled:opacity-50 ${
+    type === 'expense'
+      ? 'bg-slate-900'
+      : 'bg-purple-600'
+  }`}
+>
+  {isSaving
+    ? 'Speichere...'
+    : type === 'expense'
+    ? 'Ausgabe speichern'
+    : 'Einnahme speichern'}
+</button>
     </main>
   )
 }
