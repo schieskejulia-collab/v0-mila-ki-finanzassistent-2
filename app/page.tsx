@@ -194,7 +194,7 @@ const alerts = getMilaAlerts(
 
       <section className="grid grid-cols-2 gap-3 pb-4">
         <Link
-          href="/neue-buchung"
+          href="/neue-buchungen"
           className="flex items-center justify-center rounded-3xl bg-violet-600 p-4 text-sm font-black text-white shadow-sm active:bg-violet-700"
         >
           + Neue Buchung
