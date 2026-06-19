@@ -28,11 +28,11 @@ export default function HomePage() {
     userName,
     budgetStatus,
   } = useFinance()
-const alerts = getMilaAlerts(
-  incomes,
-  expenses,
-  summary
-)
+// const alerts = getMilaAlerts(
+//   incomes,
+//   expenses,
+//   summary
+// )
 const insights = getMilaInsights(
   incomes,
   expenses,
