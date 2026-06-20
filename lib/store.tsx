@@ -434,7 +434,7 @@ const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) =
     note: income.note?.trim() || '',
     vat: income.vat ?? 19,
     status: income.status || 'offen',
-    source: income.source || 'sonstiges',
+source: income.source || 'sonstiges',
     user_id: user.id,
   }
 
