@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   note: body.note || '',
   user_id: body.user_id || null,
   vat: body.vat ?? 19,
-  status: body.status || 'offen',
+ 
 }
 
     const { data, error } = await supabase
