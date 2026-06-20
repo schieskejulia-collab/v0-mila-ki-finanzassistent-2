@@ -104,7 +104,7 @@ export function BookingForm() {
     if (isDuplicateExpense()) {
       const ok = confirm(
         'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
-      )
+      
       if (!ok) return
     }
 
