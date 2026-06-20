@@ -17,13 +17,8 @@ function normalizeAmount(value: string) {
 }
 
 export function BookingForm() {
-  const {
-    addExpense,
-    addIncome,
-    triggerMilaFeedback,
-    expenses,
-    incomes,
-  } = useFinance()
+  const { addExpense, addIncome, triggerMilaFeedback, expenses, incomes } =
+    useFinance()
 
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState('')
@@ -38,9 +33,7 @@ export function BookingForm() {
   const detectedCategory = inferCategory(`${title} ${partner} ${note}`)
 
   const usedCategory =
-    type === 'expense' && category === 'sonstiges'
-      ? detectedCategory
-      : category
+    type === 'expense' && category === 'sonstiges' ? detectedCategory : category
 
   const readableCategory = CATEGORY_LABELS[usedCategory] || usedCategory
   const taxHint = amountNumber > 0 ? amountNumber * 0.3 : 0
@@ -93,7 +86,11 @@ export function BookingForm() {
         String(income.client || income.title || '').toLowerCase().trim() ===
         String(partner || title).toLowerCase().trim()
 
-       async function speichern() {
+      return sameAmount && sameClient && amountNumber > 0
+    })
+  }
+
+  async function speichern() {
     if (isSaving) return
 
     if (!title.trim() || !amount.trim() || amountNumber <= 0) {
@@ -102,20 +99,49 @@ export function BookingForm() {
     }
 
     if (isDuplicateExpense()) {
-  const ok = confirm(
-    'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
-  )
+      const ok = confirm(
+        'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
+      )
+      if (!ok) return
+    }
 
-  if (!ok) return
-}
+    if (isDuplicateIncome()) {
+      const ok = confirm(
+        'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
+      )
+      if (!ok) return
+    }
 
-if (isDuplicateIncome()) {
-  const ok = confirm(
-    'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
-  )
+    setIsSaving(true)
 
-  if (!ok) return
-}
+    try {
+      if (type === 'expense') {
+        await addExpense({
+          title: title.trim(),
+          vendor: partner.trim(),
+          amount: amountNumber,
+          category: usedCategory,
+          note: note.trim(),
+          hasReceipt: scanMessage.length > 0,
+        })
+
+        triggerMilaFeedback(usedCategory)
+      } else {
+        await addIncome({
+          title: title.trim(),
+          client: partner.trim(),
+          amount: amountNumber,
+          note: note.trim(),
+        })
+      }
+
+      resetForm()
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
     <section className="rounded-[2rem] bg-white p-5 shadow-sm">
       <div className="mb-4">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
@@ -179,7 +205,9 @@ if (isDuplicateIncome()) {
               setCategory(inferCategory(`${value} ${partner} ${note}`))
             }
           }}
-          placeholder={type === 'expense' ? 'Was wurde bezahlt?' : 'Wofür kam Geld rein?'}
+          placeholder={
+            type === 'expense' ? 'Was wurde bezahlt?' : 'Wofür kam Geld rein?'
+          }
           className="w-full rounded-2xl border border-violet-100 bg-white p-3 text-lg font-semibold outline-none"
         />
 
@@ -229,7 +257,8 @@ if (isDuplicateIncome()) {
             Ich ordne diese Ausgabe als <strong>{readableCategory}</strong> ein.
             {amountNumber > 0 && (
               <>
-                {' '}Als grobe Orientierung wären bei 30% etwa{' '}
+                {' '}
+                Als grobe Orientierung wären bei 30% etwa{' '}
                 <strong>{formatEuro(taxHint)}</strong> steuerlich relevant.
               </>
             )}
