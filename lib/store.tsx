@@ -101,6 +101,14 @@ setIndustry: (industry: Industry) => void
   logout: () => void
   summary: Summary
   budgetStatus: BudgetStatus[]
+taxClass: string
+setTaxClass: (value: string) => void
+annualGross: string
+setAnnualGross: (value: string) => void
+annualProfit: string
+setAnnualProfit: (value: string) => void
+vatStatus: string
+setVatStatus: (value: string) => void
 }
 
 // Einheitliche, kleingeschriebene Keys passend zum Formular & der DB
@@ -218,6 +226,10 @@ const [morningBriefing, setMorningBriefing] = useState('')
   
   // Voreinstellung direkt auf "freelancer" für den perfekten Start
   const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
+const [taxClass, setTaxClass] = useState('1')
+const [annualGross, setAnnualGross] = useState('')
+const [annualProfit, setAnnualProfit] = useState('')
+const [vatStatus, setVatStatus] = useState('kleinunternehmer')
   const [isLoggedIn, setIsLoggedIn] = useState(true)
 const [taxClass, setTaxClass] = useState('')
 const [annualGross, setAnnualGross] = useState('')
