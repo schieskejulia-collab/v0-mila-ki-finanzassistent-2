@@ -433,6 +433,7 @@ const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) =
   date: income.date || new Date().toISOString().slice(0, 10),
   note: income.note?.trim() || '',
   user_id: user.id,
+created_at: new Date().toISOString(),
 }
 
   try {
