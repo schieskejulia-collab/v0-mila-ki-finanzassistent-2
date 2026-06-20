@@ -102,18 +102,20 @@ export function BookingForm() {
     }
 
     if (isDuplicateExpense()) {
-      const ok = confirm(
-        'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
-      
-      if (!ok) return
-    }
+  const ok = confirm(
+    'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
+  )
 
-    if (isDuplicateIncome()) {
-      const ok = confirm(
-        'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
-  
+  if (!ok) return
+}
 
-  return (
+if (isDuplicateIncome()) {
+  const ok = confirm(
+    'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
+  )
+
+  if (!ok) return
+}
     <section className="rounded-[2rem] bg-white p-5 shadow-sm">
       <div className="mb-4">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
