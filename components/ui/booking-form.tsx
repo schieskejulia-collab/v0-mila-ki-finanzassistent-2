@@ -133,7 +133,9 @@ export function BookingForm() {
         })
 
         triggerMilaFeedback(usedCategory)
+
       } else {
+
         await addIncome({
   title: title.trim(),
   client: partner.trim(),
@@ -144,8 +146,8 @@ export function BookingForm() {
       resetForm()
     } finally {
       setIsSaving(false)
-    }
-  }
+   })
+} 
 
   return (
     <section className="rounded-[2rem] bg-white p-5 shadow-sm">
