@@ -33,13 +33,15 @@ export function getMilaAlerts(
   }
 
   if (balance > 0) {
-    alerts.push({
-      id: "tax",
-      type: "info",
-      title: "💰 Steuerrücklage",
-      const taxReserve = balance > 0 ? balance * 0.3 : 0
-message: `Empfohlene Rücklage: ${money(taxReserve)}`
-  }
+  const taxReserve = balance * 0.3
+
+  alerts.push({
+    id: "tax",
+    type: "info",
+    title: "💰 Steuerrücklage",
+    message: `Empfohlene Rücklage: ${money(taxReserve)}`,
+  })
+}
 
   const openIncomes = incomes.filter(
     (income) =>
@@ -62,14 +64,25 @@ message: `Empfohlene Rücklage: ${money(taxReserve)}`
   const vendorMap: Record<string, { count: number; total: number }> = {}
 
   expenses.forEach((expense) => {
-    const vendor =
-      expense.vendor || expense.client || expense.title || expense.category
+  const vendor =
+    expense.vendor ||
+    expense.client ||
+    expense.title ||
+    expense.category
 
-    if (!vendor) return
+  if (!vendor) return
 
-    if (!vendorMap[vendor]) {
-      vendorMap[vendor] = { count: 0, total: 0 }
+  if (!vendorMap[vendor]) {
+    vendorMap[vendor] = {
+      count: 0,
+      total: 0,
     }
+  }
+
+  vendorMap[vendor].count += 1
+  vendorMap[vendor].total += Number(expense.amount || 0)
+})
+
 expenses.forEach((expense, index) => {
   if (!expense.hasReceipt) {
     alerts.push({
@@ -79,22 +92,38 @@ expenses.forEach((expense, index) => {
       message: `${expense.title || "Diese Ausgabe"} hat aktuell keinen Beleg hinterlegt.`,
     })
   }
+})
     vendorMap[vendor].count += 1
     vendorMap[vendor].total += Number(expense.amount || 0)
   })
 
-  Object.entries(vendorMap).forEach(([vendor, data]) => {
-    if (data.count >= 2) {
-      alerts.push({
-        id: `recurring-${vendor}`,
-        type: "info",
-        title: "💡 Wiederkehrende Ausgabe",
-        message: `${vendor} wurde ${data.count}x gebucht (${money(
-          data.total
-        )} gesamt). Möchtest du das als Abo markieren?`,
-      })
-    }
-  })
+ Object.entries(vendorMap).forEach(([vendor, data]) => {
+  if (data.count >= 3) {
+    alerts.push({
+      id: `recurring-${vendor}`,
+      type: "info",
+      title: "💡 Wiederkehrende Ausgabe",
+      message: `${vendor} wurde ${data.count}x gebucht (${money(
+        data.total
+      )} gesamt). Möchtest du das als Abo markieren?`,
+    })
+  }
 
-  return alerts
-}
+  const v = vendor.toLowerCase()
+
+  if (
+    v.includes("pizza") ||
+    v.includes("lieferando") ||
+    v.includes("dominos")
+  ) {
+    alerts.push({
+      id: `pattern-${vendor}`,
+      type: "info",
+      title: "🧠 Verhaltensmuster erkannt",
+      message:
+        "Du bestellst häufiger Essen. Soll Mila dieses Muster beobachten?",
+    })
+  }
+})
+
+return alerts
