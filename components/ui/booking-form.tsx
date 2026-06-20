@@ -93,11 +93,7 @@ export function BookingForm() {
         String(income.client || income.title || '').toLowerCase().trim() ===
         String(partner || title).toLowerCase().trim()
 
-      return sameAmount && sameClient && amountNumber > 0
-    })
-  }
-
-    async function speichern() {
+       async function speichern() {
     if (isSaving) return
 
     if (!title.trim() || !amount.trim() || amountNumber <= 0) {
