@@ -97,7 +97,7 @@ export function BookingForm() {
     })
   }
 
-  async function speichern() {
+    async function speichern() {
     if (isSaving) return
 
     if (!title.trim() || !amount.trim() || amountNumber <= 0) {
@@ -115,39 +115,7 @@ export function BookingForm() {
     if (isDuplicateIncome()) {
       const ok = confirm(
         'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
-      )
-      if (!ok) return
-    }
-
-    setIsSaving(true)
-
-    try {
-      if (type === 'expense') {
-        await addExpense({
-          title: title.trim(),
-          vendor: partner.trim(),
-          amount: amountNumber,
-          category: usedCategory,
-          note: note.trim(),
-          hasReceipt: scanMessage.length > 0,
-        })
-
-        triggerMilaFeedback(usedCategory)
-
-      } else {
-
-        await addIncome({
-  title: title.trim(),
-  client: partner.trim(),
-  amount: amountNumber,
-  note: note.trim(),
-})
-
-      resetForm()
-    } finally {
-      setIsSaving(false)
-   })
-} 
+  
 
   return (
     <section className="rounded-[2rem] bg-white p-5 shadow-sm">
