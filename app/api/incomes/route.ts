@@ -51,16 +51,15 @@ export async function POST(req: Request) {
     }
 
     const insertPayload = {
-      title: body.title || body.client || 'Einnahme',
-      client: body.client || '',
-      amount,
-      date: body.date || new Date().toISOString().slice(0, 10),
-      note: body.note || '',
-      user_id: body.user_id || null,
-      vat: body.vat ?? 19,
-      status: body.status || 'offen',
-      source: body.source || 'sonstiges',
-    }
+  title: body.title || body.client || 'Einnahme',
+  client: body.client || '',
+  amount,
+  date: body.date || new Date().toISOString().slice(0, 10),
+  note: body.note || '',
+  user_id: body.user_id || null,
+  vat: body.vat ?? 19,
+  status: body.status || 'offen',
+}
 
     const { data, error } = await supabase
       .from('incomes')
