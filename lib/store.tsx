@@ -575,3 +575,4 @@ export function useFinance() {
   if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
   return ctx
 }
+
