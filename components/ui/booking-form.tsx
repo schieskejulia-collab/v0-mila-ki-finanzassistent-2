@@ -135,13 +135,11 @@ export function BookingForm() {
         triggerMilaFeedback(usedCategory)
       } else {
         await addIncome({
-          title: title.trim(),
-          client: partner.trim(),
-          amount: amountNumber,
-          note: note.trim(),
-          status: 'offen',
-        })
-      }
+  title: title.trim(),
+  client: partner.trim(),
+  amount: amountNumber,
+  note: note.trim(),
+})
 
       resetForm()
     } finally {
