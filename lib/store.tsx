@@ -344,9 +344,11 @@ useEffect(() => {
   const vendor = expense.vendor?.trim() || ''
   const autoCategory = inferCategory(`${title} ${vendor} ${expense.note ?? ''}`)
   const category =
-    expense.category && expense.category !== 'Automatisch'
-      ? expense.category
-      : autoCategory
+  expense.category &&
+  expense.category !== 'Automatisch' &&
+  expense.category !== 'sonstiges'
+    ? expense.category
+    : autoCategory
 
   const payload = {
     title,
