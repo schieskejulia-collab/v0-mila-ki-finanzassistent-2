@@ -1,7 +1,6 @@
-export const getMilaTip = (
-  category: string,
-  userStatus: string
-): string => {
+import { CategoryId } from './types' // falls nötig
+
+export const getMilaTip = (category: string | CategoryId): string => {
   const cat = category.toLowerCase()
 
   if (cat.includes('software')) {
