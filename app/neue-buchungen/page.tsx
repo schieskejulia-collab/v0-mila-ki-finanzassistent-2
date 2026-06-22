@@ -166,10 +166,11 @@ const [isSaving, setIsSaving] = useState(false)
   if (type === 'expense') {
     } else {
   payload.client = partner || ''
-  payload.tax_reserve = taxReserve
-  payload.status = 'offen'
-  payload.source = 'manuell'
-  payload.vat = 19
+payload.tax_reserve = taxReserve
+payload.status = status
+payload.due_date = dueDate || null
+payload.source = 'manuell'
+payload.vat = 19
 }
 
   try {
@@ -211,6 +212,8 @@ const [isSaving, setIsSaving] = useState(false)
       setAmount('')
       setPartner('')
       setNote('')
+setStatus('offen')
+setDueDate('')
       setCategory('Sonstiges')
     } else {
       alert(`Fehler beim Speichern: ${data.error} ❌`)
