@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
-
 const STATUS_DETAILS = [
   {
     key: 'angestellt',
