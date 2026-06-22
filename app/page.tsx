@@ -6,7 +6,7 @@ import { useFinance } from '@/lib/store'
 import { getMilaInsights } from '@/lib/mila-insights'
 import { BookingForm } from '@/components/ui/booking-form'
 import { TaxCard } from '@/components/ui/tax-card'
-
+import { useRouter } from 'next/navigation'
 const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
 const industries = [
@@ -50,7 +50,7 @@ export default function HomePage() {
 
   const [isMounted, setIsMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-
+const router = useRouter()
   useEffect(() => {
     setIsMounted(true)
   }, [])
@@ -158,8 +158,11 @@ const paidIncomeTotal = paidIncomes.reduce(
           </p>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-3xl bg-emerald-50 p-4">
+        <div <div
+  onClick={() => router.push('/buchungen?status=offen')}
+  className="rounded-3xl bg-amber-50 p-3 cursor-pointer"
+>className="mt-4 grid grid-cols-2 gap-3">
+          
             <p className="text-[10px] font-black uppercase text-emerald-700">
               Einnahmen
             </p>
@@ -261,7 +264,10 @@ const paidIncomeTotal = paidIncomes.reduce(
 )}
 
 {overdueIncomes.length > 0 && (
-  <div className="rounded-3xl bg-rose-50 p-4">
+  <div
+  onClick={() => router.push('/buchungen?status=ueberfaellig')}
+  className="rounded-3xl bg-rose-50 p-3 cursor-pointer"
+>
     <p className="text-lg font-black text-rose-700">
       🔴 Überfällige Einnahmen
     </p>
@@ -325,7 +331,9 @@ const paidIncomeTotal = paidIncomes.reduce(
     </p>
   </div>
 
-  <div className="rounded-3xl bg-emerald-50 p-3">
+ <div
+  onClick={() => router.push('/buchungen?status=bezahlt')}
+  className="rounded-3xl bg-emerald-50 p-3 cursor-pointer"
     <p className="text-[10px] font-black uppercase text-emerald-700">
       Bezahlt
     </p>
