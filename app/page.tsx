@@ -2,12 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFinance } from '@/lib/store'
 import { getMilaInsights } from '@/lib/mila-insights'
-import { BookingForm } from '@/components/ui/booking-form'
 import { TaxCard } from '@/components/ui/tax-card'
-import { useRouter } from 'next/navigation'
-const statuses = ['angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer'] as const
 
 const industries = [
   ['webdesigner', '🎨 Webdesigner'],
@@ -36,21 +34,20 @@ function niceIndustry(value: string) {
 }
 
 export default function HomePage() {
+  const router = useRouter()
+
   const {
     summary,
     userStatus,
-    setUserStatus,
     expenses,
     incomes,
     userName,
     budgetStatus,
     industry,
-    setIndustry,
   } = useFinance()
 
   const [isMounted, setIsMounted] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-const router = useRouter()
+
   useEffect(() => {
     setIsMounted(true)
   }, [])
@@ -65,49 +62,44 @@ const router = useRouter()
     )
   }
 
+  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+
+  const openIncomes = incomes.filter((income: any) => {
+    const status = String(income.status || 'offen').toLowerCase()
+    return status !== 'bezahlt'
+  })
+
+  const overdueIncomes = openIncomes.filter((income: any) => {
+    if (!income.due_date) return false
+
+    const due = new Date(income.due_date)
+    const today = new Date()
+
+    due.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+
+    return due < today
+  })
+
+  const paidIncomes = incomes.filter(
+    (income: any) => String(income.status || '').toLowerCase() === 'bezahlt'
+  )
+
+  const openIncomeTotal = openIncomes.reduce(
+    (sum: number, income: any) => sum + Number(income.amount || 0),
+    0
+  )
+
+  const overdueIncomeTotal = overdueIncomes.reduce(
+    (sum: number, income: any) => sum + Number(income.amount || 0),
+    0
+  )
+
   const insights = getMilaInsights(incomes, expenses, userStatus, industry)
-  const topInsights = insights.slice(0, 3)
-const displayInsights = topInsights.filter(
-  (item) =>
-    !item.title?.toLowerCase().includes('offene einnahmen')
-)
+  const displayInsights = insights
+    .filter((item: any) => !item.title?.toLowerCase().includes('offene einnahmen'))
+    .slice(0, 2)
 
- const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
-const openIncomes = incomes.filter((income: any) => {
-  const status = String(income.status || 'offen').toLowerCase()
-  return status !== 'bezahlt'
-})
-
-const overdueIncomes = openIncomes.filter((income: any) => {
-  if (!income.due_date) return false
-
-  const due = new Date(income.due_date)
-  const today = new Date()
-
-  due.setHours(0, 0, 0, 0)
-  today.setHours(0, 0, 0, 0)
-
-  return due < today
-})
-
-const openIncomeTotal = openIncomes.reduce(
-  (sum, income: any) => sum + Number(income.amount || 0),
-  0
-)
-
-const overdueIncomeTotal = overdueIncomes.reduce(
-  (sum, income: any) => sum + Number(income.amount || 0),
-  0
-)
-
-const paidIncomes = incomes.filter(
-  (i: any) => i.status === 'bezahlt'
-)
-
-const paidIncomeTotal = paidIncomes.reduce(
-  (sum, i: any) => sum + Number(i.amount || 0),
-  0
-)
   const totalLimit = budgetStatus.reduce((sum, b) => sum + b.limit, 0)
   const totalSpent = budgetStatus.reduce((sum, b) => sum + b.spent, 0)
   const percent = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0
@@ -158,147 +150,96 @@ const paidIncomeTotal = paidIncomes.reduce(
           </p>
         </div>
 
-  onClick={() => router.push('/buchungen?status=offen')}
-  className="rounded-3xl bg-amber-50 p-3 cursor-pointer"
-<div className="mt-4 grid grid-cols-3 gap-3">
-  <button
-    type="button"
-    onClick={() => router.push('/buchungen?status=offen')}
-    className="rounded-3xl bg-amber-50 p-3 text-left"
-  >
-    <p className="text-[10px] font-black uppercase text-amber-700">
-      Offen
-    </p>
-    <p className="mt-1 text-lg font-black text-slate-950">
-      {openIncomes.length}
-    </p>
-  </button>
-
-  <button
-    type="button"
-    onClick={() => router.push('/buchungen?status=bezahlt')}
-    className="rounded-3xl bg-emerald-50 p-3 text-left"
-  >
-    <p className="text-[10px] font-black uppercase text-emerald-700">
-      Bezahlt
-    </p>
-    <p className="mt-1 text-lg font-black text-slate-950">
-      {paidIncomes.length}
-    </p>
-  </button>
-
-  <button
-    type="button"
-    onClick={() => router.push('/buchungen?status=ueberfaellig')}
-    className="rounded-3xl bg-rose-50 p-3 text-left"
-  >
-    <p className="text-[10px] font-black uppercase text-rose-700">
-      Überfällig
-    </p>
-    <p className="mt-1 text-lg font-black text-slate-950">
-      {overdueIncomes.length}
-    </p>
-  </button>
-</div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-3xl bg-emerald-50 p-4">
             <p className="text-[10px] font-black uppercase text-emerald-700">
               Einnahmen
             </p>
-            <p className="mt-1 text-xl font-black text-emerald-800">
+            <p className="mt-2 text-2xl font-black text-emerald-700">
               {formatEuro(summary.totalIncomes)}
             </p>
-            <p className="text-xs font-bold text-emerald-600">
+            <p className="text-xs font-bold text-emerald-700">
+              {incomes.length} Buchungen
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-rose-50 p-4">
+            <p className="text-[10px] font-black uppercase text-rose-700">
+              Ausgaben
+            </p>
+            <p className="mt-2 text-2xl font-black text-rose-700">
               {formatEuro(summary.totalExpenses)}
             </p>
-           <p className="text-xs font-bold text-rose-700">
-  {expenses.length} Belege
-</p>
-<div className="mt-4 grid grid-cols-2 gap-3">
-  <div className="rounded-3xl bg-emerald-50 p-4">
-    <p className="text-[10px] font-black uppercase text-emerald-700">
-      Einnahmen
-    </p>
-    <p className="mt-2 text-2xl font-black text-emerald-700">
-      {formatEuro(summary.totalIncomes)}
-    </p>
-    <p className="text-xs font-bold text-emerald-700">
-      {incomes.length} Buchungen
-    </p>
-  </div>
-
-  <div className="rounded-3xl bg-rose-50 p-4">
-    <p className="text-[10px] font-black uppercase text-rose-700">
-      Ausgaben
-    </p>
-    <p className="mt-2 text-2xl font-black text-rose-700">
-      {formatEuro(summary.totalExpenses)}
-    </p>
-    <p className="text-xs font-bold text-rose-700">
-      {expenses.length} Belege
-    </p>
-  </div>
-</div>
-      {topInsights.length > 0 && (
-        <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-            ✨ Heute wichtig
-          </h2>
-{openIncomes.length > 0 && (
- <Link
-  href="/buchungen"
-  className="block rounded-3xl bg-amber-50 p-4"
->
-    <p className="text-lg font-black text-slate-950">
-      📄 Offene Einnahmen
-    </p>
-    <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-      Du hast {openIncomes.length} offene Einnahme
-      {openIncomes.length === 1 ? '' : 'n'} im Wert von{' '}
-      <strong>{formatEuro(openIncomeTotal)}</strong>.
-    </p>
-  </Link>
-)}
-
-{overdueIncomes.length > 0 && (
-  <div
-  onClick={() => router.push('/buchungen?status=ueberfaellig')}
-  className="rounded-3xl bg-rose-50 p-3 cursor-pointer"
->
-    <p className="text-lg font-black text-rose-700">
-      🔴 Überfällige Einnahmen
-    </p>
-    <p className="mt-2 text-sm font-semibold leading-relaxed text-rose-700">
-      {overdueIncomes.length} Einnahme
-      {overdueIncomes.length === 1 ? ' ist' : 'n sind'} überfällig:{' '}
-      <strong>{formatEuro(overdueIncomeTotal)}</strong>.
-    </p>
-  </div>
-)}
-          <div className="mt-4 space-y-3">
-           {displayInsights.map((item) => (
-              <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-base font-black text-slate-950">
-                  {item.title}
-                </p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  {item.message}
-                </p>
-              </div>
-            ))}
+            <p className="text-xs font-bold text-rose-700">
+              {expenses.length} Belege
+            </p>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-       <h2 className="mb-4 text-sm font-black">
-  Neue Buchung
-</h2>
+        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+          ✨ Heute wichtig
+        </h2>
 
-<Link
-  href="/neue-buchungen"
-  className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm"
->
-  ➕ Neue Buchung erfassen
-</Link>
+        <div className="mt-4 space-y-3">
+          {openIncomes.length > 0 && (
+            <Link
+              href="/buchungen"
+              className="block rounded-3xl bg-amber-50 p-4"
+            >
+              <p className="text-lg font-black text-slate-950">
+                📄 Offene Einnahmen
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+                Du hast {openIncomes.length} offene Einnahme
+                {openIncomes.length === 1 ? '' : 'n'} im Wert von{' '}
+                <strong>{formatEuro(openIncomeTotal)}</strong>.
+              </p>
+            </Link>
+          )}
+
+          {overdueIncomes.length > 0 && (
+            <button
+              type="button"
+              onClick={() => router.push('/buchungen?status=ueberfaellig')}
+              className="block w-full rounded-3xl bg-rose-50 p-4 text-left"
+            >
+              <p className="text-lg font-black text-rose-700">
+                🔴 Überfällige Einnahmen
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-rose-700">
+                {overdueIncomes.length} Einnahme
+                {overdueIncomes.length === 1 ? ' ist' : 'n sind'} überfällig:{' '}
+                <strong>{formatEuro(overdueIncomeTotal)}</strong>.
+              </p>
+            </button>
+          )}
+
+          {displayInsights.map((item: any) => (
+            <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-base font-black text-slate-950">
+                {item.title}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                {item.message}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-sm font-black">
+          Neue Buchung
+        </h2>
+
+        <Link
+          href="/neue-buchungen"
+          className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm"
+        >
+          ➕ Neue Buchung erfassen
+        </Link>
       </section>
 
       <TaxCard />
@@ -310,42 +251,58 @@ const paidIncomeTotal = paidIncomes.reduce(
 
         <div className="space-y-3">
           <div className="text-xl font-black">
-            {percent >= 100
+            {overdueIncomes.length > 0
+              ? '🔴 Einnahmen überfällig'
+              : openIncomes.length > 0
+              ? '🟡 Offene Einnahmen prüfen'
+              : percent >= 100
               ? '🔴 Budget überschritten'
               : percent >= 80
               ? '🟡 Kategorien beobachten'
               : '🟢 Alles im grünen Bereich'}
           </div>
-<section className="grid grid-cols-3 gap-3">
-  <div className="rounded-3xl bg-amber-50 p-3">
-    <p className="text-[10px] font-black uppercase text-amber-700">
-      Offen
-    </p>
-    <p className="mt-1 text-lg font-black">
-      {openIncomes.length}
-    </p>
-  </div>
 
- <div
-  onClick={() => router.push('/buchungen?status=bezahlt')}
-  className="rounded-3xl bg-emerald-50 p-3 cursor-pointer"
-    <p className="text-[10px] font-black uppercase text-emerald-700">
-      Bezahlt
-    </p>
-    <p className="mt-1 text-lg font-black">
-      {paidIncomes.length}
-    </p>
-  </div>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => router.push('/buchungen?status=offen')}
+              className="rounded-3xl bg-amber-50 p-3 text-left"
+            >
+              <p className="text-[10px] font-black uppercase text-amber-700">
+                Offen
+              </p>
+              <p className="mt-1 text-lg font-black text-slate-950">
+                {openIncomes.length}
+              </p>
+            </button>
 
-  <div className="rounded-3xl bg-rose-50 p-3">
-    <p className="text-[10px] font-black uppercase text-rose-700">
-      Überfällig
-    </p>
-    <p className="mt-1 text-lg font-black">
-      {overdueIncomes.length}
-    </p>
-  </div>
-</section>
+            <button
+              type="button"
+              onClick={() => router.push('/buchungen?status=bezahlt')}
+              className="rounded-3xl bg-emerald-50 p-3 text-left"
+            >
+              <p className="text-[10px] font-black uppercase text-emerald-700">
+                Bezahlt
+              </p>
+              <p className="mt-1 text-lg font-black text-slate-950">
+                {paidIncomes.length}
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push('/buchungen?status=ueberfaellig')}
+              className="rounded-3xl bg-rose-50 p-3 text-left"
+            >
+              <p className="text-[10px] font-black uppercase text-rose-700">
+                Überfällig
+              </p>
+              <p className="mt-1 text-lg font-black text-slate-950">
+                {overdueIncomes.length}
+              </p>
+            </button>
+          </div>
+
           <div className="text-sm text-slate-600">
             Verwendet: {formatEuro(totalSpent)}
           </div>
