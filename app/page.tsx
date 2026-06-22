@@ -96,26 +96,25 @@ function getMainTip({ summary, expenses, incomes, userStatus, industry }: any) {
 // --- HAUPTKOMPONENTE ---
 export default function DashboardPage() {
   const { summary, expenses, incomes, userName, userStatus, industry, vatStatus, isLoggedIn } = useFinance()
+  const [isClient, setIsClient] = useState(false)
 
-  // 🛡️ SICHERHEITS-SCHUTZWALL: Wenn nicht eingeloggt oder Daten fehlen, zeige sanften Hinweis statt Absturz
-  if (!isLoggedIn || !summary) {
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // 🛡️ SICHERER LADEZUSTAND (Verhindert fehlerhafte Redirects beim Hydrieren)
+  if (!isClient || !summary) {
     return (
       <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center">
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-sm space-y-4">
-          <span className="text-4xl">🌸</span>
-          <h2 className="text-xl font-black text-slate-950">Willkommen bei Mila</h2>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Bitte richte zuerst dein Profil ein oder logge dich ein, damit Mila deine persönlichen Finanzauswertungen berechnen kann.
-          </p>
-          <Link href="/profil" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-3 rounded-xl text-xs transition">
-            Zum Profil & Login
-          </Link>
+        <div className="space-y-3">
+          <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs text-slate-500 font-medium">Mila lädt deine Schaltzentrale...</p>
         </div>
       </div>
     )
   }
 
-  // Berechnungen aus deinen Daten (Sicher verpackt mit Fallbacks)
+  // --- BERECHNUNGEN (VOLLSTÄNDIG WIEDERHERGESTELLT) ---
   const recurringExpenses = findRecurringExpenses(expenses || [])
   const softwareExpenses = getSoftwareExpenses(expenses || [])
   const financeScore = getFinanceScore(summary, expenses || [], incomes || [])
@@ -129,6 +128,7 @@ export default function DashboardPage() {
   const availableInTwoWeeks = (summary.balance || 0) + totalOpenAmount
   const nextPayments = (summary.totalExpenses || 0) * 0.8
 
+  // Detaillierte Ampel-Logik
   let trafficLight = { status: '🟢 Alles gut', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' }
   if (financeScore < 50 || summary.balance < 0) {
     trafficLight = { status: '🔴 Liquiditätsrisiko in 10 Tagen', color: 'bg-rose-50 border-rose-200 text-rose-900', dot: 'bg-rose-500' }
@@ -139,6 +139,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
+      {/* Rotes Warnbanner oben */}
       <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
         <span>🚨</span>
         <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
@@ -146,7 +147,7 @@ export default function DashboardPage() {
 
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
 
-        {/* --- MORNING BRIEFING SECTION --- */}
+        {/* --- MAIN HEADER BLOCK & MORNING BRIEFING --- */}
         <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-600">Heute für dich</p>
@@ -158,6 +159,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* Lila Hauptkarte */}
           <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
             <p className="mt-1 text-3xl font-black">{formatEuro(summary.balance)}</p>
@@ -166,6 +168,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* Score & Rücklage Grids */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
               <p className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">Finanzgesundheit</p>
@@ -182,11 +185,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Mila Tipp Box */}
           <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">Mila Tipp ✨</p>
             <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-700">{tip}</p>
           </div>
 
+          {/* Muster & Software Tracker */}
           {(recurringExpenses.length > 0 || softwareExpenses.length > 0) && (
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
@@ -204,7 +209,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* --- DYNAMISCHE PRIORITÄTEN-UPDATES --- */}
+        {/* --- PRIORITÄT 1: CASHFLOW PROGNOSE --- */}
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
             🥇 Priorität 1 – Cashflow-Prognose
@@ -225,6 +230,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
         <div className="space-y-2">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
             🥈 Priorität 2 – Mila-Ampel
@@ -235,6 +241,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* --- PRIORITÄT 3: KI-ERKENNTNISSE --- */}
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
             🥉 Priorität 3 – KI-Erkenntnisse
@@ -251,6 +258,7 @@ export default function DashboardPage() {
           </ul>
         </div>
 
+        {/* Chat-Anker Link */}
         <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
           💬 Mit Mila sprechen (Dein Anker)
         </Link>
