@@ -54,7 +54,6 @@ export default function ProfilPage() {
   const [married, setMarried] = useState('nein')
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
-setAnnualProfit(profile.annualProfit || '')
   const [assemblyWork, setAssemblyWork] = useState('nein')
 const [vatStatus, setVatStatus] = useState('kleinunternehmer')
   const missing: string[] = []
@@ -76,6 +75,7 @@ useEffect(() => {
     setUserStatus(profile.userStatus || 'freelancer')
     setIndustry(profile.industry || 'webdesign')
     setAnnualGross(profile.annualGross || '')
+setAnnualProfit(profile.annualProfit || '')
     setVatStatus(profile.vatStatus || 'kleinunternehmer')
     setFederalState(profile.federalState || 'Sachsen-Anhalt')
     setChurchTax(profile.churchTax || 'nein')
