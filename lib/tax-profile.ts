@@ -1,251 +1,109 @@
-export type UserTaxType =
-  | 'angestellt'
-  | 'minijob'
-  | 'selbststaendig_gewerbe'
-  | 'freiberufler'
-  | 'kleinunternehmer'
-  | 'handwerker'
-  | 'montagearbeiter'
+// lib/tax-profile.ts
 
-export type VatStatus =
-  | 'kleinunternehmer'
-  | 'regelbesteuerung_19'
-  | 'ermaessigt_7'
-  | 'nicht_bekannt'
+export type UserStatus = 'angestellt' | 'freelancer' | 'selbststaendig' | 'kleinunternehmer';
 
-export type TaxProfile = {
-  userType: UserTaxType
-  annualRevenueGross?: number
-  estimatedAnnualProfit?: number
-  vatStatus?: VatStatus
-  churchTax?: boolean
-  federalState?: string
-  municipality?: string
-
-  taxClass?: '1' | '2' | '3' | '4' | '5' | '6'
-  annualGrossSalary?: number
-  hasChildren?: boolean
-  isMarried?: boolean
-
-  assemblyWork?: boolean
-  receivesPerDiem?: boolean
-  employerPaysHotel?: boolean
-  travelDaysPerMonth?: number
-  commuteKm?: number
+export interface TaxRule {
+  category: string;
+  deductiblePercent: number;
+  hint: string;
+  legalTip?: string;
 }
 
-export type TaxEstimate = {
-  title: string
-  reserveRateMin: number
-  reserveRateMax: number
-  reserveMin: number
-  reserveMax: number
-  confidence: number
-  taxTypes: string[]
-  missingData: string[]
-  notes: string[]
-  niches: string[]
-  disclaimer: string
+export interface TaxProfile {
+  title: string;
+  incomeTaxRate: number;
+  vatLiable: boolean;
+  globalTips: string[];
 }
 
-function money(value: number) {
-  return value.toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
-}
-
-function n(value?: number) {
-  return Number.isFinite(Number(value)) ? Number(value) : 0
-}
-
-function getProfit(profile: TaxProfile) {
-  if (n(profile.estimatedAnnualProfit) > 0) return n(profile.estimatedAnnualProfit)
-  if (n(profile.annualGrossSalary) > 0) return n(profile.annualGrossSalary)
-  return 0
-}
-
-function getReserveRangeByProfit(profit: number) {
-  if (profit <= 0) return [0, 0]
-  if (profit < 20000) return [0.2, 0.25]
-  if (profit < 50000) return [0.25, 0.3]
-  if (profit < 80000) return [0.3, 0.35]
-  return [0.35, 0.4]
-}
-
-function getMissingBase(profile: TaxProfile) {
-  const missing: string[] = []
-
-  if (!profile.userType) missing.push('Nutzertyp')
-  if (!profile.federalState) missing.push('Bundesland')
-  if (typeof profile.churchTax !== 'boolean') missing.push('Kirchensteuer')
-  if (!profile.vatStatus && profile.userType !== 'angestellt' && profile.userType !== 'minijob') {
-    missing.push('Umsatzsteuerstatus')
+export const TAX_PROFILES: Record<UserStatus, TaxProfile> = {
+  angestellt: {
+    title: 'Angestellt (Montage/Handwerk)',
+    incomeTaxRate: 0,
+    vatLiable: false,
+    globalTips: [
+      'Steuerklassen-Check: Ein jährlicher Faktorverfahren-Wechsel bei Ehegatten optimiert das Netto.',
+      'Homeoffice-Pauschale: Nutze die 6 €/Tag (bis 1.260 €/Jahr) ohne separates Arbeitszimmer.',
+      'Fahrtkosten: 0,30 €/km für den Arbeitsweg als Werbungskosten geltend machen.'
+    ]
+  },
+  freelancer: {
+    title: 'Freelancer / Freiberufler',
+    incomeTaxRate: 0.25,
+    vatLiable: true,
+    globalTips: [
+      'Arbeitszimmer: Bei Mittelpunkt der Tätigkeit Miete/Strom anteilig absetzen.',
+      'SaaS-Vollabschreibung: Software wie Adobe/ChatGPT sofort im Anschaffungsjahr absetzen.',
+      'Bewirtung: 70% Absetzbarkeit bei korrektem Beleg und Anlass-Notiz.'
+    ]
+  },
+  selbststaendig: {
+    title: 'Selbstständig (Gewerbe)',
+    incomeTaxRate: 0.30,
+    vatLiable: true,
+    globalTips: [
+      'Umsatzsteuer: Bilde konsequent 19% Rücklage auf alle Brutto-Einnahmen.',
+      'GWG-Regel: Hardware unter 952 € sofort zu 100% abschreiben.',
+      'Dokumentation: Jedes Geschäftsessen braucht einen Anlass und Teilnehmer-Nachweis.'
+    ]
+  },
+  kleinunternehmer: {
+    title: 'Kleinunternehmer (§ 19 UStG)',
+    incomeTaxRate: 0.15,
+    vatLiable: false,
+    globalTips: [
+      'Umsatzsteuer-Wahrnung: Weise auf keinen Fall MwSt. auf deinen Rechnungen aus!',
+      'Brutto-Buchung: Da kein Vorsteuerabzug, gilt immer der Bruttobetrag als Betriebsausgabe.',
+      'Einfachheit: Nutze den Vorteil der Buchhaltung ohne Vorsteuer-Differenzierung.'
+    ]
   }
+};
 
-  return missing
-}
+export function evaluateTransactionTax(status: UserStatus, category: string, amount: number) {
+  const normalizedCat = category.toLowerCase().trim();
+  let deductiblePercent = 0;
+  let hint = 'Wird als reguläre Ausgabe erfasst.';
+  let legalTip = '';
 
-export function estimateTaxProfile(profile: TaxProfile): TaxEstimate {
-  const missingData = getMissingBase(profile)
-  const notes: string[] = []
-  const niches: string[] = []
-  const taxTypes: string[] = []
-
-  let profit = getProfit(profile)
-  let reserveRateMin = 0
-  let reserveRateMax = 0
-  let title = 'Steuerliche Orientierung'
-
-  if (profile.userType === 'angestellt') {
-    title = 'Angestellten-Profil'
-    taxTypes.push('Lohnsteuer', 'Sozialabgaben')
-
-    if (!profile.taxClass) missingData.push('Steuerklasse')
-    if (!profile.annualGrossSalary) missingData.push('Jahresbrutto')
-
-    const salary = n(profile.annualGrossSalary)
-    profit = salary
-
-    if (salary <= 0) {
-      reserveRateMin = 0
-      reserveRateMax = 0
-    } else if (salary < 20000) {
-      reserveRateMin = 0.05
-      reserveRateMax = 0.15
-    } else if (salary < 50000) {
-      reserveRateMin = 0.2
-      reserveRateMax = 0.3
+  // Logik-Kern
+  if (status === 'angestellt') {
+    if (normalizedCat.includes('reise') || normalizedCat.includes('hotel') || normalizedCat.includes('fahrt')) {
+      deductiblePercent = 100;
+      hint = '100% absetzbar als Werbungskosten.';
+      legalTip = 'Tipp: Prüfe Verpflegungsmehraufwand (14€ bzw. 28€ Pauschale).';
+    } else if (normalizedCat.includes('hardware') || normalizedCat.includes('software')) {
+      deductiblePercent = 100;
+      hint = 'Arbeitsmittel: 100% absetzbar.';
+    }
+  } else if (status === 'freelancer' || status === 'selbststaendig') {
+    if (normalizedCat.includes('software') || normalizedCat.includes('saas')) {
+      deductiblePercent = 100;
+      hint = 'Digitale Betriebsausgabe: 100% sofort absetzbar.';
+    } else if (normalizedCat.includes('bewirtung')) {
+      deductiblePercent = 70;
+      hint = 'Geschäftliche Bewirtung: 70% absetzbar.';
     } else {
-      reserveRateMin = 0.3
-      reserveRateMax = 0.45
+      deductiblePercent = 100;
+      hint = 'Betriebsausgabe: 100% absetzbar.';
     }
-
-    notes.push(
-      'Bei Angestellten geht es eher um eine grobe Gesamtbelastung und mögliche Werbungskosten, nicht um klassische Umsatzsteuer-Rücklagen.'
-    )
-
-    niches.push(
-      'Werbungskosten',
-      'Pendlerpauschale',
-      'Homeoffice',
-      'Arbeitsmittel',
-      'Weiterbildung'
-    )
+  } else if (status === 'kleinunternehmer') {
+    deductiblePercent = 100;
+    hint = '100% Brutto-Betriebsausgabe (Kein Vorsteuerabzug).';
   }
 
-  if (profile.userType === 'minijob') {
-    title = 'Minijob-Profil'
-    taxTypes.push('Pauschalversteuerung durch Arbeitgeber möglich')
-    reserveRateMin = 0
-    reserveRateMax = 0
+  return { deductiblePercent, hint, legalTip };
+}
 
-    notes.push(
-      'Bei Minijobs fällt in der Regel keine eigene Einkommensteuer auf den Minijob an. Wichtig ist die Kombination mit Hauptjob oder weiteren Einkünften.'
-    )
+export function generateDynamicInsights(status: UserStatus, totalExpenses: number, softwareExpenses: number) {
+  const profile = TAX_PROFILES[status];
+  const insights = [...profile.globalTips];
 
-    niches.push('Hauptjob prüfen', 'Sozialversicherung', 'Mehrere Minijobs')
+  if (status === 'angestellt' && totalExpenses > 500) {
+    insights.unshift('🔥 Hohe Werbungskosten erkannt – das mindert deine Steuerlast erheblich!');
+  }
+  if ((status === 'freelancer' || status === 'selbststaendig') && softwareExpenses > 200) {
+    insights.unshift('⚠️ Abo-Check: Deine Software-Kosten sind diesen Monat gestiegen. Zeit für einen Abo-Check?');
   }
 
-  if (profile.userType === 'kleinunternehmer') {
-    title = 'Kleinunternehmer-Profil'
-    taxTypes.push('Einkommensteuer')
-    notes.push('Du stellst in der Regel Rechnungen ohne Umsatzsteuer nach §19 UStG.')
-    notes.push('Einkommensteuer kann trotzdem auf deinen Gewinn anfallen.')
-
-    ;[reserveRateMin, reserveRateMax] = getReserveRangeByProfit(profit)
-
-    if (profit > 24500) {
-      taxTypes.push('Gewerbesteuer möglich')
-      notes.push('Ab etwa 24.500 € Gewinn kann bei Gewerbe Gewerbesteuer relevant werden.')
-    }
-
-    niches.push('Arbeitsmittel', 'Software', 'Telefon & Internet', 'Homeoffice', 'Fortbildung')
-  }
-
-  if (profile.userType === 'freiberufler') {
-    title = 'Freiberufler/Freelancer-Profil'
-    taxTypes.push('Einkommensteuer')
-    if (profile.vatStatus !== 'kleinunternehmer') taxTypes.push('Umsatzsteuer')
-    ;[reserveRateMin, reserveRateMax] = getReserveRangeByProfit(profit)
-
-    notes.push('Freiberufler zahlen in der Regel keine Gewerbesteuer.')
-    niches.push('Software', 'Arbeitsmittel', 'Homeoffice', 'Fortbildung', 'Reisekosten', 'Bewirtung')
-  }
-
-  if (
-    profile.userType === 'selbststaendig_gewerbe' ||
-    profile.userType === 'handwerker'
-  ) {
-    title =
-      profile.userType === 'handwerker'
-        ? 'Handwerker-Profil'
-        : 'Gewerbe-Profil'
-
-    taxTypes.push('Einkommensteuer')
-    if (profile.vatStatus !== 'kleinunternehmer') taxTypes.push('Umsatzsteuer')
-
-    ;[reserveRateMin, reserveRateMax] = getReserveRangeByProfit(profit)
-
-    if (profit > 24500) {
-      taxTypes.push('Gewerbesteuer möglich')
-      notes.push('Ab etwa 24.500 € Gewinn kann Gewerbesteuer relevant werden.')
-    } else {
-      notes.push('Gewerbesteuer wird meist erst ab höheren Gewinnen relevant.')
-    }
-
-    niches.push(
-      'Werkzeug',
-      'Arbeitskleidung',
-      'Fahrzeugkosten',
-      'Material',
-      'Versicherungen',
-      'Lagerkosten'
-    )
-  }
-
-  if (profile.userType === 'montagearbeiter') {
-    title = 'Montage-Profil'
-    taxTypes.push('Einkommensteuer')
-    if (profile.vatStatus !== 'kleinunternehmer') taxTypes.push('Umsatzsteuer möglich')
-    ;[reserveRateMin, reserveRateMax] = getReserveRangeByProfit(profit)
-
-    if (profile.assemblyWork !== true) missingData.push('Montagetätigkeit bestätigt')
-    if (typeof profile.receivesPerDiem !== 'boolean') missingData.push('Spesen/Auslöse')
-    if (typeof profile.employerPaysHotel !== 'boolean') missingData.push('Übernachtungskosten')
-    if (!profile.travelDaysPerMonth) missingData.push('Reisetage pro Monat')
-
-    notes.push(
-      'Bei Montage sind Reisekosten, Verpflegungspauschalen, Übernachtungen und Fahrten besonders wichtig.'
-    )
-
-    niches.push(
-      'Verpflegungspauschalen',
-      'Übernachtungskosten',
-      'Fahrtkosten',
-      'Doppelte Haushaltsführung',
-      'Werkzeug',
-      'Arbeitskleidung'
-    )
-  }
-
-  const reserveMin = profit * reserveRateMin
-  const reserveMax = profit * reserveRateMax
-
-  const confidence = Math.max(25, Math.min(95, 95 - missingData.length * 10))
-
-  return {
-    title,
-    reserveRateMin,
-    reserveRateMax,
-    reserveMin,
-    reserveMax,
-    confidence,
-    taxTypes: Array.from(new Set(taxTypes)),
-    missingData: Array.from(new Set(missingData)),
-    notes,
-    niches: Array.from(new Set(niches)),
-    disclaimer:
-      `Mila schätzt eine grobe Rücklage zwischen ${money(reserveMin)} und ${money(reserveMax)}. Das ist eine Orientierung und ersetzt keine Steuerberatung.`,
-  }
+  return insights.slice(0, 3);
 }
