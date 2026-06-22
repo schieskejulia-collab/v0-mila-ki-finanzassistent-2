@@ -246,6 +246,7 @@ useEffect(() => {
   setChildren(profile.children || '')
   setTravelType(profile.travelType || 'none')
 }, [])
+
 useEffect(() => {
   localStorage.setItem(
     'mila_profile',
