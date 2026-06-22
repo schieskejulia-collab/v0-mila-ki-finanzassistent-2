@@ -1,485 +1,312 @@
 'use client'
 
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
 
-type EntryType = 'income' | 'expense'
-type ViewMode = 'all' | 'income' | 'expense' | 'offen' | 'bezahlt' | 'ueberfaellig'
+const STATUS_DETAILS = [
+  {
+    key: 'angestellt',
+    label: 'Angestellt',
+    info: 'Fester Job. Mila achtet besonders auf Steuerklasse, Arbeitsmittel, Fahrtkosten und Weiterbildung.',
+  },
+  {
+    key: 'freelancer',
+    label: 'Freelancer / Freiberufler',
+    info: 'Projektbasiert oder freiberuflich. Mila achtet besonders auf Rücklagen, Software, Fortbildung und Reisekosten.',
+  },
+  {
+    key: 'kleinunternehmer',
+    label: 'Kleinunternehmer',
+    info: 'Keine Umsatzsteuer auf Rechnungen, aber Einkommensteuer auf Gewinn kann trotzdem relevant sein.',
+  },
+  {
+    key: 'selbstständig',
+    label: 'Selbstständig / Gewerbe',
+    info: 'Gewerblich tätig. Mila achtet auf Rücklagen, Umsatzsteuer, Gewerbesteuer und Betriebsausgaben.',
+  },
+] as const
 
-const months = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-]
+const INDUSTRIES = [
+  ['webdesigner', '🎨 Webdesigner'],
+  ['fotograf', '📸 Fotograf'],
+  ['coach', '🎓 Coach'],
+  ['handwerker', '🧰 Handwerker'],
+  ['restaurant', '🍽️ Gastronomie'],
+  ['ecommerce', '🛒 E-Commerce'],
+  ['berater', '💼 Berater'],
+  ['sonstiges', '✨ Sonstiges'],
+] as const
 
-function formatEuro(value: number | string) {
-  const number =
-    typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
+export default function ProfilPage() {
+  // ✅ Alle Felder direkt aus dem zentralen Store holen
+  const {
+    userName,
+    setUserName,
+    userStatus,
+    setUserStatus,
+    industry,
+    setIndustry,
+    taxClass = '1',
+    setTaxClass,
+    federalState = 'Sachsen-Anhalt',
+    setFederalState,
+    churchTax = 'nein',
+    setChurchTax,
+    children = '0',
+    setChildren,
+    married = 'nein',
+    setMarried,
+    annualGross = '',
+    setAnnualGross,
+    annualProfit = '',
+    setAnnualProfit,
+    assemblyWork = 'nein',
+    setAssemblyWork,
+    vatStatus = 'kleinunternehmer',
+    setVatStatus,
+    logout,
+  } = useFinance()
 
-  return (Number.isFinite(number) ? number : 0).toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
-}
+  // Validierung für die Fortschrittsanzeige
+  const missing: string[] = []
+  if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
+  if (!userName) missing.push('Name')
+  if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
+  if (!federalState) missing.push('Bundesland')
+  if (!annualGross && userStatus === 'angestellt') missing.push('Jahresbrutto')
+  if (!annualProfit && userStatus !== 'angestellt') missing.push('Jahresgewinn')
 
-function formatDate(value?: string) {
-  if (!value) return 'Kein Datum'
-  try {
-    return new Date(value).toLocaleDateString('de-DE')
-  } catch {
-    return value
-  }
-}
-
-function getDate(value?: string) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-function getDueText(status?: string, dueDate?: string) {
-  if (!dueDate || status === 'bezahlt') return ''
-
-  const today = new Date()
-  const due = new Date(dueDate)
-  today.setHours(0, 0, 0, 0)
-  due.setHours(0, 0, 0, 0)
-
-  const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) {
-    return `🚨 Seit ${Math.abs(diffDays)} Tag${Math.abs(diffDays) === 1 ? '' : 'en'} überfällig`
-  }
-  if (diffDays === 0) {
-    return '🟠 Heute fällig'
-  }
-  return `📅 Fällig am ${formatDate(dueDate)} (in ${diffDays} Tag${diffDays === 1 ? '' : 'en'})`
-}
-
-function getStatusInfo(status?: string, dueDate?: string) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const due = dueDate ? new Date(dueDate) : null
-  if (due) due.setHours(0, 0, 0, 0)
-
-  if (status === 'bezahlt') {
-    return {
-      label: '🟢 Bezahlt',
-      className: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-      isOverdue: false
-    }
-  }
-
-  if (status === 'ueberfaellig' || (due && due < today)) {
-    return {
-      label: '🔴 Überfällig',
-      className: 'bg-rose-50 text-rose-700 border border-rose-200',
-      isOverdue: true
-    }
-  }
-
-  return {
-    label: '🟡 Offen',
-    className: 'bg-amber-50 text-amber-700 border border-amber-200',
-    isOverdue: false
-  }
-}
-
-export default function BuchungenPage() {
-  const { expenses, incomes, deleteExpense, deleteIncome, summary, userName, setIncomes } = useFinance()
-
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | number | null>(null)
-  const [search, setSearch] = useState('')
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
-  const [selectedMonth, setSelectedMonth] = useState('alle')
-  const [viewMode, setViewMode] = useState<ViewMode>('all')
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
-
-  const [reminderText, setReminderText] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-
-  const handleMarkAsPaid = (incomeId: string | number) => {
-    if (!setIncomes) return
-    const updated = incomes.map((inc) => {
-      if (inc.id === incomeId) {
-        return { ...inc, status: 'bezahlt' }
-      }
-      return inc
-    })
-    setIncomes(updated)
-  }
-
-  const allEntries = useMemo(() => {
-    return [
-      ...incomes.map((income) => ({
-        ...income,
-        entryType: 'income' as EntryType,
-        displayTitle: income.title || income.client || 'Einnahme',
-        displaySub: income.client || 'Kein Kunde',
-      })),
-      ...expenses.map((expense) => ({
-        ...expense,
-        entryType: 'expense' as EntryType,
-        displayTitle: expense.title || expense.vendor || 'Ausgabe',
-        displaySub: expense.category || 'Sonstiges',
-      })),
-    ].sort((a, b) => {
-      const da = getDate(a.date)?.getTime() || 0
-      const db = getDate(b.date)?.getTime() || 0
-      return db - da
-    })
-  }, [incomes, expenses])
-
-  const years = useMemo(() => {
-    const found = allEntries
-      .map((entry) => getDate(entry.date)?.getFullYear().toString())
-      .filter(Boolean) as string[]
-    return Array.from(new Set([new Date().getFullYear().toString(), ...found]))
-  }, [allEntries])
-
-  const filteredEntries = useMemo(() => {
-    const searchTerm = search.toLowerCase().trim()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    return allEntries.filter((entry) => {
-      const date = getDate(entry.date)
-      const due = (entry.due_date || entry.dueDate) ? new Date(entry.due_date || entry.dueDate) : null
-      if (due) due.setHours(0, 0, 0, 0)
-
-      const text = `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${entry.category || ''} ${entry.note || ''}`.toLowerCase()
-
-      const matchesSearch = !searchTerm || text.includes(searchTerm)
-      const matchesYear = !date || date.getFullYear().toString() === selectedYear
-      const matchesMonth = selectedMonth === 'alle' || !date || date.getMonth().toString() === selectedMonth
-      
-      let matchesTypeOrStatus = true
-      if (viewMode === 'income') matchesTypeOrStatus = entry.entryType === 'income'
-      if (viewMode === 'expense') matchesTypeOrStatus = entry.entryType === 'expense'
-      if (viewMode === 'offen') matchesTypeOrStatus = entry.entryType === 'income' && entry.status !== 'bezahlt'
-      if (viewMode === 'bezahlt') matchesTypeOrStatus = entry.status === 'bezahlt'
-      if (viewMode === 'ueberfaellig') {
-        matchesTypeOrStatus = entry.entryType === 'income' && (entry.status === 'ueberfaellig' || (due !== null && due < today && entry.status !== 'bezahlt'))
-      }
-
-      return matchesSearch && matchesYear && matchesMonth && matchesTypeOrStatus
-    })
-  }, [allEntries, search, selectedYear, selectedMonth, viewMode])
-
-  const groupedEntries = useMemo(() => {
-    const groups: Record<string, typeof filteredEntries> = {}
-    filteredEntries.forEach((entry) => {
-      const date = getDate(entry.date)
-      const key = date ? `${months[date.getMonth()]} ${date.getFullYear()}` : 'Ohne Datum'
-      if (!groups[key]) groups[key] = []
-      groups[key].push(entry)
-    })
-    return Object.entries(groups)
-  }, [filteredEntries])
-
-  async function handleDelete(entry: any) {
-    const text = entry.entryType === 'income' ? 'Diese Einnahme wirklich löschen?' : 'Diese Ausgabe wirklich löschen?'
-    if (!confirm(text)) return
-    setDeletingId(entry.id)
-    try {
-      if (entry.entryType === 'income') {
-        await deleteIncome(entry.id)
-      } else {
-        await deleteExpense(entry.id)
-      }
-      setOpenId(null)
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  const handleOpenReminder = (entry: any) => {
-    const kunde = entry.client || 'Kunde'
-    const titel = entry.title || 'unserer Leistung'
-    const betrag = formatEuro(entry.amount)
-    const absender = userName || 'Julia'
-
-    const msg = `Hallo ${kunde},\n\nich wollte kurz an die offene Zahlung zu „${titel}“ über ${betrag} erinnern.\n\nLiebe Grüße\n${absender}`
-    
-    setReminderText(msg)
-    setCopied(false)
-  }
-
-  const handleCopy = async () => {
-    if (!reminderText) return
-    try {
-      await navigator.clipboard.writeText(reminderText)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Kopieren fehlgeschlagen', err)
-    }
-  }
-
-  const handleWhatsAppShare = () => {
-    if (!reminderText) return
-    window.open(`https://wa.me/?text=${encodeURIComponent(reminderText)}`, '_blank')
-  }
+  const completeness = Math.max(20, 100 - missing.length * 15)
 
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
-      <section className="flex items-center justify-between pt-2">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">Buchungen</h1>
-          <p className="mt-1 text-sm font-semibold text-slate-500">Suche, filtere und prüfe deine Finanzen.</p>
-        </div>
-        <Link href="/neue-buchungen" className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl font-black text-white shadow-sm">+</Link>
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
+          Profil
+        </p>
+
+        <h1 className="mt-3 text-3xl font-black tracking-tight">
+          Dein Mila-Profil
+        </h1>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Je besser dein Profil ausgefüllt ist, desto genauer kann Mila Rücklagen,
+          Hinweise und Erinnerungen einschätzen.
+        </p>
       </section>
 
-      <section className="grid grid-cols-3 gap-2">
-        <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Einnahmen</p>
-          <p className="mt-1 text-xs font-black text-emerald-700">{formatEuro(summary.totalIncomes)}</p>
-        </div>
-        <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Ausgaben</p>
-          <p className="mt-1 text-xs font-black text-rose-700">{formatEuro(summary.totalExpenses)}</p>
-        </div>
-        <div className="rounded-3xl bg-white p-3 shadow-sm">
-          <p className="text-[9px] font-black uppercase text-slate-400">Saldo</p>
-          <p className="mt-1 text-xs font-black text-violet-700">{formatEuro(summary.balance)}</p>
-        </div>
-      </section>
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Datenqualität
+        </p>
 
-      <section className="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍 Suche nach Händler, Kunde, Kategorie..."
-          className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none">
-            {years.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full rounded-2xl bg-violet-50 p-4 text-sm font-bold text-slate-700 outline-none">
-            <option value="alle">Alle Monate</option>
-            {months.map((month, index) => <option key={month} value={index.toString()}>{month}</option>)}
-          </select>
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-violet-600"
+            style={{ width: `${completeness}%` }}
+          />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {[
-            ['all', 'Alle'],
-            ['income', 'Einnahmen'],
-            ['expense', 'Ausgaben'],
-            ['offen', '⏳ Offen'],
-            ['bezahlt', '✅ Bezahlt'],
-            ['ueberfaellig', '🚨 Überfällig'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setViewMode(value as ViewMode)}
-              className={`rounded-xl px-3 py-2 text-xs font-black transition-all ${
-                viewMode === value ? 'bg-violet-600 text-white shadow-sm' : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+        <p className="mt-2 text-sm font-black text-slate-700">
+          {completeness}% vollständig
+        </p>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-          Gefundene Buchungen ({filteredEntries.length})
-        </h2>
-
-        {filteredEntries.length === 0 ? (
-          <div className="rounded-3xl bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">Keine passenden Buchungen gefunden.</div>
-        ) : (
-          groupedEntries.map(([groupName, entries]) => {
-            const isGroupOpen = openGroups[groupName] ?? true
-
-            return (
-              <div key={groupName} className="rounded-[2rem] bg-white p-4 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups((prev) => ({ ...prev, [groupName]: !isGroupOpen }))}
-                  className="flex w-full items-center justify-between"
-                >
-                  <div>
-                    <p className="text-lg font-black text-slate-900">{groupName}</p>
-                    <p className="text-xs font-bold text-slate-400">{entries.length} Buchungen</p>
-                  </div>
-                  <span className="text-xl font-black text-violet-700">{isGroupOpen ? '⌃' : '⌄'}</span>
-                </button>
-
-                {isGroupOpen && (
-                  <div className="mt-4 space-y-3">
-                    {entries.map((entry) => {
-                      const id = `${entry.entryType}-${entry.id}`
-                      const isOpen = openId === id
-                      const isDeleting = deletingId === entry.id
-                      const isIncome = entry.entryType === 'income'
-                      
-                      const status = getStatusInfo(entry.status, entry.due_date || entry.dueDate)
-                      const dueText = getDueText(entry.status, entry.due_date || entry.dueDate)
-
-                      return (
-                        <div
-                          key={id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setOpenId(isOpen ? null : id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenId(isOpen ? null : id) }}
-                          className={`w-full text-left rounded-3xl p-4 transition-all outline-none cursor-pointer border ${
-                            status.isOverdue 
-                              ? 'bg-rose-50/60 border-rose-500 shadow-sm ring-1 ring-rose-500/20' 
-                              : 'bg-slate-50 hover:bg-slate-100 border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-black text-slate-900">
-                                  {isIncome ? '💰 ' : '📉 '}
-                                  {entry.displayTitle}
-                                </p>
-                                {isIncome && (
-                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide ${status.className}`}>
-                                    {status.label}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="mt-1 text-xs font-semibold text-slate-500">
-                                {entry.displaySub} · {formatDate(entry.date)}
-                              </p>
-                              {isIncome && dueText && (
-                                <p className="mt-1 text-xs font-bold text-rose-600">{dueText}</p>
-                              )}
-                            </div>
-
-                            <p className={`font-black text-base whitespace-nowrap ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>
-                              {isIncome ? '+' : '-'}{formatEuro(entry.amount)}
-                            </p>
-                          </div>
-
-                          {isOpen && (
-                            <div className="mt-4 border-t border-slate-200/80 pt-3 text-sm text-slate-600" onClick={(e) => e.stopPropagation()}>
-                              {isIncome ? (
-                                <div className="space-y-1">
-                                  <p><span className="font-bold text-slate-700">Kunde:</span> {entry.client || 'Nicht angegeben'}</p>
-                                  {entry.due_date && <p><span className="font-bold text-slate-700">Fällig am:</span> {formatDate(entry.due_date)}</p>}
-                                  <p><span className="font-bold text-slate-700">Buchungsdatum:</span> {formatDate(entry.date)}</p>
-                                </div>
-                              ) : (
-                                <div className="space-y-1">
-                                  <p><span className="font-bold text-slate-700">Händler:</span> {entry.vendor || 'Nicht angegeben'}</p>
-                                  <p><span className="font-bold text-slate-700">Kategorie:</span> {entry.category || 'Sonstiges'}</p>
-                                  <p><span className="font-bold text-slate-700">Datum:</span> {formatDate(entry.date)}</p>
-                                </div>
-                              )}
-
-                              {entry.note && <p className="mt-1 bg-white/60 p-2 rounded-xl border border-slate-100 text-xs italic">Notiz: {entry.note}</p>}
-
-                              <div className="mt-4 flex items-center gap-2 flex-wrap">
-                                {isIncome && entry.status !== 'bezahlt' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMarkAsPaid(entry.id)}
-                                    className="rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-emerald-700 shadow-sm"
-                                  >
-                                    ✅ Als bezahlt markieren
-                                  </button>
-                                )}
-
-                                {isIncome && entry.status !== 'bezahlt' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenReminder(entry)}
-                                    className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-600 shadow-sm"
-                                  >
-                                    🔔 Erinnern
-                                  </button>
-                                )}
-
-                                <button
-                                  type="button"
-                                  disabled={isDeleting}
-                                  onClick={() => handleDelete(entry)}
-                                  className="rounded-2xl bg-rose-50 px-4 py-2 text-xs font-black text-rose-600 transition-colors hover:bg-rose-100 disabled:opacity-50"
-                                >
-                                  {isDeleting ? 'Lösche...' : 'Löschen'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })
+        {missing.length > 0 && (
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            Fehlt noch: {missing.join(', ')}
+          </p>
         )}
       </section>
 
-      {/* KONTROLLIERTES MODAL */}
-      {reminderText && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="absolute inset-0" onClick={() => setReminderText(null)} />
-          
-          <div className="relative w-full max-w-md rounded-[2rem] bg-white p-6 pb-28 sm:pb-6 shadow-xl space-y-4 transform transition-all">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-black text-slate-900">Zahlungserinnerung</h3>
-              <button 
-                type="button" 
-                onClick={() => setReminderText(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500 hover:bg-slate-200"
-              >
-                ✕
-              </button>
-            </div>
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Name
+        </label>
 
-            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 whitespace-pre-wrap text-sm text-slate-800 font-medium leading-relaxed shadow-inner max-h-48 overflow-y-auto">
-              {reminderText}
-            </div>
+        <input
+          value={userName || ''}
+          onChange={(e) => setUserName?.(e.target.value)}
+          placeholder="Dein Name"
+          className="mt-2 w-full rounded-2xl border border-violet-100 bg-white p-4 text-lg font-bold outline-none"
+        />
+      </section>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Nutzertyp
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {STATUS_DETAILS.map((item) => {
+            const isSelected = userStatus === item.key
+
+            return (
               <button
+                key={item.key}
                 type="button"
-                onClick={handleCopy}
-                className={`rounded-2xl py-3 text-sm font-black transition-all ${
-                  copied 
-                    ? 'bg-emerald-600 text-white shadow-sm' 
-                    : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
-                }`}
+                onClick={() => setUserStatus?.(item.key)}
+                className={
+                  isSelected
+                    ? 'w-full rounded-2xl bg-violet-600 p-4 text-left text-white shadow-sm'
+                    : 'w-full rounded-2xl bg-violet-50 p-4 text-left text-slate-700'
+                }
               >
-                {copied ? '✅ Kopiert!' : '📋 Nur Kopieren'}
-              </button>
+                <p className="font-black">
+                  {isSelected ? '🔘 ' : '⚪ '}
+                  {item.label}
+                </p>
 
-              <button
-                type="button"
-                onClick={handleWhatsAppShare}
-                className="rounded-2xl bg-emerald-600 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-700 transition-all"
-              >
-                💬 WhatsApp
+                <p
+                  className={
+                    isSelected
+                      ? 'mt-1 text-xs font-semibold text-white/80'
+                      : 'mt-1 text-xs font-semibold text-slate-500'
+                  }
+                >
+                  {item.info}
+                </p>
               </button>
-            </div>
-          </div>
+            )
+          })}
         </div>
-      )}
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Branche
+        </p>
+
+        <select
+          value={industry || 'sonstiges'}
+          onChange={(e) => setIndustry?.(e.target.value as any)}
+          className="mt-3 w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold text-slate-700 outline-none"
+        >
+          {INDUSTRIES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Steuerprofil
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {userStatus === 'angestellt' && (
+            <>
+              <select
+                value={taxClass}
+                onChange={(e) => setTaxClass?.(e.target.value)}
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              >
+                <option value="1">Steuerklasse I</option>
+                <option value="2">Steuerklasse II</option>
+                <option value="3">Steuerklasse III</option>
+                <option value="4">Steuerklasse IV</option>
+                <option value="5">Steuerklasse V</option>
+                <option value="6">Steuerklasse VI</option>
+              </select>
+
+              <input
+                value={annualGross}
+                onChange={(e) => setAnnualGross?.(e.target.value)}
+                inputMode="decimal"
+                placeholder="Jahresbrutto z.B. 38000"
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              />
+            </>
+          )}
+
+          {userStatus !== 'angestellt' && (
+            <input
+              value={annualProfit}
+              onChange={(e) => setAnnualProfit?.(e.target.value)}
+              inputMode="decimal"
+              placeholder="Geschätzter Jahresgewinn"
+              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+            />
+          )}
+
+          {userStatus !== 'angestellt' && (
+            <select
+              value={vatStatus}
+              onChange={(e) => setVatStatus?.(e.target.value)}
+              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+            >
+              <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
+              <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
+              <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
+            </select>
+          )}
+
+          <input
+            value={federalState}
+            onChange={(e) => setFederalState?.(e.target.value)}
+            placeholder="Bundesland"
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          />
+
+          <select
+            value={churchTax}
+            onChange={(e) => setChurchTax?.(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Keine Kirchensteuer</option>
+            <option value="ja">Kirchensteuerpflichtig</option>
+          </select>
+
+          <select
+            value={married}
+            onChange={(e) => setMarried?.(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Nicht verheiratet</option>
+            <option value="ja">Verheiratet</option>
+          </select>
+
+          <input
+            value={children}
+            onChange={(e) => setChildren?.(e.target.value)}
+            inputMode="numeric"
+            placeholder="Kinderanzahl"
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          />
+
+          <select
+            value={assemblyWork}
+            onChange={(e) => setAssemblyWork?.(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Keine Montage/Außendienst</option>
+            <option value="ja">Montage/Außendienst vorhanden</option>
+          </select>
+        </div>
+
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">
+          Diese Angaben verbessern Milas Einschätzung. Sie ersetzen keine
+          Steuerberatung und werden aktuell nur für Orientierung genutzt.
+        </p>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              confirm(
+                'Möchtest du dich wirklich abmelden? Lokale Daten können zurückgesetzt werden.'
+              )
+            ) {
+              logout()
+            }
+          }}
+          className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
+        >
+          Abmelden
+        </button>
+      </section>
     </main>
   )
 }
