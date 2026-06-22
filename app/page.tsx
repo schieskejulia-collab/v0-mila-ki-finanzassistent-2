@@ -96,7 +96,6 @@ const openIncomeTotal = openIncomes.reduce(
 )
 
 const overdueIncomeTotal = overdueIncomes.reduce(
-const overdueIncomeTotal = overdueIncomes.reduce(
   (sum, income: any) => sum + Number(income.amount || 0),
   0
 )
