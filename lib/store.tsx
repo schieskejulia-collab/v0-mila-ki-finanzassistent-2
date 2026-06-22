@@ -14,7 +14,6 @@ import {
 import { supabase } from '@/lib/supabase'
 
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
-
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomes, setIncomes] = useState<Income[]>([])
@@ -31,18 +30,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [federalState, setFederalState] = useState('berlin')
   const [churchTax, setChurchTax] = useState(false)
   const [married, setMarried] = useState(false)
-  const [childCount, setChildCount] = useState(0)
+  const [childrenCount, setChildren] = useState(0) // Umbenannt, um Kollision zu vermeiden
 
   const [assemblyWork, setAssemblyWork] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const children = childCount
-return(
- <FinanceContext.Provider value={value}>
-      {setChildCount}
+  return (
+    <FinanceContext.Provider value={value}>
+      {children}
     </FinanceContext.Provider>
   )
-} 
+}
+
 export type UserStatus =
   | 'angestellt'
   | 'minijob'
