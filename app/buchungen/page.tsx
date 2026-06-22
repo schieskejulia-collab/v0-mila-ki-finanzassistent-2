@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
 
 type EntryType = 'income' | 'expense'
-// ✅ Erweitertes ViewMode für Status-Filter
 type ViewMode = 'all' | 'income' | 'expense' | 'offen' | 'bezahlt' | 'ueberfaellig'
 
 const months = [
@@ -48,7 +47,6 @@ function getDate(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-// ✅ Funktion für exakte Fälligkeitshinweise
 function getDueText(status?: string, dueDate?: string) {
   if (!dueDate || status === 'bezahlt') return ''
 
@@ -65,10 +63,9 @@ function getDueText(status?: string, dueDate?: string) {
   if (diffDays === 0) {
     return '🟠 Heute fällig'
   }
-  return `原始 Fällig in ${diffDays} Tag${diffDays === 1 ? '' : 'en'}`
+  return `🟡 Fällig in ${diffDays} Tag${diffDays === 1 ? '' : 'en'}`
 }
 
-// ✅ Funktion für dynamische Status-Badges & rote Markierung
 function getStatusInfo(status?: string, dueDate?: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -87,16 +84,8 @@ function getStatusInfo(status?: string, dueDate?: string) {
   if (status === 'ueberfaellig' || (due && due < today)) {
     return {
       label: '🔴 Überfällig',
-      className: 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse-slow',
+      className: 'bg-rose-50 text-rose-700 border border-rose-200',
       isOverdue: true
-    }
-  }
-
-  if (dueDate) {
-    return {
-      label: '🟡 Offen',
-      className: 'bg-amber-50 text-amber-700 border border-amber-200',
-      isOverdue: false
     }
   }
 
@@ -108,7 +97,7 @@ function getStatusInfo(status?: string, dueDate?: string) {
 }
 
 export default function BuchungenPage() {
-  const { expenses, incomes, deleteExpense, deleteIncome, summary } = useFinance()
+  const { expenses, incomes, deleteExpense, deleteIncome, summary, userName } = useFinance()
 
   const [openId, setOpenId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | number | null>(null)
@@ -117,6 +106,10 @@ export default function BuchungenPage() {
   const [selectedMonth, setSelectedMonth] = useState('alle')
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+
+  // ✅ States für das neue Erinnerungs-Modal
+  const [reminderText, setReminderText] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const allEntries = useMemo(() => {
     return [
@@ -146,7 +139,6 @@ export default function BuchungenPage() {
     return Array.from(new Set([new Date().getFullYear().toString(), ...found]))
   }, [allEntries])
 
-  // ✅ Gefilterte Einträge inkl. Status-Filter-Logik
   const filteredEntries = useMemo(() => {
     const searchTerm = search.toLowerCase().trim()
     const today = new Date()
@@ -163,7 +155,6 @@ export default function BuchungenPage() {
       const matchesYear = !date || date.getFullYear().toString() === selectedYear
       const matchesMonth = selectedMonth === 'alle' || !date || date.getMonth().toString() === selectedMonth
       
-      // ✅ Filter für Typ & Status verarbeiten
       let matchesTypeOrStatus = true
       if (viewMode === 'income') matchesTypeOrStatus = entry.entryType === 'income'
       if (viewMode === 'expense') matchesTypeOrStatus = entry.entryType === 'expense'
@@ -204,14 +195,46 @@ export default function BuchungenPage() {
     }
   }
 
-  // ✅ Funktion für den Erinnerungsbutton
-  const triggerReminder = (entry: any) => {
-    const text = `Erinnerung für ${entry.displayTitle} (${formatEuro(entry.amount)}):\nFällig am: ${formatDate(entry.due_date || entry.dueDate)}`
+  // ✅ Optimierte Funktion: Generiert den dynamischen Text und öffnet das Modal
+  const handleOpenReminder = (entry: any) => {
+    const kunde = entry.client || 'Kunde'
+    const titel = entry.title || 'unserer Leistung'
+    const betrag = formatEuro(entry.amount)
+    const absender = userName || 'Julia'
+
+    const msg = `Hallo ${kunde},\n\nich wollte kurz an die offene Zahlung zu „${titel}“ über ${betrag} erinnern.\n\nLiebe Grüße\n${absender}`
+    
+    setReminderText(msg)
+    setCopied(false)
+  }
+
+  // ✅ Kopiert den generierten Text in die Zwischenablage
+  const handleCopy = async () => {
+    if (!reminderText) return
+    try {
+      await navigator.clipboard.writeText(reminderText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Kopieren fehlgeschlagen', err)
+    }
+  }
+
+  // ✅ Öffnet das native Share-Menü auf Mobilgeräten (WhatsApp, Signal, iMessage, Mail)
+  const handleNativeShare = async () => {
+    if (!reminderText) return
     if (navigator.share) {
-      navigator.share({ title: 'Zahlungserinnerung', text }).catch(console.error)
+      try {
+        await navigator.share({
+          title: 'Zahlungserinnerung',
+          text: reminderText,
+        })
+      } catch (err) {
+        console.log('Share abgebrochen oder fehlgeschlagen', err)
+      }
     } else {
-      navigator.clipboard.writeText(text)
-      alert('Zahlungserinnerung in Zwischenablage kopiert!')
+      // Fallback zu WhatsApp Web/App, falls navigator.share am Desktop nicht existiert
+      window.open(`https://wa.me/?text=${encodeURIComponent(reminderText)}`, '_blank')
     }
   }
 
@@ -225,6 +248,7 @@ export default function BuchungenPage() {
         <Link href="/neue-buchungen" className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl font-black text-white shadow-sm">+</Link>
       </section>
 
+      {/* Filter-Karten oben */}
       <section className="grid grid-cols-3 gap-2">
         <div className="rounded-3xl bg-white p-3 shadow-sm">
           <p className="text-[9px] font-black uppercase text-slate-400">Einnahmen</p>
@@ -240,6 +264,7 @@ export default function BuchungenPage() {
         </div>
       </section>
 
+      {/* Suche & Filter-Tabs */}
       <section className="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
         <input
           value={search}
@@ -258,7 +283,6 @@ export default function BuchungenPage() {
           </select>
         </div>
 
-        {/* ✅ NEUE FILTERZEILE: Schnellauswahl Typen & Status */}
         <div className="flex flex-wrap gap-1.5 pt-1">
           {[
             ['all', 'Alle'],
@@ -273,9 +297,7 @@ export default function BuchungenPage() {
               type="button"
               onClick={() => setViewMode(value as ViewMode)}
               className={`rounded-xl px-3 py-2 text-xs font-black transition-all ${
-                viewMode === value
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
+                viewMode === value ? 'bg-violet-600 text-white shadow-sm' : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
               }`}
             >
               {label}
@@ -284,6 +306,7 @@ export default function BuchungenPage() {
         </div>
       </section>
 
+      {/* Liste der Buchungen */}
       <section className="space-y-4">
         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
           Gefundene Buchungen ({filteredEntries.length})
@@ -317,7 +340,6 @@ export default function BuchungenPage() {
                       const isDeleting = deletingId === entry.id
                       const isIncome = entry.entryType === 'income'
                       
-                      // ✅ Status berechnen
                       const status = getStatusInfo(entry.status, entry.due_date || entry.dueDate)
                       const dueText = getDueText(entry.status, entry.due_date || entry.dueDate)
 
@@ -328,7 +350,6 @@ export default function BuchungenPage() {
                           tabIndex={0}
                           onClick={() => setOpenId(isOpen ? null : id)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenId(isOpen ? null : id) }}
-                          // ✅ ÜBERFÄLLIGE BUCHUNGEN ROT MARKIEREN (Rand + sanfter roter BG)
                           className={`w-full text-left rounded-3xl p-4 transition-all outline-none cursor-pointer ${
                             status.isOverdue 
                               ? 'bg-rose-50/60 border border-rose-200 hover:bg-rose-50' 
@@ -342,7 +363,6 @@ export default function BuchungenPage() {
                                   {isIncome ? '💰 ' : '📉 '}
                                   {entry.displayTitle}
                                 </p>
-                                {/* ✅ STATUS-BADGE direkt sichtbar */}
                                 {isIncome && (
                                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide ${status.className}`}>
                                     {status.label}
@@ -352,7 +372,6 @@ export default function BuchungenPage() {
                               <p className="mt-1 text-xs font-semibold text-slate-500">
                                 {entry.displaySub} · {formatDate(entry.date)}
                               </p>
-                              {/* ✅ FÄLLIGKEITSHINWEISE unter dem Titel */}
                               {isIncome && dueText && (
                                 <p className="mt-1 text-xs font-bold text-rose-600">{dueText}</p>
                               )}
@@ -382,11 +401,11 @@ export default function BuchungenPage() {
                               {entry.note && <p className="mt-1 bg-white/60 p-2 rounded-xl border border-slate-100 text-xs italic">Notiz: {entry.note}</p>}
 
                               <div className="mt-4 flex items-center gap-2">
-                                {/* ✅ ERINNERUNGSBUTTON (Nur für offene Einnahmen) */}
+                                {/* ✅ DER NEUE ERINNERUNGSBUTTON (Triggert das Text-Modal) */}
                                 {isIncome && entry.status !== 'bezahlt' && (
                                   <button
                                     type="button"
-                                    onClick={() => triggerReminder(entry)}
+                                    onClick={() => handleOpenReminder(entry)}
                                     className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-600 shadow-sm"
                                   >
                                     🔔 Erinnern
@@ -414,6 +433,52 @@ export default function BuchungenPage() {
           })
         )}
       </section>
+
+      {/* ✅ DAS ERINNERUNGS-MODAL (Overlay Popup) */}
+      {reminderText && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-xl space-y-4 mb-4 sm:mb-0 transform transition-all animate-slide-up">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-black text-slate-900">Zahlungserinnerung</h3>
+              <button 
+                type="button" 
+                onClick={() => setReminderText(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500 hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Die Textvorschau */}
+            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 whitespace-pre-wrap text-sm text-slate-800 font-medium leading-relaxed shadow-inner max-h-60 overflow-y-auto">
+              {reminderText}
+            </div>
+
+            {/* Buttons im Modal */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className={`rounded-2xl py-3 text-sm font-black transition-all ${
+                  copied 
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
+                }`}
+              >
+                {copied ? '✅ Kopiert!' : '📋 Text kopieren'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="rounded-2xl bg-violet-600 py-3 text-sm font-black text-white shadow-sm hover:bg-violet-700 transition-all"
+              >
+                🚀 Senden / Teilen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
