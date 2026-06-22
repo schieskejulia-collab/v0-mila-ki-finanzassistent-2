@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useFinance } from '@/lib/store'
-import { useEffect, useState } from 'react'
 
 const STATUS_DETAILS = [
   {
