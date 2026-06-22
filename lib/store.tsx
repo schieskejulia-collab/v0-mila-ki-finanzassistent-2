@@ -331,13 +331,18 @@ ${tip}`)
     return{totalExpenses,totalIncomes,balance:totalIncomes-totalExpenses}
   },[expenses,incomes])
 
-  const budgetStatus=useMemo(()=>categories.map(c=>{
-    const spent=expenses.filter(e=>e.category===c).reduce((s,e)=>s+toNumber(e.amount),0)
-    const limit=BUDGET_LIMITS[c]??100
-    const remaining=limit-spent
-    const percent=limit>0?Math.min(100,Math.max(0,(spent/limit)*100)):0
-    return{category:CATEGORY_LABELS[c]||c,spent,limit,remaining,percent}
-  }),[categories,expenses])
+  const budgetStatus = useMemo(() =>
+  categories.map(c => {
+    const spent = expenses.filter(e => e.category === c).reduce((s, e) => s + toNumber(e.amount), 0)
+    const limit = BUDGET_LIMITS[c] ?? 100
+    const remaining = limit - spent
+    const percent = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0
+    return { category: CATEGORY_LABELS[c] || c, spent, limit, remaining, percent }
+  })
+, [categories, expenses])
+
+const value = useMemo<FinanceContextValue>(() => ({
+
 
   const value=useMemo<FinanceContextValue>(()=>({
     expenses,
