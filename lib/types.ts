@@ -1,3 +1,7 @@
+// -----------------------------
+// TYPES
+// -----------------------------
+
 export type CategoryId =
   | 'miete'
   | 'software'
@@ -53,6 +57,10 @@ export interface Budget {
   warnThreshold: number
 }
 
+// -----------------------------
+// CATEGORY DEFINITIONS
+// -----------------------------
+
 export const CATEGORIES: Record<CategoryId, Category> = {
   miete: { id: 'miete', label: 'Miete', icon: 'Home', color: 'var(--chart-1)' },
   software: { id: 'software', label: 'Software', icon: 'Laptop', color: 'var(--chart-2)' },
@@ -64,3 +72,58 @@ export const CATEGORIES: Record<CategoryId, Category> = {
 }
 
 export const CATEGORY_LIST = Object.values(CATEGORIES)
+
+// -----------------------------
+// KEYWORD MAPPING
+// -----------------------------
+
+const CATEGORY_KEYWORDS: Record<CategoryId, string[]> = {
+  miete: ['miete', 'büro', 'office rent', 'coworking'],
+  software: ['software', 'saas', 'abo', 'subscription', 'cloud', 'hosting', 'domain', 'notion', 'figma', 'adobe'],
+  marketing: ['ads', 'werbung', 'facebook ads', 'google ads', 'marketing', 'kampagne'],
+  buerobedarf: ['papier', 'stifte', 'drucker', 'bürobedarf', 'ordner'],
+  reisen: ['hotel', 'flug', 'bahn', 'reise', 'airbnb', 'uber'],
+  weiterbildung: ['kurs', 'coaching', 'weiterbildung', 'training', 'seminar'],
+  sonstiges: [],
+}
+
+// -----------------------------
+// CATEGORY DETECTION
+// -----------------------------
+
+export function detectCategory(text: string): CategoryId {
+  const lower = text.toLowerCase()
+
+  for (const categoryId of Object.keys(CATEGORY_KEYWORDS) as CategoryId[]) {
+    const keywords = CATEGORY_KEYWORDS[categoryId]
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return categoryId
+    }
+  }
+
+  return 'sonstiges'
+}
+
+// -----------------------------
+// CATEGORY OBJECT FROM TEXT
+// -----------------------------
+
+export function getCategoryFromText(text: string): Category {
+  const id = detectCategory(text)
+  return CATEGORIES[id]
+}
+
+// -----------------------------
+// ENRICH EXPENSE WITH CATEGORY
+// -----------------------------
+
+export function enrichExpense(expense: Expense) {
+  const combined = `${expense.vendor} ${expense.notes ?? ''}`
+  const detected = detectCategory(combined)
+
+  return {
+    ...expense,
+    detectedCategory: detected,
+    detectedCategoryData: CATEGORIES[detected],
+  }
+}
