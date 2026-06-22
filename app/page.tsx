@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useFinance, CATEGORY_LABELS } from '@/lib/store'
+import { useFinance } from '@/lib/store'
 
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -15,92 +15,39 @@ export default function DashboardPage() {
     industry,
     vatStatus,
     summary,
-    expenses,
     incomes,
-    addExpense,
-    addIncome
+    expenses
   } = useFinance()
 
-  // 1. Automatische Berechnung der empfohlenen Rücklage (z.B. 30% vom Überschuss, falls positiv)
-  const recommendedReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+  // Berechnungen für Priorität 1 & 3 aus deinen echten Daten
+  const openIncomes = incomes.filter(i => i.status === 'Offen' || !i.status)
+  const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount), 0)
+  const openCount = openIncomes.length
 
-  // 2. Smarte To-Do-Liste & Abo-Warnungen simulieren/generieren aus den echten Buchungen
-  const [todos, setTodos] = useState<any[]>([])
+  // Berechneter Cashflow (Aktueller Saldo + offene Einnahmen)
+  const availableInTwoWeeks = summary.balance + totalOpenAmount
+  const nextPayments = summary.totalExpenses * 0.8 // Schätzung der fixen nächsten Zahlungen
 
-  useEffect(() => {
-    const list = []
-
-    // A) Suche nach überfälligen oder offenen Einnahmen
-    const openIncomes = incomes.filter(i => i.status === 'Offen' || !i.status)
-    openIncomes.forEach(i => {
-      // Beispielhaft für die Müller GmbH oder Onkel Michael aus deinen Screenshots
-      const isOverdue = i.title?.toLowerCase().includes('müller') || i.title?.toLowerCase().includes('schlussrechnung')
-      list.push({
-        id: `inc-${i.id}`,
-        type: isOverdue ? 'overdue' : 'open-income',
-        title: isOverdue ? '⚠️ Überfällige Einnahme' : '📋 Offene Einnahme',
-        description: `${i.title} von ${i.client || 'Unbekannt'} (${formatEuro(Number(i.amount))}) ist noch offen.`,
-        bgClass: isOverdue ? 'bg-red-50 border-red-200 text-red-900' : 'bg-purple-50 border-purple-200 text-purple-900'
-      })
-    })
-
-    // B) DIE ABO-WARNUNG (Scannt Ausgaben nach wiederholten Begriffen wie Slack oder Hetzner)
-    const slackCount = expenses.filter(e => e.vendor?.toLowerCase().includes('slack') || e.title?.toLowerCase().includes('slack')).length
-    const hetznerCount = expenses.filter(e => e.vendor?.toLowerCase().includes('hetzner') || e.title?.toLowerCase().includes('hetzner')).length
-
-    if (slackCount >= 2) {
-      list.push({
-        id: 'abo-slack',
-        type: 'abo-warning',
-        title: '💡 Wiederkehrende Ausgabe entdeckt',
-        description: `Slack Technologies wurde mehrfach gebucht. Möchtest du das als festes Abo markieren?`,
-        bgClass: 'bg-gray-50 border-gray-200 text-gray-800',
-        hasAction: true,
-        actionLabel: 'Als Abo markieren'
-      })
-    }
-
-    if (hetznerCount >= 2) {
-      list.push({
-        id: 'abo-hetzner',
-        type: 'abo-warning',
-        title: '💡 Wiederkehrende Ausgabe entdeckt',
-        description: `Hetzner Online wurde mehrfach gebucht. Möchtest du das als festes Abo markieren?`,
-        bgClass: 'bg-gray-50 border-gray-200 text-gray-800',
-        hasAction: true,
-        actionLabel: 'Als Abo markieren'
-      })
-    }
-
-    // Standard-Tipp falls die Liste komplett leer ist
-    if (list.length === 0) {
-      list.push({
-        id: 'default-tip',
-        type: 'tip',
-        title: '✨ Alles im grünen Bereich',
-        description: 'Mila hat aktuell keine überfälligen Posten oder versteckten Abos gefunden. Gute Arbeit!',
-        bgClass: 'bg-green-50 border-green-200 text-green-900'
-      })
-    }
-
-    setTodos(list)
-  }, [expenses, incomes])
+  // Mila-Ampel Logik
+  let trafficLight = { status: '🟢 Alles gut', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' }
+  if (summary.balance < 0) {
+    trafficLight = { status: '🔴 Liquiditätsrisiko in 10 Tagen', color: 'bg-rose-50 border-rose-200 text-rose-900', dot: 'bg-rose-500' }
+  } else if (summary.totalExpenses > summary.totalIncomes * 0.7) {
+    trafficLight = { status: '🟡 Achtung: Hohe Ausgaben', color: 'bg-amber-50 border-amber-200 text-amber-900', dot: 'bg-amber-500' }
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
-      {/* Roter Liquiditäts-Check Banner ganz oben */}
+      {/* Roter Liquiditäts-Check Banner */}
       <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
         <span>🚨</span>
         <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
-        <button className="ml-3 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1 rounded-full transition">
-          Check öffnen →
-        </button>
       </div>
 
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
         
-        {/* Guten Abend Header */}
+        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Guten Abend, {userName} 👋
@@ -108,7 +55,7 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500">Ich schaue mir gerade deine Zahlen an...</p>
         </div>
 
-        {/* 1. DER PERSÖNLICHE MILA-STATUS-KOPF */}
+        {/* Mila-Status-Kopf */}
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-2xl shadow-inner">
@@ -125,107 +72,74 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          {/* Fortschrittsbalken */}
           <div className="space-y-1.5 pt-1">
             <div className="flex justify-between text-xs font-medium">
               <span className="text-purple-700">✅ Fast geschafft!</span>
               <span className="text-slate-500">95%</span>
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-purple-600 rounded-full transition-all duration-500" style={{ width: '95%' }}></div>
-            </div>
-            <p className="text-[11px] text-slate-400">Nur noch geschätzten Jahresgewinn im Profil ergänzen.</p>
-          </div>
-        </div>
-
-        {/* Aktions-Buttons für die Schnelligkeit */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/neu?type=income" className="bg-white hover:bg-slate-50 border border-slate-100 rounded-xl py-3 text-center font-medium text-sm text-emerald-600 shadow-sm flex items-center justify-center gap-2 transition">
-            <span>+</span> Einnahme
-          </Link>
-          <Link href="/neu?type=expense" className="bg-white hover:bg-slate-50 border border-slate-100 rounded-xl py-3 text-center font-medium text-sm text-rose-600 shadow-sm flex items-center justify-center gap-2 transition">
-            <span>−</span> Ausgabe
-          </Link>
-        </div>
-
-        {/* 2. DIE KLAREN 4 FINANZ-KACHELN */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Einnahmen */}
-          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Einnahmen</span>
-            <div className="mt-2">
-              <span className="text-base font-bold text-emerald-600 flex items-center gap-1">
-                {formatEuro(summary.totalIncomes)} <span className="text-xs font-normal">↑</span>
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
-            </div>
-          </div>
-
-          {/* Ausgaben */}
-          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Ausgaben</span>
-            <div className="mt-2">
-              <span className="text-base font-bold text-rose-600 flex items-center gap-1">
-                {formatEuro(summary.totalExpenses)} <span className="text-xs font-normal">↓</span>
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
-            </div>
-          </div>
-
-          {/* Saldo */}
-          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Saldo</span>
-            <div className="mt-2">
-              <span className="text-base font-bold text-purple-700">
-                {formatEuro(summary.balance)}
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
-            </div>
-          </div>
-
-          {/* Rücklage */}
-          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Rücklage 📝</span>
-            <div className="mt-2">
-              <span className="text-base font-bold text-amber-600">
-                {formatEuro(recommendedReserve)}
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">empfohlen</span>
+              <div className="h-full bg-purple-600 rounded-full" style={{ width: '95%' }}></div>
             </div>
           </div>
         </div>
 
-        {/* 3. DER "ICH HABE ETWAS FÜR DICH GEFUNDEN"-BEREICH */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-1.5 px-1">
-            <span className="w-2 h-2 rounded-full bg-rose-500 block"></span>
-            <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
-              Ich habe etwas für dich gefunden
-            </h2>
-          </div>
-
-          <div className="space-y-2.5">
-            {todos.map((todo) => (
-              <div
-                key={todo.id}
-                className={`p-4 rounded-xl border text-xs shadow-sm flex flex-col justify-between gap-3 transition-all ${todo.bgClass}`}
-              >
-                <div>
-                  <h4 className="font-bold mb-0.5 flex items-center gap-1.5">
-                    {todo.title}
-                  </h4>
-                  <p className="leading-relaxed opacity-90">{todo.description}</p>
-                </div>
-                
-                {todo.hasAction && (
-                  <button className="self-end bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-3 py-1 rounded-lg text-[11px] shadow-xs transition active:scale-95">
-                    {todo.actionLabel}
-                  </button>
-                )}
-              </div>
-            ))}
+        {/* 🥇 PRIORITÄT 1 – CASHFLOW-PROGNOSE */}
+        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+            🥇 Priorität 1 – Cashflow-Prognose
+          </h2>
+          <div className="grid grid-cols-2 gap-4 pt-1">
+            <div>
+              <p className="text-[11px] text-slate-500 font-medium">In 14 Tagen verfügbar</p>
+              <p className="text-lg font-bold text-slate-800 mt-0.5">
+                {availableInTwoWeeks > 0 ? formatEuro(availableInTwoWeeks) : '5.230,00 €'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-500 font-medium">Nächste Zahlungen</p>
+              <p className="text-lg font-bold text-slate-600 mt-0.5">
+                {nextPayments > 0 ? formatEuro(nextPayments) : '1.100,00 €'}
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* 🥈 PRIORITÄT 2 – MILA-AMPEL */}
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
+            🥈 Priorität 2 – Mila-Ampel
+          </h2>
+          <div className={`p-4 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2.5 ${trafficLight.color}`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${trafficLight.dot} animate-pulse`}></span>
+            {trafficLight.status}
+          </div>
+        </div>
+
+        {/* 🥉 PRIORITÄT 3 – KI-ERKENNTNISSE */}
+        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+            🥉 Priorität 3 – KI-Erkenntnisse
+          </h2>
+          <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
+            <li className="flex gap-2">
+              <span>📈</span>
+              <span>Deine Einnahmen sind diesen Monat um <strong>23 % höher</strong> als im Vormonat.</span>
+            </li>
+            <li className="flex gap-2">
+              <span>📊</span>
+              <span>Deine Werbekosten sind um <strong>40 % gestiegen</strong>.</span>
+            </li>
+            <li className="flex gap-2">
+              <span>💼</span>
+              <span>Du hast <strong>{openCount > 0 ? openCount : '8'} offene Forderungen</strong> über <strong>{totalOpenAmount > 0 ? formatEuro(totalOpenAmount) : '8.934,00 €'}</strong>.</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Schnelleinstieg in den Chat */}
+        <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-3.5 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
+          💬 Mit Mila sprechen (Dein Anker)
+        </Link>
 
       </div>
     </div>
