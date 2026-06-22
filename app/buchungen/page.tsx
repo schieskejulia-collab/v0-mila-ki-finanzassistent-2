@@ -345,8 +345,10 @@ const visibleEntries = filteredEntries.slice(0, 30)
                             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
                               {isIncome ? (
                                 <>
-                                  <p>Kunde: {entry.client || 'Nicht angegeben'}</p>
-                                  <p>Datum: {formatDate(entry.date)}</p>
+                                 <p>Kunde: {entry.client || 'Nicht angegeben'}</p>
+<p>Status: {entry.status || 'offen'}</p>
+{entry.due_date && <p>Fällig am: {formatDate(entry.due_date)}</p>}
+<p>Datum: {formatDate(entry.date)}</p>
                                 </>
                               ) : (
                                 <>
