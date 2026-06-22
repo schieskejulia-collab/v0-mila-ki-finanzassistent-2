@@ -325,13 +325,13 @@ ${tip}`)
     }catch(e){console.error(e)}
   },[])
 
-  const summary=useMemo(()=>{
-    const totalExpenses=expenses.reduce((s,e)=>s+toNumber(e.amount),0)
-    const totalIncomes=incomes.reduce((s,i)=>s+toNumber(i.amount),0)
-    return{totalExpenses,totalIncomes,balance:totalIncomes-totalExpenses}
-  },[expenses,incomes])
+  const summary = useMemo(() => {
+  const totalExpenses = expenses.reduce((s, e) => s + toNumber(e.amount), 0)
+  const totalIncomes = incomes.reduce((s, i) => s + toNumber(i.amount), 0)
+  return { totalExpenses, totalIncomes, balance: totalIncomes - totalExpenses }
+}, [expenses, incomes])
 
-  const budgetStatus = useMemo(() =>
+const budgetStatus = useMemo(() =>
   categories.map(c => {
     const spent = expenses.filter(e => e.category === c).reduce((s, e) => s + toNumber(e.amount), 0)
     const limit = BUDGET_LIMITS[c] ?? 100
@@ -342,81 +342,75 @@ ${tip}`)
 , [categories, expenses])
 
 const value = useMemo<FinanceContextValue>(() => ({
+  expenses,
+  incomes,
+  setIncomes,
+  categories,
+  milaFeedback,
+  morningBriefing,
+  refreshMorningBriefing,
+  triggerMilaFeedback,
+  addExpense,
+  deleteExpense,
+  addIncome,
+  deleteIncome,
+  userName,
+  setUserName,
+  userStatus,
+  setUserStatus,
+  industry,
+  setIndustry,
+  taxClass,
+  setTaxClass,
+  annualGross,
+  setAnnualGross,
+  annualProfit,
+  setAnnualProfit,
+  vatStatus,
+  setVatStatus,
+  federalState,
+  setFederalState,
+  churchTax,
+  setChurchTax,
+  married,
+  setMarried,
+  children,
+  setChildren,
+  assemblyWork,
+  setAssemblyWork,
+  isLoggedIn,
+  login,
+  logout,
+  summary,
+  budgetStatus,
+}), [
+  expenses,
+  incomes,
+  categories,
+  milaFeedback,
+  morningBriefing,
+  userName,
+  userStatus,
+  industry,
+  taxClass,
+  annualGross,
+  annualProfit,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
+  isLoggedIn,
+  summary,
+  budgetStatus,
+])
 
-
-  const value=useMemo<FinanceContextValue>(()=>({
-    expenses,
-    incomes,
-  const value = useMemo<FinanceContextValue>(() => ({
-    expenses,
-    incomes,
-    setIncomes,
-    categories,
-    milaFeedback,
-    morningBriefing,
-    refreshMorningBriefing,
-    triggerMilaFeedback,
-    addExpense,
-    deleteExpense,
-    addIncome,
-    deleteIncome,
-    userName,
-    setUserName,
-    userStatus,
-    setUserStatus,
-    industry,
-    setIndustry,
-    taxClass,
-    setTaxClass,
-    annualGross,
-    setAnnualGross,
-    annualProfit,
-    setAnnualProfit,
-    vatStatus,
-    setVatStatus,
-    federalState,
-    setFederalState,
-    churchTax,
-    setChurchTax,
-    married,
-    setMarried,
-    children,
-    setChildren,
-    assemblyWork,
-    setAssemblyWork,
-    isLoggedIn,
-    login,
-    logout,
-    summary,
-    budgetStatus,
-  }), [
-    expenses,
-    incomes,
-    categories,
-    milaFeedback,
-    morningBriefing,
-    userName,
-    userStatus,
-    industry,
-    taxClass,
-    annualGross,
-    annualProfit,
-    vatStatus,
-    federalState,
-    churchTax,
-    married,
-    children,
-    assemblyWork,
-    isLoggedIn,
-    summary,
-    budgetStatus,
-  ])
-
-  return (
-    <FinanceContext.Provider value={value}>
-      {children}
-    </FinanceContext.Provider>
-  )
+return (
+  <FinanceContext.Provider value={value}>
+    {children}
+  </FinanceContext.Provider>
+)
 }
 
 export function useFinance() {
