@@ -223,10 +223,16 @@ export default function HomePage() {
       )}
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-          Neue Buchung
-        </h2>
-        <BookingForm />
+       <h2 className="mb-4 text-sm font-black">
+  Neue Buchung
+</h2>
+
+<Link
+  href="/neue-buchungen"
+  className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm"
+>
+  ➕ Neue Buchung erfassen
+</Link>
       </section>
 
       <TaxCard />
