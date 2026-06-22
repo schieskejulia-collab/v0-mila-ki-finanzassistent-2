@@ -292,20 +292,20 @@ const [isSaving, setIsSaving] = useState(false)
 {type === 'income' && (
   <>
     <select
-      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
       value={status}
       onChange={(e) => setStatus(e.target.value)}
+      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
     >
-      <option value="offen">Offen</option>
-      <option value="bezahlt">Bezahlt</option>
-      <option value="überfällig">Überfällig</option>
+      <option value="offen">🟡 Offen</option>
+      <option value="bezahlt">🟢 Bezahlt</option>
+      <option value="ueberfaellig">🔴 Überfällig</option>
     </select>
 
     <input
-      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
       type="date"
       value={dueDate}
       onChange={(e) => setDueDate(e.target.value)}
+      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
     />
   </>
 )}
