@@ -31,14 +31,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [federalState, setFederalState] = useState('berlin')
   const [churchTax, setChurchTax] = useState(false)
   const [married, setMarried] = useState(false)
-  const [children, setChildren] = useState(0)
+  const [childCount, setChildCount] = useState(0)
+
   const [assemblyWork, setAssemblyWork] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const appChildren = children
+  const children = childCount
 return(
  <FinanceContext.Provider value={value}>
-      {appChildren}
+      {setChildCount}
     </FinanceContext.Provider>
   )
 } 
@@ -198,7 +199,7 @@ interface FinanceContextValue {
         federalState,
         churchTax,
         married,
-        children,
+        childCount,
         assemblyWork,
       })
     )
@@ -213,7 +214,7 @@ interface FinanceContextValue {
     federalState,
     churchTax,
     married,
-    children,
+    childCount,
     assemblyWork,
   ])
 
