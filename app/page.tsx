@@ -96,15 +96,17 @@ const openIncomeTotal = openIncomes.reduce(
 )
 
 const overdueIncomeTotal = overdueIncomes.reduce(
+const overdueIncomeTotal = overdueIncomes.reduce(
+  (sum, income: any) => sum + Number(income.amount || 0),
+  0
+)
+
 const paidIncomes = incomes.filter(
   (i: any) => i.status === 'bezahlt'
 )
 
 const paidIncomeTotal = paidIncomes.reduce(
   (sum, i: any) => sum + Number(i.amount || 0),
-  0
-)
-  (sum, income: any) => sum + Number(income.amount || 0),
   0
 )
   const totalLimit = budgetStatus.reduce((sum, b) => sum + b.limit, 0)
