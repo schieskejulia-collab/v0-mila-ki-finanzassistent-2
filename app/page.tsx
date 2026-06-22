@@ -251,15 +251,15 @@ export default function HomePage() {
 
         <div className="space-y-3">
           <div className="text-xl font-black">
-            {overdueIncomes.length > 0
-              ? '🔴 Einnahmen überfällig'
-              : openIncomes.length > 0
-              ? '🟡 Offene Einnahmen prüfen'
-              : percent >= 100
-              ? '🔴 Budget überschritten'
-              : percent >= 80
-              ? '🟡 Kategorien beobachten'
-              : '🟢 Alles im grünen Bereich'}
+         {overdueIncomes.length > 0
+  ? `🔴 ${overdueIncomes.length} überfällige Einnahme${overdueIncomes.length === 1 ? '' : 'n'} prüfen`
+  : openIncomes.length > 0
+  ? `🟡 ${openIncomes.length} offene Einnahme${openIncomes.length === 1 ? '' : 'n'} prüfen`
+  : percent >= 100
+  ? '🔴 Budget überschritten'
+  : percent >= 80
+  ? '🟡 Kategorien beobachten'
+  : '🟢 Alles im grünen Bereich'}
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -317,10 +317,10 @@ export default function HomePage() {
       </section>
 
       <section className="relative z-40 grid grid-cols-2 gap-3 pb-8">
-     <Link
-  href="/buchungen?status=offen"
-  className="block rounded-3xl bg-amber-50 p-4 active:scale-[0.98]"
->
+        <Link
+          href="/buchungen"
+          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
+        >
           📒 Buchungen
         </Link>
 
