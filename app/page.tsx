@@ -210,67 +210,32 @@ const paidIncomeTotal = paidIncomes.reduce(
             <p className="mt-1 text-xl font-black text-rose-800">
               {formatEuro(summary.totalExpenses)}
             </p>
-            <p className="text-xs font-bold text-rose-600">
-              {expenses.length} Belege
-            </p>
-          </div>
-        </div>
-      </section>
+            <p className="text-xs font-bold text-rose-
+<div className="mt-4 grid grid-cols-2 gap-3">
+  <div className="rounded-3xl bg-emerald-50 p-4">
+    <p className="text-[10px] font-black uppercase text-emerald-700">
+      Einnahmen
+    </p>
+    <p className="mt-2 text-2xl font-black text-emerald-700">
+      {formatEuro(summary.totalIncomes)}
+    </p>
+    <p className="text-xs font-bold text-emerald-700">
+      {incomes.length} Buchungen
+    </p>
+  </div>
 
-      <section className="rounded-[2rem] bg-white p-4 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setShowSettings(!showSettings)}
-          className="flex w-full items-center justify-between rounded-2xl bg-violet-50 px-4 py-3 text-left"
-        >
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-500">
-              Profil & Branche
-            </p>
-            <p className="mt-1 text-sm font-black text-slate-800">
-              {niceStatus(userStatus)} · {niceIndustry(industry)}
-            </p>
-          </div>
-
-          <span className="text-xl font-black text-violet-700">
-            {showSettings ? '⌃' : '⌄'}
-          </span>
-        </button>
-
-        {showSettings && (
-          <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {statuses.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setUserStatus(status)}
-                  className={
-                    userStatus === status
-                      ? 'rounded-2xl bg-violet-600 px-3 py-3 text-[10px] font-black uppercase text-white shadow-sm'
-                      : 'rounded-2xl bg-violet-50 px-3 py-3 text-[10px] font-black uppercase text-violet-700'
-                  }
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-
-            <select
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value as any)}
-              className="w-full rounded-2xl border border-violet-100 bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
-            >
-              {industries.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </section>
-
+  <div className="rounded-3xl bg-rose-50 p-4">
+    <p className="text-[10px] font-black uppercase text-rose-700">
+      Ausgaben
+    </p>
+    <p className="mt-2 text-2xl font-black text-rose-700">
+      {formatEuro(summary.totalExpenses)}
+    </p>
+    <p className="text-xs font-bold text-rose-700">
+      {expenses.length} Belege
+    </p>
+  </div>
+</div>
       {topInsights.length > 0 && (
         <section className="rounded-[2rem] bg-white p-5 shadow-sm">
           <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
