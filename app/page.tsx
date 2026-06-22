@@ -96,6 +96,14 @@ const openIncomeTotal = openIncomes.reduce(
 )
 
 const overdueIncomeTotal = overdueIncomes.reduce(
+const paidIncomes = incomes.filter(
+  (i: any) => i.status === 'bezahlt'
+)
+
+const paidIncomeTotal = paidIncomes.reduce(
+  (sum, i: any) => sum + Number(i.amount || 0),
+  0
+)
   (sum, income: any) => sum + Number(income.amount || 0),
   0
 )
@@ -306,7 +314,34 @@ const overdueIncomeTotal = overdueIncomes.reduce(
               ? '🟡 Kategorien beobachten'
               : '🟢 Alles im grünen Bereich'}
           </div>
+<section className="grid grid-cols-3 gap-3">
+  <div className="rounded-3xl bg-amber-50 p-3">
+    <p className="text-[10px] font-black uppercase text-amber-700">
+      Offen
+    </p>
+    <p className="mt-1 text-lg font-black">
+      {openIncomes.length}
+    </p>
+  </div>
 
+  <div className="rounded-3xl bg-emerald-50 p-3">
+    <p className="text-[10px] font-black uppercase text-emerald-700">
+      Bezahlt
+    </p>
+    <p className="mt-1 text-lg font-black">
+      {paidIncomes.length}
+    </p>
+  </div>
+
+  <div className="rounded-3xl bg-rose-50 p-3">
+    <p className="text-[10px] font-black uppercase text-rose-700">
+      Überfällig
+    </p>
+    <p className="mt-1 text-lg font-black">
+      {overdueIncomes.length}
+    </p>
+  </div>
+</section>
           <div className="text-sm text-slate-600">
             Verwendet: {formatEuro(totalSpent)}
           </div>
