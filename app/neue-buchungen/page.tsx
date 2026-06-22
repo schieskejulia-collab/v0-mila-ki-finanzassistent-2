@@ -102,6 +102,8 @@ export default function NeueBuchungPage() {
   const [partner, setPartner] = useState('')
   const [category, setCategory] = useState('Sonstiges')
   const [note, setNote] = useState('')
+const [status, setStatus] = useState('offen')
+const [dueDate, setDueDate] = useState('')
 const [isSaving, setIsSaving] = useState(false)
   const numericAmount = Number(amount || 0)
   const deductible = type === 'expense' && isDeductible(category)
@@ -160,14 +162,13 @@ const [isSaving, setIsSaving] = useState(false)
   }
 
   if (type === 'expense') {
-    payload.vendor = partner || ''
-    payload.category = category
-    payload.tax_deductible = deductible
-    payload.tax_hint = taxHint
-  } else {
-    payload.client = partner || ''
-    payload.tax_reserve = taxReserve
-  }
+    } else {
+  payload.client = partner || ''
+  payload.tax_reserve = taxReserve
+  payload.status = 'offen'
+  payload.source = 'manuell'
+  payload.vat = 19
+}
 
   try {
     const checkRes = await fetch(apiPath)
@@ -286,7 +287,26 @@ const [isSaving, setIsSaving] = useState(false)
           value={partner}
           onChange={(e) => updatePartner(e.target.value)}
         />
+{type === 'income' && (
+  <>
+    <select
+      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+      value={status}
+      onChange={(e) => setStatus(e.target.value)}
+    >
+      <option value="offen">Offen</option>
+      <option value="bezahlt">Bezahlt</option>
+      <option value="überfällig">Überfällig</option>
+    </select>
 
+    <input
+      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+      type="date"
+      value={dueDate}
+      onChange={(e) => setDueDate(e.target.value)}
+    />
+  </>
+)}
         {type === 'expense' && (
           <select
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
