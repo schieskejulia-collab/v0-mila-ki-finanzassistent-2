@@ -54,6 +54,7 @@ export default function ProfilPage() {
   const [married, setMarried] = useState('nein')
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
+setAnnualProfit(profile.annualProfit || '')
   const [assemblyWork, setAssemblyWork] = useState('nein')
 const [vatStatus, setVatStatus] = useState('kleinunternehmer')
   const missing: string[] = []
