@@ -160,8 +160,46 @@ const paidIncomeTotal = paidIncomes.reduce(
 
   onClick={() => router.push('/buchungen?status=offen')}
   className="rounded-3xl bg-amber-50 p-3 cursor-pointer"
->className="mt-4 grid grid-cols-2 gap-3">
-          
+<div className="mt-4 grid grid-cols-3 gap-3">
+  <button
+    type="button"
+    onClick={() => router.push('/buchungen?status=offen')}
+    className="rounded-3xl bg-amber-50 p-3 text-left"
+  >
+    <p className="text-[10px] font-black uppercase text-amber-700">
+      Offen
+    </p>
+    <p className="mt-1 text-lg font-black text-slate-950">
+      {openIncomes.length}
+    </p>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => router.push('/buchungen?status=bezahlt')}
+    className="rounded-3xl bg-emerald-50 p-3 text-left"
+  >
+    <p className="text-[10px] font-black uppercase text-emerald-700">
+      Bezahlt
+    </p>
+    <p className="mt-1 text-lg font-black text-slate-950">
+      {paidIncomes.length}
+    </p>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => router.push('/buchungen?status=ueberfaellig')}
+    className="rounded-3xl bg-rose-50 p-3 text-left"
+  >
+    <p className="text-[10px] font-black uppercase text-rose-700">
+      Überfällig
+    </p>
+    <p className="mt-1 text-lg font-black text-slate-950">
+      {overdueIncomes.length}
+    </p>
+  </button>
+</div>
             <p className="text-[10px] font-black uppercase text-emerald-700">
               Einnahmen
             </p>
