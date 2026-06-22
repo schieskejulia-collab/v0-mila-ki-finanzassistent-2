@@ -1,387 +1,423 @@
-export type UserTaxType =
-  | 'angestellt'
-  | 'minijob'
-  | 'selbststaendig_gewerbe'
-  | 'freiberufler'
-  | 'kleinunternehmer'
-  | 'handwerker'
-  | 'montagearbeiter'
+'use client'
+import { createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,ReactNode } from 'react'
+import { supabase } from '@/lib/supabase'
 
-export type VatStatus =
-  | 'kleinunternehmer'
-  | 'regelbesteuerung_19'
-  | 'ermaessigt_7'
-  | 'nicht_bekannt'
+export type UserStatus='angestellt'|'minijob'|'selbststaendig_gewerbe'|'freelancer'|'kleinunternehmer'|'handwerker'|'montagearbeiter'
+export type Industry='webdesigner'|'fotograf'|'coach'|'handwerker'|'restaurant'|'ecommerce'|'berater'|'sonstiges'
 
-export type TaxProfile = {
-  userType: UserTaxType
-  annualRevenueGross?: number
-  estimatedAnnualProfit?: number
-  vatStatus?: VatStatus
-  churchTax?: boolean
-  federalState?: string
-  municipality?: string
+export type Expense={id:string|number,title:string,vendor:string,amount:number,date:string,category:string,note?:string|null}
+export type Income={id:string|number,title:string,client:string,amount:number,date:string,status?:string,due_date?:string,dueDate?:string,invoiceNumber?:string,note?:string|null}
+export type BudgetStatus={category:string,spent:number,limit:number,remaining:number,percent:number}
+type Summary={totalExpenses:number,totalIncomes:number,balance:number}
 
-  taxClass?: '1' | '2' | '3' | '4' | '5' | '6'
-  annualGrossSalary?: number
-  hasChildren?: boolean
-  isMarried?: boolean
-
-  assemblyWork?: boolean
-  receivesPerDiem?: boolean
-  employerPaysHotel?: boolean
-  travelDaysPerMonth?: number
-  commuteKm?: number
+interface FinanceContextValue{
+  expenses:Expense[]
+  incomes:Income[]
+  setIncomes:(i:Income[])=>void
+  categories:string[]
+  milaFeedback:string
+  morningBriefing:string
+  refreshMorningBriefing:()=>Promise<void>
+  triggerMilaFeedback:(category:string)=>void
+  addExpense:(e:{title?:string,vendor?:string,amount:number|string,date?:string,category?:string,note?:string,hasReceipt?:boolean,vat?:number})=>Promise<void>
+  deleteExpense:(id:string|number)=>Promise<void>
+  addIncome:(i:{title?:string,client?:string,amount:number|string,date?:string,note?:string,vat?:number,status?:string,source?:string})=>Promise<void>
+  deleteIncome:(id:string|number)=>Promise<void>
+  userName:string
+  setUserName:(v:string)=>void
+  userStatus:UserStatus
+  setUserStatus:(v:UserStatus)=>void
+  industry:Industry
+  setIndustry:(v:Industry)=>void
+  isLoggedIn:boolean
+  login:(name:string,status:UserStatus)=>void
+  logout:()=>void
+  summary:Summary
+  budgetStatus:BudgetStatus[]
+  taxClass:string
+  setTaxClass:(v:string)=>void
+  annualGross:number
+  setAnnualGross:(v:number)=>void
+  annualProfit:number
+  setAnnualProfit:(v:number)=>void
+  vatStatus:string
+  setVatStatus:(v:string)=>void
+  federalState:string
+  setFederalState:(v:string)=>void
+  churchTax:boolean
+  setChurchTax:(v:boolean)=>void
+  married:boolean
+  setMarried:(v:boolean)=>void
+  children:number
+  setChildren:(v:number)=>void
+  assemblyWork:boolean
+  setAssemblyWork:(v:boolean)=>void
 }
 
-export type TaxEstimate = {
-  title: string
-  reserveRateMin: number
-  reserveRateMax: number
-  reserveMin: number
-  reserveMax: number
-  confidence: number
-  taxTypes: string[]
-  missingData: string[]
-  notes: string[]
-  niches: string[]
-  insiderTips: string[] // Enthält die barwertigen Insider-Tipps
-  disclaimer: string
+const DEFAULT_CATEGORIES=['software','hardware','elektronik','telefon & internet','marketing','buerobedarf','reisen','fahrtkosten','bewirtung','weiterbildung','versicherung','miete','bankgebühren','material','werkzeug','arbeitskleidung','sonstiges']
+
+export const CATEGORY_LABELS:Record<string,string>={
+  software:'Software & IT',hardware:'Hardware',elektronik:'Elektronik','telefon & internet':'Telefon & Internet',marketing:'Marketing',buerobedarf:'Büro & Arbeitsmittel',reisen:'Reisekosten',fahrtkosten:'Fahrtkosten',bewirtung:'Bewirtung',weiterbildung:'Weiterbildung',versicherung:'Versicherung',miete:'Miete & Coworking',bankgebühren:'Bankgebühren',material:'Material',werkzeug:'Werkzeug',arbeitskleidung:'Arbeitskleidung',sonstiges:'Sonstiges'
 }
 
-function money(value: number) {
-  return value.toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+const BUDGET_LIMITS:Record<string,number>={software:200,reisen:500,weiterbildung:300,marketing:250,buerobedarf:150,bewirtung:200,versicherung:100,hardware:400,'telefon & internet':150,miete:600,fahrtkosten:250,bankgebühren:80,sonstiges:100}
+
+const STATUS_VALUES:UserStatus[]=['angestellt','minijob','selbststaendig_gewerbe','freelancer','kleinunternehmer','handwerker','montagearbeiter']
+const FinanceContext=createContext<FinanceContextValue|null>(null)
+function isUserStatus(v:any):v is UserStatus{return typeof v==='string'&&STATUS_VALUES.includes(v)}
+
+export function toNumber(v:any){if(typeof v==='number')return v||0;const raw=String(v??'').trim();if(!raw)return 0;const normalized=raw.includes(',')?raw.replace(/\./g,'').replace(',','.'):raw;const cleaned=normalized.replace(/[^\d.-]/g,'');const num=Number(cleaned);return Number.isFinite(num)?num:0}
+
+const CATEGORY_RULES=[
+  {regex:/laptop|notebook|computer|macbook|monitor|pc|tastatur|maus|headset/,category:'hardware'},
+  {regex:/werkzeug|bohrer|akkuschrauber|maschine|hammer|zange/,category:'werkzeug'},
+  {regex:/arbeitskleidung|arbeitsschuhe|schutzbrille|helm|handschuhe|blaumann/,category:'arbeitskleidung'},
+  {regex:/hotel|bahn|flug|reise|airbnb|unterkunft|übernachtung/,category:'reisen'},
+  {regex:/kurs|seminar|weiterbildung|coaching/,category:'weiterbildung'},
+  {regex:/restaurant|essen|bewirtung|lunch|dinner|cafe/,category:'bewirtung'},
+  {regex:/versicherung|haftpflicht|rechtsschutz/,category:'versicherung'},
+  {regex:/miete|coworking|bürofläche/,category:'miete'},
+  {regex:/tank|diesel|benzin|fahrt|parken|uber|taxi/,category:'fahrtkosten'},
+  {regex:/material|farbe|holz|metall|rohr|baustoff/,category:'material'},
+  {regex:/telefon|internet|vodafone|telekom|o2/,category:'telefon & internet'},
+  {regex:/hosting|server|canva|figma|adobe|openai|notion|saas/,category:'software'}
+]
+
+export function inferCategory(input:string){
+  const t=input.toLowerCase()
+  for(const r of CATEGORY_RULES){if(r.regex.test(t))return r.category}
+  return 'sonstiges'
 }
 
-function n(value?: number) {
-  return Number.isFinite(Number(value)) ? Number(value) : 0
-}
-
-function getProfit(profile: TaxProfile) {
-  if (n(profile.estimatedAnnualProfit) > 0) return n(profile.estimatedAnnualProfit)
-  if (n(profile.annualGrossSalary) > 0) return n(profile.annualGrossSalary)
-  if (n(profile.annualRevenueGross) > 0) return n(profile.annualRevenueGross) * 0.5 // Fallback: 50% Marge
-  return 0
-}
-
-function getReserveRangeByProfit(profit: number) {
-  if (profit <= 0) return [0, 0] as const
-  if (profit < 20000) return [0.2, 0.25] as const
-  if (profit < 50000) return [0.25, 0.3] as const
-  if (profit < 80000) return [0.3, 0.35] as const
-  return [0.35, 0.4] as const
-}
-
-function getMissingBase(profile: TaxProfile) {
-  const missing: string[] = []
-  if (!profile.userType) missing.push('Nutzertyp')
-  if (!profile.federalState) missing.push('Bundesland')
-  if (typeof profile.churchTax !== 'boolean') missing.push('Kirchensteuer')
-  return missing
-}
-
-// --- Shared Helfer für Angestellte (inkl. Montagearbeiter-Spezial) ---
-function applyEmployeeBaseLogic(
-  profile: TaxProfile,
-  ctx: {
-    title: string
-    notes: string[]
-    insiderTips: string[]
-    niches: string[]
-    taxTypes: string[]
-    missingData: string[]
+const TIPS:any={
+  montagearbeiter:{
+    reisen:'🛏️ Unterkunft auf Montage: zählt zur doppelten Haushaltsführung – bringt hohe Erstattungen.',
+    fahrtkosten:'🚗 Jeder km zur Baustelle: 0,30 € (ab km 21 → 0,38 €).',
+    arbeitskleidung:'🦺 Arbeitskleidung & Werkzeug: 100% sofort absetzbar.',
+    werkzeug:'🛠️ Werkzeug: komplett absetzbar.',
+    default:'✨ Montagekosten erfasst – Mila optimiert deine Erstattung.'
   },
-  options?: { isMontage?: boolean }
-) {
-  const { notes, insiderTips, niches, taxTypes, missingData } = ctx
-  const isMontage = options?.isMontage ?? false
-
-  taxTypes.push('Lohnsteuer', 'Sozialabgaben')
-
-  if (!profile.taxClass) missingData.push('Steuerklasse')
-  if (!profile.annualGrossSalary) missingData.push('Jahresbrutto')
-
-  const salary = n(profile.annualGrossSalary)
-  let reserveRateMin = 0
-  let reserveRateMax = 0
-
-  if (salary <= 0) {
-    reserveRateMin = 0
-    reserveRateMax = 0
-  } else if (salary < 20000) {
-    reserveRateMin = 0.05
-    reserveRateMax = 0.15
-  } else if (salary < 50000) {
-    reserveRateMin = 0.2
-    reserveRateMax = 0.3
-  } else {
-    reserveRateMin = 0.3
-    reserveRateMax = 0.45
-  }
-
-  notes.push(
-    'Deine Lohnsteuer wird monatlich direkt vom Arbeitgeber einbehalten. Über geschickte Werbungskosten holst du dir bares Geld vom Finanzamt zurück.'
-  )
-
-  insiderTips.push(
-    'Legal 1.260 € ohne Nachweise: Nutze die Homeoffice-Pauschale (6 €/Tag) für alle Tage, an denen du Berichte schreibst oder von zu Hause arbeitest.',
-    'Arbeitsmittel-Sofortabzug: Smartphones, Tablets & Laptops unter 952 € (brutto) kannst du sofort zu 100% im selben Jahr komplett geltend machen.',
-    'Steuerklassen-Hebel: Wenn du verheiratet bist und dein Partner weniger verdient, prüft den Wechsel auf Klasse 3/5 oder das Faktorverfahren für sofort mehr Netto auf dem Konto.'
-  )
-
-  niches.push('Werbungskosten', 'Pendlerpauschale', 'Homeoffice')
-
-  if (isMontage) {
-    ctx.title = 'Montage-Spezialprofil'
-    if (!profile.travelDaysPerMonth) missingData.push('Reisetage pro Monat')
-
-    const tage = n(profile.travelDaysPerMonth) || 15
-    const spesenSchaetzung = tage * 14
-
-    notes.length = 0 // Clear standard note to put focus on assembly work
-    notes.push('Auf Montage entscheiden deine Auslöse, Fahrtwege und die doppelte Haushaltsführung über massive Steuerrückzahlungen.')
-
-    insiderTips.length = 0 // Tausche allgemeine Tipps gegen scharfe Montage-Tipps aus
-    insiderTips.push(
-      `Verpflegungsmehraufwand (Spesen): Bei ca. ${tage} Reisetagen stehen dir legal mindestens ${money(
-        spesenSchaetzung
-      )}/Monat als Werbungskosten zu, falls dein Chef sie nicht steuerfrei auszahlt! (14 € ab 8h, 28 € bei 24h Abwesenheit).`,
-      'Doppelte Haushaltsführung: Kosten für ein Zimmer oder eine Zweitwohnung am Montageort sowie wöchentliche Familienheimfahrten sind komplett absetzbar.',
-      'Fahrten zur Baustelle: Jeder gefahrene Kilometer zu wechselnden Einsatzorten mit dem Privat-PKW bringt dir 0,30 € (ab dem 21. Kilometer sogar 0,38 €) als Werbungskosten.',
-      'Arbeitskleidung & Werkzeug: Spezialkleidung (Sicherheitsschuhe, Blaumann) und eigenes Werkzeug sind uneingeschränkt zu 100% absetzbar.'
-    )
-
-    niches.push('Spesen', 'Doppelte Haushaltsführung', 'Fahrtkosten')
-
-    // Bei Montagearbeitern ist der Fokus die Erstattung, daher halten wir die simulierte Nachzahlungs-Rücklage klein
-    reserveRateMin = 0.05
-    reserveRateMax = 0.15
-  }
-
-  return {
-    profit: salary,
-    reserveRateMin,
-    reserveRateMax,
-  }
-}
-
-// --- Shared Helfer für Selbstständige / Gewerbe / Freiberufler / Kleinunternehmer ---
-function applyBusinessBaseLogic(
-  profile: TaxProfile,
-  ctx: {
-    taxTypes: string[]
-    notes: string[]
-    insiderTips: string[]
-    niches: string[]
+  angestellt:{
+    software:'💻 Geräte & Tools unter 952 € brutto → sofort 100% absetzbar.',
+    hardware:'💻 Arbeitsmittel sofort absetzbar.',
+    buerobedarf:'📝 Homeoffice-Pauschale: 6 €/Tag, bis 1.260 €/Jahr.',
+    default:'✨ Werbungskosten erkannt – Mila prüft deine Vorteile.'
   },
-  options: {
-    isFreelancer?: boolean
-    isKleinunternehmer?: boolean
-    isHandwerker?: boolean
-  }
-) {
-  const { taxTypes, notes, insiderTips, niches } = ctx
-  const profit = getProfit(profile)
-  let [reserveRateMin, reserveRateMax] = getReserveRangeByProfit(profit)
-
-  const isFreelancer = options.isFreelancer ?? false
-  const isKleinunternehmer = options.isKleinunternehmer ?? false
-  const isHandwerker = options.isHandwerker ?? false
-
-  taxTypes.push('Einkommensteuer')
-
-  if (!isKleinunternehmer && profile.vatStatus !== 'kleinunternehmer') {
-    taxTypes.push('Umsatzsteuer')
-  }
-
-  if (!isFreelancer && profit > 24500) {
-    taxTypes.push('Gewerbesteuer')
-    notes.push('Ab 24.500 € Gewinn kann Gewerbesteuer anfallen (Freibetrag greift).')
-  }
-
-  if (isKleinunternehmer) {
-    notes.push('Du stellst deine Rechnungen ohne Umsatzsteuer nach §19 UStG aus.')
-    insiderTips.push(
-      'Kein Vorsteuerabzug: Mila berücksichtigt deine Ausgaben immer als Bruttobetrag, da du die MwSt. nicht vom Finanzamt zurückholst – das schützt deine echte Liquidität.',
-      'Software-Hebel: Jedes digitale Tool (Hosting, KI-Abos, SaaS-Tools) mindert sofort deinen steuerlichen Gewinn und schützt dich vor der Einkommensteuer.'
-    )
-    niches.push('Software', 'Homeoffice')
-  } else if (isFreelancer) {
-    insiderTips.push(
-      'Gewerbesteuer-Freiheit: Als Freiberufler/Freelancer bist du legal komplett von der Gewerbesteuer befreit, ganz egal wie hoch dein Gewinn ist.',
-      'Kunden-Bewirtung: Geschäftsessen im Restaurant sind zu 70% als Betriebsausgabe absetzbar. Wichtig: Den geschäftlichen Anlass direkt auf dem Beleg eintragen!',
-      'Digitale Wirtschaftsgüter: Computer, Software und Lizenzen unterliegen keiner mehrjährigen Abschreibungsdauer mehr und können sofort zu 100% reingehauen werden.'
-    )
-    niches.push('Software', 'Bewirtung', 'Reisekosten')
-  } else {
-    // Gewerbe / Handwerk
-    insiderTips.push(
-      'Fahrzeug-Hebel: Nutzt du dein Fahrzeug zu mehr als 50% betrieblich, gehören alle Kosten (Sprit, Reparaturen, Versicherung, Kfz-Steuer) voll in die Buchhaltung.',
-      'Typische Handwerker-Kosten: Werkstattmiete, Lagerkosten, Arbeitskleidung, Maschinen und Materialeinkäufe sind sofort steuerlich wirksame Betriebsausgaben.',
-      'Werkzeug-Pool: Kleinwerkzeuge unterhalb der GWG-Grenze kannst du sofort zu 100% im Jahr der Anschaffung absetzen.'
-    )
-    niches.push('Werkzeug', 'Fahrzeugkosten', 'Arbeitskleidung')
-    if (isHandwerker) niches.push('Montagefahrten', 'Baustellenfahrten')
-  }
-
-  return {
-    profit,
-    reserveRateMin,
-    reserveRateMax,
+  kleinunternehmer:{
+    default:'🌱 Bruttobetrag verbucht – ohne Vorsteuerabzug schützt das deine Liquidität.'
+  },
+  default:{
+    software:'⚙️ Software-Abos mindern sofort deinen Gewinn.',
+    bewirtung:'🍽️ Geschäftsessen: 70% absetzbar – Anlass auf den Beleg!',
+    default:'✨ Buchung erfasst – Mila prüft steuerliche Vorteile.'
   }
 }
 
-export function estimateTaxProfile(profile: TaxProfile): TaxEstimate {
-  const missingData = getMissingBase(profile)
-  const notes: string[] = []
-  const niches: string[] = []
-  const insiderTips: string[] = []
-  const taxTypes: string[] = []
+function getMilaTip(category:string,status:UserStatus){
+  return TIPS[status]?.[category]||TIPS[status]?.default||TIPS.default[category]||TIPS.default.default
+}
 
-  let title = 'Steuerliche Orientierung'
-  let profit = getProfit(profile)
-  let reserveRateMin = 0
-  let reserveRateMax = 0
+export function FinanceProvider({children}:{children:ReactNode}){
+  const [expenses,setExpenses]=useState<Expense[]>([])
+  const [incomes,setIncomes]=useState<Income[]>([])
+  const [categories]=useState(DEFAULT_CATEGORIES)
+  const [milaFeedback,setMilaFeedback]=useState('Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.')
+  const [industry,setIndustry]=useState<Industry>('webdesigner')
+  const [morningBriefing,setMorningBriefing]=useState('')
+  const [userName,setUserName]=useState('Julia')
+  const [userStatus,setUserStatus]=useState<UserStatus>('freelancer')
 
-  // --- Routing nach Nutzertyp ---
-  switch (profile.userType) {
-    case 'angestellt': {
-      title = 'Angestellten-Profil'
-      const res = applyEmployeeBaseLogic(profile, {
-        title,
-        notes,
-        insiderTips,
-        niches,
-        taxTypes,
-        missingData,
+  const [taxClass,setTaxClass]=useState('1')
+  const [annualGross,setAnnualGross]=useState(0)
+  const [annualProfit,setAnnualProfit]=useState(0)
+  const [vatStatus,setVatStatus]=useState('kleinunternehmer')
+  const [federalState,setFederalState]=useState('Sachsen-Anhalt')
+  const [churchTax,setChurchTax]=useState(false)
+  const [married,setMarried]=useState(false)
+  const [children,setChildren]=useState(0)
+  const [assemblyWork,setAssemblyWork]=useState(false)
+  const [isLoggedIn,setIsLoggedIn]=useState(true)
+
+  useEffect(()=>{
+    if(typeof window==='undefined')return
+    const saved=localStorage.getItem('mila_profile_central')
+    if(!saved)return
+    try{
+      const p=JSON.parse(saved)
+      if(p.userName)setUserName(p.userName)
+      if(p.userStatus)setUserStatus(p.userStatus)
+      if(p.industry)setIndustry(p.industry)
+      if(p.taxClass)setTaxClass(p.taxClass)
+      if(p.annualGross)setAnnualGross(Number(p.annualGross))
+      if(p.annualProfit)setAnnualProfit(Number(p.annualProfit))
+      if(p.vatStatus)setVatStatus(p.vatStatus)
+      if(p.federalState)setFederalState(p.federalState)
+      if(typeof p.churchTax==='boolean')setChurchTax(p.churchTax)
+      if(typeof p.married==='boolean')setMarried(p.married)
+      if(p.children)setChildren(Number(p.children))
+      if(typeof p.assemblyWork==='boolean')setAssemblyWork(p.assemblyWork)
+    }catch(e){console.error('Fehler beim Laden',e)}
+  },[])
+
+  useEffect(()=>{
+    if(typeof window==='undefined')return
+    localStorage.setItem('mila_profile_central',JSON.stringify({
+      userName,userStatus,industry,taxClass,annualGross,annualProfit,vatStatus,federalState,churchTax,married,children,assemblyWork
+    }))
+  },[userName,userStatus,industry,taxClass,annualGross,annualProfit,vatStatus,federalState,churchTax,married,children,assemblyWork])
+
+  const refreshMorningBriefing=async()=>{
+    const incomeTotal=incomes.reduce((s,i)=>s+toNumber(i.amount),0)
+    const expensesTotal=expenses.reduce((s,e)=>s+toNumber(e.amount),0)
+    const profit=incomeTotal-expensesTotal
+    let tip='Behalte deine Steuerrücklage im Auge.'
+    if(userStatus==='montagearbeiter')tip='Fokus Montage: Sammle alle Belege für Unterkunft & Fahrten!'
+    else{
+      if(profit>1000)tip='Starker Monat – vielleicht etwas zurücklegen.'
+      if(expenses.length>incomes.length)tip='Mehr Ausgaben als Einnahmen – prüfe offene Posten.'
+    }
+    setMorningBriefing(`🌸 Guten Tag ${userName}
+
+Einnahmen: ${incomeTotal.toFixed(2)} €
+Ausgaben: ${expensesTotal.toFixed(2)} €
+Überschuss: ${profit.toFixed(2)} €
+
+Ich habe aktuell ${expenses.length} Ausgaben und ${incomes.length} Einnahmen im Blick.
+
+💜 Mein Tipp:
+${tip}`)
+  }
+
+  useEffect(()=>{refreshMorningBriefing()},[incomes,expenses,userName,userStatus])
+
+  const mountedRef=useRef(true)
+  useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[])
+
+  const loadData=useCallback(async(signal?:AbortSignal)=>{
+    try{
+      const[expRes,incRes]=await Promise.all([
+        fetch('/api/expenses',{signal}),
+        fetch('/api/incomes',{signal})
+      ])
+      if(signal?.aborted)return
+      const[expJson,incJson]=await Promise.all([expRes.json(),incRes.json()])
+      if(!mountedRef.current)return
+      if(expJson.success)setExpenses(expJson.data??[])
+      if(incJson.success)setIncomes(incJson.data??[])
+    }catch(e){
+      if(e instanceof DOMException&&e.name==='AbortError')return
+      console.error('Laden fehlgeschlagen:',e)
+    }
+  },[])
+
+  useEffect(()=>{
+    const c=new AbortController()
+    loadData(c.signal)
+    return()=>c.abort()
+  },[loadData])
+
+  const login=useCallback((name:string,status:UserStatus)=>{
+    const safeName=name?.trim()||'Julia'
+    const safeStatus=isUserStatus(status)?status:'freelancer'
+    setUserName(safeName)
+    setUserStatus(safeStatus)
+    setIsLoggedIn(true)
+    setMilaFeedback(`Willkommen zurück, ${safeName} ✨`)
+    loadData()
+  },[loadData])
+
+  const logout=useCallback(()=>{
+    setIsLoggedIn(false)
+    setUserName('Julia')
+    setUserStatus('freelancer')
+    setExpenses([])
+    setIncomes([])
+    setMilaFeedback('Du wurdest ausgeloggt. Ich bin bereit, wenn du zurück bist.')
+  },[])
+
+  const triggerMilaFeedback=useCallback((category:string)=>{
+    setMilaFeedback(getMilaTip(category,userStatus))
+  },[userStatus])
+  const addExpense=useCallback(async(exp:any)=>{
+    const{data:{user}}=await supabase.auth.getUser()
+    if(!user){
+      setMilaFeedback('Bitte zuerst einloggen.')
+      return
+    }
+    const title=exp.title?.trim()||'Ausgabe'
+    const vendor=exp.vendor?.trim()||''
+    const autoCategory=inferCategory(`${title} ${vendor} ${exp.note??''}`)
+    const category=exp.category&&exp.category!=='Automatisch'&&exp.category!=='sonstiges'
+      ?exp.category
+      :autoCategory
+
+    const payload={
+      title,
+      vendor,
+      amount:toNumber(exp.amount),
+      date:exp.date||new Date().toISOString().slice(0,10),
+      category,
+      note:exp.note?.trim()||'',
+      vat:exp.vat??19,
+      user_id:user.id
+    }
+
+    try{
+      const res=await fetch('/api/expenses',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
       })
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      break
+      const data=await res.json()
+      const saved=data.data?.[0]
+      if(mountedRef.current&&saved){
+        setExpenses(p=>[saved,...p])
+        setMilaFeedback(getMilaTip(category,userStatus))
+      }
+    }catch(e){console.error(e)}
+  },[userStatus])
+
+  const deleteExpense=useCallback(async(id:any)=>{
+    try{
+      const res=await fetch(`/api/expenses?id=${id}`,{method:'DELETE'})
+      const data=await res.json()
+      if(data.success&&mountedRef.current){
+        setExpenses(p=>p.filter(e=>String(e.id)!==String(id)))
+        setMilaFeedback('Die Ausgabe wurde gelöscht.')
+      }
+    }catch(e){console.error(e)}
+  },[])
+
+  const addIncome=useCallback(async(inc:any)=>{
+    const{data:{user}}=await supabase.auth.getUser()
+    if(!user)return
+    const payload={
+      title:inc.title?.trim()||'Einnahme',
+      client:inc.client?.trim()||'',
+      amount:toNumber(inc.amount),
+      date:inc.date||new Date().toISOString().slice(0,10),
+      note:inc.note?.trim()||'',
+      user_id:user.id,
+      created_at:new Date().toISOString()
     }
+    try{
+      const res=await fetch('/api/incomes',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      })
+      const data=await res.json()
+      const saved=data.data?.[0]
+      if(mountedRef.current&&saved){
+        setIncomes(p=>[saved,...p])
+        setMilaFeedback('💰 Einnahme gespeichert.')
+      }
+    }catch(e){console.error(e)}
+  },[])
 
-    case 'montagearbeiter': {
-      const res = applyEmployeeBaseLogic(
-        profile,
-        {
-          title,
-          notes,
-          insiderTips,
-          niches,
-          taxTypes,
-          missingData,
-        },
-        { isMontage: true }
-      )
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      title = 'Montage-Spezialprofil'
-      break
-    }
+  const deleteIncome=useCallback(async(id:any)=>{
+    try{
+      const res=await fetch(`/api/incomes?id=${id}`,{method:'DELETE'})
+      const data=await res.json()
+      if(data.success&&mountedRef.current){
+        setIncomes(p=>p.filter(i=>String(i.id)!==String(id)))
+      }
+    }catch(e){console.error(e)}
+  },[])
 
-    case 'kleinunternehmer': {
-      title = 'Kleinunternehmer-Profil'
-      const res = applyBusinessBaseLogic(
-        profile,
-        { taxTypes, notes, insiderTips, niches },
-        { isKleinunternehmer: true }
-      )
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      break
-    }
+  const summary=useMemo(()=>{
+    const totalExpenses=expenses.reduce((s,e)=>s+toNumber(e.amount),0)
+    const totalIncomes=incomes.reduce((s,i)=>s+toNumber(i.amount),0)
+    return{totalExpenses,totalIncomes,balance:totalIncomes-totalExpenses}
+  },[expenses,incomes])
 
-    case 'freiberufler': {
-      title = 'Freelancer-Profil'
-      const res = applyBusinessBaseLogic(
-        profile,
-        { taxTypes, notes, insiderTips, niches },
-        { isFreelancer: true }
-      )
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      break
-    }
+  const budgetStatus=useMemo(()=>categories.map(c=>{
+    const spent=expenses.filter(e=>e.category===c).reduce((s,e)=>s+toNumber(e.amount),0)
+    const limit=BUDGET_LIMITS[c]??100
+    const remaining=limit-spent
+    const percent=limit>0?Math.min(100,Math.max(0,(spent/limit)*100)):0
+    return{category:CATEGORY_LABELS[c]||c,spent,limit,remaining,percent}
+  }),[categories,expenses])
 
-    case 'selbststaendig_gewerbe': {
-      title = 'Gewerbe-Profil'
-      const res = applyBusinessBaseLogic(
-        profile,
-        { taxTypes, notes, insiderTips, niches },
-        { isFreelancer: false, isKleinunternehmer: profile.vatStatus === 'kleinunternehmer', isHandwerker: false }
-      )
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      break
-    }
+  const value=useMemo<FinanceContextValue>(()=>({
+    expenses,
+    incomes,
+  const value = useMemo<FinanceContextValue>(() => ({
+    expenses,
+    incomes,
+    setIncomes,
+    categories,
+    milaFeedback,
+    morningBriefing,
+    refreshMorningBriefing,
+    triggerMilaFeedback,
+    addExpense,
+    deleteExpense,
+    addIncome,
+    deleteIncome,
+    userName,
+    setUserName,
+    userStatus,
+    setUserStatus,
+    industry,
+    setIndustry,
+    taxClass,
+    setTaxClass,
+    annualGross,
+    setAnnualGross,
+    annualProfit,
+    setAnnualProfit,
+    vatStatus,
+    setVatStatus,
+    federalState,
+    setFederalState,
+    churchTax,
+    setChurchTax,
+    married,
+    setMarried,
+    children,
+    setChildren,
+    assemblyWork,
+    setAssemblyWork,
+    isLoggedIn,
+    login,
+    logout,
+    summary,
+    budgetStatus,
+  }), [
+    expenses,
+    incomes,
+    categories,
+    milaFeedback,
+    morningBriefing,
+    userName,
+    userStatus,
+    industry,
+    taxClass,
+    annualGross,
+    annualProfit,
+    vatStatus,
+    federalState,
+    churchTax,
+    married,
+    children,
+    assemblyWork,
+    isLoggedIn,
+    summary,
+    budgetStatus,
+  ])
 
-    case 'handwerker': {
-      title = 'Handwerker-Betriebsprofil'
-      const res = applyBusinessBaseLogic(
-        profile,
-        { taxTypes, notes, insiderTips, niches },
-        { isFreelancer: false, isKleinunternehmer: profile.vatStatus === 'kleinunternehmer', isHandwerker: true }
-      )
-      profit = res.profit
-      reserveRateMin = res.reserveRateMin
-      reserveRateMax = res.reserveRateMax
-      break
-    }
-
-    case 'minijob': {
-      title = 'Minijob-Profil'
-      taxTypes.push('Pauschalsteuer (Arbeitgeber)')
-      reserveRateMin = 0
-      reserveRateMax = 0
-      notes.push(
-        'In der Regel steuerfrei für dich, solange du die Minijob-Grenze einhältst. Die Pauschalsteuer trägt dein Arbeitgeber.'
-      )
-      insiderTips.push(
-        'Achtung bei Mehrfachbeschäftigung: Mehrere Minijobs werden zusammengerechnet und können steuerpflichtig werden, wenn sie die Grenze überschreiten.',
-        'Kombination mit Hauptjob: Ein Minijob neben einer Vollzeitstelle bleibt meist steuerfrei, solange er korrekt als Minijob geführt wird.'
-      )
-      profit = n(profile.annualGrossSalary) || 0
-      break
-    }
-
-    default: {
-      notes.push('Nutzertyp ist unklar. Mila zeigt nur eine grobe Orientierung.')
-      const [min, max] = getReserveRangeByProfit(profit)
-      reserveRateMin = min
-      reserveRateMax = max
-      break
-    }
-  }
-
-  const reserveMin = profit * reserveRateMin
-  const reserveMax = profit * reserveRateMax
-  const confidence = Math.max(25, Math.min(95, 95 - missingData.length * 10))
-
-  return {
-    title,
-    reserveRateMin,
-    reserveRateMax,
-    reserveMin,
-    reserveMax,
-    confidence,
-    taxTypes: Array.from(new Set(taxTypes)),
-    missingData: Array.from(new Set(missingData)),
-    notes,
-    niches: Array.from(new Set(niches)),
-    insiderTips,
-    disclaimer:
-      reserveMin === 0 && reserveMax === 0
-        ? 'Mila gibt dir hier eine qualitative Einschätzung. Für exakte Werte brauchst du konkrete Zahlen.'
-        : `Mila orientiert sich an einer empfohlenen Rücklage zwischen ${money(reserveMin)} und ${money(
-            reserveMax
-          )}. Dies ist keine Steuerberatung, sondern eine praxisnahe Orientierung.`,
-  }
+  return (
+    <FinanceContext.Provider value={value}>
+      {children}
+    </FinanceContext.Provider>
+  )
 }
+
+export function useFinance() {
+  const ctx = useContext(FinanceContext)
+  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
+  return ctx
+}
+
+export { FinanceProvider }
