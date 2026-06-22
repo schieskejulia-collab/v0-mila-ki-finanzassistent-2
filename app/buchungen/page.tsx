@@ -107,7 +107,6 @@ export default function BuchungenPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
-  // ✅ States für das neue Erinnerungs-Modal
   const [reminderText, setReminderText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -195,7 +194,6 @@ export default function BuchungenPage() {
     }
   }
 
-  // ✅ Optimierte Funktion: Generiert den dynamischen Text und öffnet das Modal
   const handleOpenReminder = (entry: any) => {
     const kunde = entry.client || 'Kunde'
     const titel = entry.title || 'unserer Leistung'
@@ -208,7 +206,6 @@ export default function BuchungenPage() {
     setCopied(false)
   }
 
-  // ✅ Kopiert den generierten Text in die Zwischenablage
   const handleCopy = async () => {
     if (!reminderText) return
     try {
@@ -220,7 +217,6 @@ export default function BuchungenPage() {
     }
   }
 
-  // ✅ Öffnet das native Share-Menü auf Mobilgeräten (WhatsApp, Signal, iMessage, Mail)
   const handleNativeShare = async () => {
     if (!reminderText) return
     if (navigator.share) {
@@ -230,10 +226,9 @@ export default function BuchungenPage() {
           text: reminderText,
         })
       } catch (err) {
-        console.log('Share abgebrochen oder fehlgeschlagen', err)
+        console.log('Share abgebrochen', err)
       }
     } else {
-      // Fallback zu WhatsApp Web/App, falls navigator.share am Desktop nicht existiert
       window.open(`https://wa.me/?text=${encodeURIComponent(reminderText)}`, '_blank')
     }
   }
@@ -248,7 +243,6 @@ export default function BuchungenPage() {
         <Link href="/neue-buchungen" className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl font-black text-white shadow-sm">+</Link>
       </section>
 
-      {/* Filter-Karten oben */}
       <section className="grid grid-cols-3 gap-2">
         <div className="rounded-3xl bg-white p-3 shadow-sm">
           <p className="text-[9px] font-black uppercase text-slate-400">Einnahmen</p>
@@ -264,7 +258,6 @@ export default function BuchungenPage() {
         </div>
       </section>
 
-      {/* Suche & Filter-Tabs */}
       <section className="space-y-3 rounded-3xl bg-white p-4 shadow-sm">
         <input
           value={search}
@@ -306,7 +299,6 @@ export default function BuchungenPage() {
         </div>
       </section>
 
-      {/* Liste der Buchungen */}
       <section className="space-y-4">
         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
           Gefundene Buchungen ({filteredEntries.length})
@@ -401,7 +393,6 @@ export default function BuchungenPage() {
                               {entry.note && <p className="mt-1 bg-white/60 p-2 rounded-xl border border-slate-100 text-xs italic">Notiz: {entry.note}</p>}
 
                               <div className="mt-4 flex items-center gap-2">
-                                {/* ✅ DER NEUE ERINNERUNGSBUTTON (Triggert das Text-Modal) */}
                                 {isIncome && entry.status !== 'bezahlt' && (
                                   <button
                                     type="button"
@@ -434,14 +425,12 @@ export default function BuchungenPage() {
         )}
       </section>
 
-            {/* ✅ DAS ERINNERUNGS-MODAL (Optimiert für mobile Bottom-Bar) */}
+      {/* ✅ OPTIMIERTES ERINNERUNGS-MODAL (Garantiert fehlerfrei geschlossen) */}
       {reminderText && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in">
-          {/* Hintergrund-Klick schließt das Modal */}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setReminderText(null)} />
           
-          {/* pb-28 sorgt dafür, dass der Inhalt über der Navigationsleiste steht */}
-          <div className="relative w-full max-w-md rounded-[2rem] bg-white p-6 pb-28 sm:pb-6 shadow-xl space-y-4 transform transition-all animate-slide-up">
+          <div className="relative w-full max-w-md rounded-[2rem] bg-white p-6 pb-28 sm:pb-6 shadow-xl space-y-4 transform transition-all">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-black text-slate-900">Zahlungserinnerung</h3>
               <button 
@@ -453,12 +442,10 @@ export default function BuchungenPage() {
               </button>
             </div>
 
-            {/* Die Textvorschau */}
             <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 whitespace-pre-wrap text-sm text-slate-800 font-medium leading-relaxed shadow-inner max-h-48 overflow-y-auto">
               {reminderText}
             </div>
 
-            {/* Buttons im Modal */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 type="button"
@@ -483,3 +470,6 @@ export default function BuchungenPage() {
           </div>
         </div>
       )}
+    </main>
+  )
+}
