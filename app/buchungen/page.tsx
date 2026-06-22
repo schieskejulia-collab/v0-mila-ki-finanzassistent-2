@@ -119,11 +119,11 @@ export default function BuchungenPage() {
       return matchesSearch && matchesYear && matchesMonth && matchesType
     })
   }, [allEntries, search, selectedYear, selectedMonth, viewMode])
-
+const visibleEntries = filteredEntries.slice(0, 30)
   const groupedEntries = useMemo(() => {
     const groups: Record<string, typeof filteredEntries> = {}
 
-    filteredEntries.forEach((entry) => {
+    visibleEntries.forEach((entry) => {
       const date = getDate(entry.date)
       const key = date
         ? `${months[date.getMonth()]} ${date.getFullYear()}`
