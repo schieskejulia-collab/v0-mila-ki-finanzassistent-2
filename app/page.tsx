@@ -232,7 +232,10 @@ const overdueIncomeTotal = overdueIncomes.reduce(
             ✨ Heute wichtig
           </h2>
 {openIncomes.length > 0 && (
-  <div className="rounded-3xl bg-amber-50 p-4">
+ <Link
+  href="/buchungen"
+  className="block rounded-3xl bg-amber-50 p-4"
+>
     <p className="text-lg font-black text-slate-950">
       📄 Offene Einnahmen
     </p>
@@ -241,7 +244,7 @@ const overdueIncomeTotal = overdueIncomes.reduce(
       {openIncomes.length === 1 ? '' : 'n'} im Wert von{' '}
       <strong>{formatEuro(openIncomeTotal)}</strong>.
     </p>
-  </div>
+  </Link>
 )}
 
 {overdueIncomes.length > 0 && (
