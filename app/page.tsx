@@ -210,7 +210,10 @@ const paidIncomeTotal = paidIncomes.reduce(
             <p className="mt-1 text-xl font-black text-rose-800">
               {formatEuro(summary.totalExpenses)}
             </p>
-            <p className="text-xs font-bold text-rose-
+           <p className="text-xs font-bold text-rose-700">
+  {expenses.length} Belege
+</p>
+</div>
 <div className="mt-4 grid grid-cols-2 gap-3">
   <div className="rounded-3xl bg-emerald-50 p-4">
     <p className="text-[10px] font-black uppercase text-emerald-700">
