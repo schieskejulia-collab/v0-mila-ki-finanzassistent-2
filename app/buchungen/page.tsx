@@ -1,81 +1,262 @@
 'use client'
 
-import { useFinance } from '@/lib/store'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useFinance } from '@/lib/store'
 
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
-export default function BuchungenPage() {
-  const { expenses, incomes, summary } = useFinance()
+// --- HELFER-FUNKTIONEN ---
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 11) return 'Guten Morgen'
+  if (hour < 17) return 'Guten Tag'
+  return 'Guten Abend'
+}
 
-  // Kombiniere Einnahmen und Ausgaben für eine chronologische Liste
-  const alleTransaktionen = [
-    ...(expenses || []).map(e => ({ ...e, typ: 'ausgabe' })),
-    ...(incomes || []).map(i => ({ ...i, typ: 'einnahme' }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+function getText(entry: any) {
+  return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${
+    entry.category || ''
+  } ${entry.note || ''}`.toLowerCase()
+}
+
+function findRecurringExpenses(expenses: any[]) {
+  if (!expenses || !Array.isArray(expenses)) return []
+  const groups: Record<string, { count: number; total: number; name: string }> = {}
+  expenses.forEach((expense) => {
+    const name = String(expense.vendor || expense.title || '').trim()
+    if (!name) return
+    const key = name.toLowerCase()
+    const amount = Number(expense.amount || 0)
+    if (!groups[key]) groups[key] = { count: 0, total: 0, name }
+    groups[key].count += 1
+    groups[key].total += amount
+  })
+  return Object.values(groups).filter((item) => item.count >= 2)
+}
+
+function getSoftwareExpenses(expenses: any[]) {
+  if (!expenses || !Array.isArray(expenses)) return []
+  return expenses.filter((expense) =>
+    /adobe|canva|figma|chatgpt|openai|claude|notion|hetzner|ionos|domain|hosting|vercel|github|software|tool|saas/.test(
+      getText(expense)
+    )
+  )
+}
+
+function getFinanceScore(summary: any, expenses: any[], incomes: any[]) {
+  if (!summary) return 60
+  const income = Number(summary.totalIncomes || 0)
+  const expense = Number(summary.totalExpenses || 0)
+  const balance = Number(summary.balance || 0)
+  if (income === 0 && expense === 0) return 60
+
+  let score = 75
+  if (balance < 0) score -= 35
+  if (income > 0 && expense / income > 0.8) score -= 15
+  if (income > 0 && expense / income < 0.4) score += 10
+  if (balance > 1000) score += 10
+  if (expenses && incomes && expenses.length > incomes.length * 4 && incomes.length > 0) score -= 5
+  return Math.max(0, Math.min(100, score))
+}
+
+function getMainTip({ summary, expenses, incomes, userStatus, industry }: any) {
+  if (!summary) return 'Lade deine Finanzdaten...'
+  const balance = Number(summary.balance || 0)
+  const recurring = findRecurringExpenses(expenses || [])
+  const software = getSoftwareExpenses(expenses || [])
+  const branch = String(industry || '').toLowerCase()
+
+  if (summary.totalIncomes === 0 && summary.totalExpenses === 0) {
+    return 'Starte mit deiner ersten Buchung. Danach kann Mila Rücklagen, Muster und Hinweise für dich ableiten.'
+  }
+  if (balance < 0) {
+    return 'Deine Ausgaben liegen über deinen Einnahmen. Prüfe zuerst Fixkosten, Abos und offene Einnahmen.'
+  }
+  if (userStatus === 'angestellt') {
+    return 'Prüfe Arbeitsmittel, Weiterbildung, Fahrtkosten und wiederkehrende Kosten. Mila hilft dir beim Sortieren.'
+  }
+  if (recurring.length > 0) {
+    return `Mila hat ${recurring.length} wiederkehrende Ausgaben erkannt. Prüfe, ob diese Kosten noch sinnvoll sind.`
+  }
+  if (balance > 1000) {
+    return `Dein Monat läuft stark. Plane ungefähr ${formatEuro(balance * 0.3)} als vorsichtige Rücklage ein.`
+  }
+  if (branch.includes('web')) {
+    return 'Für Webdesign sind Software, Hosting, Domains und KI-Tools wichtige Kostenblöcke. Mila behält sie im Blick.'
+  }
+  if (software.length >= 3) {
+    return `Du hast ${software.length} Software-/Tool-Kosten erkannt. Prüfe regelmäßig, ob alle Tools aktiv genutzt werden.`
+  }
+  return 'Deine Finanzen wirken aktuell stabil. Behalte Rücklagen, Fixkosten und neue Ausgaben weiter im Blick.'
+}
+
+// --- HAUPTKOMPONENTE ---
+export default function DashboardPage() {
+  const { summary, expenses, incomes, userName, userStatus, industry, vatStatus } = useFinance()
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Sanfter, neutraler Ladezustand statt Redirect-Falle
+  if (!isClient || !summary) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center">
+        <div className="space-y-3">
+          <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs text-slate-500 font-medium">Mila lädt deine Schaltzentrale...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ab hier laufen die echten Live-Berechnungen mit sicheren Fallbacks
+  const safeExpenses = expenses || []
+  const safeIncomes = incomes || []
+
+  const recurringExpenses = findRecurringExpenses(safeExpenses)
+  const softwareExpenses = getSoftwareExpenses(safeExpenses)
+  const financeScore = getFinanceScore(summary, safeExpenses, safeIncomes)
+  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+  const tip = getMainTip({ summary, expenses: safeExpenses, incomes: safeIncomes, userStatus, industry })
+
+  const openIncomes = safeIncomes.filter(i => i.status === 'Offen' || !i.status)
+  const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+  const openCount = openIncomes.length
+
+  const availableInTwoWeeks = summary.balance + totalOpenAmount
+  const nextPayments = summary.totalExpenses * 0.8
+
+  let trafficLight = { status: '🟢 Alles gut', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' }
+  if (financeScore < 50 || summary.balance < 0) {
+    trafficLight = { status: '🔴 Liquiditätsrisiko in 10 Tagen', color: 'bg-rose-50 border-rose-200 text-rose-900', dot: 'bg-rose-500' }
+  } else if (financeScore < 75 || (summary.totalExpenses > summary.totalIncomes * 0.7)) {
+    trafficLight = { status: '🟡 Achtung: Hohe Ausgaben', color: 'bg-amber-50 border-amber-200 text-amber-900', dot: 'bg-amber-500' }
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-xl font-black text-slate-950">Deine Buchungen</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Alle erfassten Einnahmen & Ausgaben</p>
-        </div>
+      
+      <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
+        <span>🚨</span>
+        <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-6 space-y-4">
-        {/* Kleine Statistik-Übersicht */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Einnahmen gesamt</p>
-            <p className="text-lg font-black text-emerald-600 mt-0.5">{formatEuro(summary?.totalIncomes || 0)}</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Ausgaben gesamt</p>
-            <p className="text-lg font-black text-rose-600 mt-0.5">{formatEuro(summary?.totalExpenses || 0)}</p>
-          </div>
-        </div>
+      <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
 
-        {/* Transaktionsliste */}
-        <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm space-y-4">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">Verlauf</h2>
+        {/* --- MORNING BRIEFING SECTION --- */}
+        <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-600">Heute für dich</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950 flex items-center gap-2">
+              {getGreeting()}, {userName || 'Julia'} 🌸
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Status: <span className="font-semibold capitalize">{userStatus}</span> ({industry === 'webdesigner' ? 'Webdesign' : industry}) · <span className="font-semibold">{vatStatus === 'kleinunternehmer' ? 'Kleinunternehmer' : 'Regelbest.'}</span>
+            </p>
+          </div>
 
-          {alleTransaktionen.length === 0 ? (
-            <div className="text-center py-8 space-y-2">
-              <span className="text-2xl">📒</span>
-              <p className="text-xs text-slate-500">Noch keine Buchungen vorhanden.</p>
-              <Link href="/neue-buchungen" className="inline-block text-xs text-purple-600 font-bold underline">
-                Jetzt erste Buchung hinzufügen
-              </Link>
+          <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
+            <p className="mt-1 text-3xl font-black">{formatEuro(summary.balance)}</p>
+            <p className="mt-2 text-xs font-bold text-white/80">
+              Einnahmen {formatEuro(summary.totalIncomes)} · Ausgaben {formatEuro(summary.totalExpenses)}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
+              <p className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">Finanzgesundheit</p>
+              <p className="mt-1 text-2xl font-black text-emerald-800">{financeScore}/100</p>
+              <p className="mt-0.5 text-xs font-bold text-slate-600">
+                {financeScore >= 80 ? '🟢 Stabil' : financeScore >= 50 ? '🟡 Beobachten' : '🔴 Achtung'}
+              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {alleTransaktionen.map((t: any, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-slate-900">{t.title || (t.typ === 'ausgabe' ? 'Ausgabe' : 'Einnahme')}</p>
-                    <p className="text-[10px] text-slate-400">
-                      {t.date} {t.vendor || t.client ? `· ${t.vendor || t.client}` : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-black ${t.typ === 'ausgabe' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                      {t.typ === 'ausgabe' ? '-' : '+'}{formatEuro(Number(t.amount))}
-                    </p>
-                    {t.category && (
-                      <span className="text-[9px] bg-slate-200/60 px-2 py-0.5 rounded-full text-slate-600 font-semibold uppercase tracking-wider">
-                        {t.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+
+            <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100">
+              <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
+              <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
+              <p className="mt-0.5 text-xs font-bold text-slate-600">Orientierung</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">Mila Tipp ✨</p>
+            <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-700">{tip}</p>
+          </div>
+
+          {(recurringExpenses.length > 0 || softwareExpenses.length > 0) && (
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
+                <p className="text-[10px] font-black uppercase text-blue-700">Wiederkehrend</p>
+                <p className="mt-0.5 text-xl font-black text-blue-800">{recurringExpenses.length}</p>
+                <p className="text-[10px] font-bold text-slate-500">Muster erkannt</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                <p className="text-[10px] font-black uppercase text-slate-600">Tools</p>
+                <p className="mt-0.5 text-xl font-black text-slate-800">{softwareExpenses.length}</p>
+                <p className="text-[10px] font-bold text-slate-500">Softwarekosten</p>
+              </div>
             </div>
           )}
+        </section>
+
+        {/* --- PRIORITÄTEN --- */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+            🥇 Priorität 1 – Cashflow-Prognose
+          </h2>
+          <div className="grid grid-cols-2 gap-4 pt-1">
+            <div>
+              <p className="text-[11px] text-slate-500 font-medium">In 14 Tagen verfügbar</p>
+              <p className="text-lg font-bold text-slate-800 mt-0.5">
+                {availableInTwoWeeks > 0 ? formatEuro(availableInTwoWeeks) : '0,00 €'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-500 font-medium">Nächste Zahlungen</p>
+              <p className="text-lg font-bold text-slate-600 mt-0.5">
+                {nextPayments > 0 ? formatEuro(nextPayments) : '0,00 €'}
+              </p>
+            </div>
+          </div>
         </div>
+
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
+            🥈 Priorität 2 – Mila-Ampel
+          </h2>
+          <div className={`p-4 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2.5 transition-all ${trafficLight.color}`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${trafficLight.dot} animate-pulse`}></span>
+            {trafficLight.status}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+            🥉 Priorität 3 – KI-Erkenntnisse
+          </h2>
+          <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
+            <li className="flex gap-2.5">
+              <span>📊</span>
+              <span>Mila analysiert deine Ausgabetrends, sobald die ersten Belege erfasst sind.</span>
+            </li>
+            <li className="flex gap-2.5">
+              <span>💼</span>
+              <span>Du hast <strong>{openCount} offene Forderungen</strong> über <strong>{formatEuro(totalOpenAmount)}</strong>.</span>
+            </li>
+          </ul>
+        </div>
+
+        <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
+          💬 Mit Mila sprechen (Dein Anker)
+        </Link>
+
       </div>
     </div>
   )
