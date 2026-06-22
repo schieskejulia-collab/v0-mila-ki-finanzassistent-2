@@ -1,5 +1,28 @@
 import { Expense, Income } from './store'
 
+/* 1) Kategorie‑Keywords */
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  reisen: ['hotel', 'übernacht', 'reise', 'bahn', 'db', 'flug', 'airbnb'],
+  software: ['adobe', 'canva', 'hosting', 'domain', 'webflow', 'notion', 'software', 'abo'],
+  bewirtung: ['essen', 'restaurant', 'bewirt', 'café', 'mittag', 'dinner'],
+  hardware: ['laptop', 'handy', 'iphone', 'kamera', 'monitor', 'maus', 'tastatur'],
+  weiterbildung: ['kurs', 'coaching', 'weiterbildung', 'seminar', 'schule', 'training'],
+}
+
+/* 2) Kategorie‑Erkennung */
+function detectCategory(text: string): string {
+  const lower = text.toLowerCase()
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((word) => lower.includes(word))) {
+      return category
+    }
+  }
+
+  return 'sonstiges'
+}
+
+/* 3) Danach kommt dein bisheriger Code */
 type ChatMessage = {
   role: 'system' | 'user' | 'assistant'
   content: string
@@ -72,76 +95,97 @@ function buildFinancialContext(contextData?: MilaContextData) {
   const recentIncomes = incomes.slice(0, 12).map(compactEntry)
 
   const categoryTotals: Record<string, number> = {}
+// Kategorien aus Titel/Vendor automatisch erkennen
+const detectedCategories = expenses.map((expense: any) => {
+  const text = `${expense.title || ''} ${expense.vendor || ''} ${expense.note || ''}`
+  return detectCategory(text)
+})
+
+// Häufigste automatisch erkannten Kategorien
+const autoCategoryTotals: Record<string, number> = {}
+
+detectedCategories.forEach((cat) => {
+  autoCategoryTotals[cat] = (autoCategoryTotals[cat] || 0) + 1
+})
+
+const topAutoCategories = Object.entries(autoCategoryTotals)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5)
+  .map(([category, count]) => ({ category, count }))
 
   expenses.forEach((expense: any) => {
-    const category = expense.category || 'sonstiges'
-    categoryTotals[category] =
-      (categoryTotals[category] || 0) + toNumber(expense.amount)
-  })
+  const category = expense.category || 'sonstiges'
+  categoryTotals[category] =
+    (categoryTotals[category] || 0) + toNumber(expense.amount)
+})
 
-  const topCategories = Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([category, total]) => ({ category, total }))
+const topCategories = Object.entries(categoryTotals)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6)
+  .map(([category, total]) => ({ category, total }))
 
-  const vendorGroups: Record<string, { count: number; total: number }> = {}
+const vendorGroups: Record<string, { count: number; total: number }> = {}
 
-  expenses.forEach((expense: any) => {
-    const vendor = String(expense.vendor || expense.title || '').trim()
-    if (!vendor) return
+expenses.forEach((expense: any) => {
+  const vendor = String(expense.vendor || expense.title || '').trim()
+  if (!vendor) return
 
-    const key = vendor.toLowerCase()
-    if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
+  const key = vendor.toLowerCase()
+  if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
 
-    vendorGroups[key].count += 1
-    vendorGroups[key].total += toNumber(expense.amount)
-  })
+  vendorGroups[key].count += 1
+  vendorGroups[key].total += toNumber(expense.amount)
+})
 
-  const recurring = Object.entries(vendorGroups)
-    .filter(([, data]) => data.count >= 2)
-    .slice(0, 6)
-    .map(([vendor, data]) => ({
-      vendor,
-      count: data.count,
-      total: data.total,
-      monthlyEstimate: data.total / data.count,
-    }))
+const recurring = Object.entries(vendorGroups)
+  .filter(([, data]) => data.count >= 2)
+  .slice(0, 6)
+  .map(([vendor, data]) => ({
+    vendor,
+    count: data.count,
+    total: data.total,
+    monthlyEstimate: data.total / data.count,
+  }))
 
-  const taxRate =
-    contextData?.userStatus === 'angestellt'
-      ? 0.1
-      : contextData?.userStatus === 'kleinunternehmer'
-      ? 0.25
-      : 0.3
+const taxRate =
+  contextData?.userStatus === 'angestellt'
+    ? 0.1
+    : contextData?.userStatus === 'kleinunternehmer'
+    ? 0.25
+    : 0.3
 
-  const taxReserve = balance > 0 ? balance * taxRate : 0
-  const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
-
-  return {
-    user: {
-      name: contextData?.userName || 'Julia',
-      status: contextData?.userStatus || 'freelancer',
-    },
-    totals: {
-      incomeTotal,
-      expenseTotal,
-      balance,
-      taxReserve,
-      freeAfterReserve,
-      openIncomeCount: openIncomes.length,
-      openIncomeTotal,
-    },
-    counts: {
-      incomes: incomes.length,
-      expenses: expenses.length,
-    },
-    topCategories,
-    recurring,
-    recentIncomes,
-    recentExpenses,
-    budgetStatus: contextData?.budgetStatus ?? [],
-    milaFeedback: contextData?.milaFeedback || '',
-  }
+const taxReserve = balance > 0 ? balance * taxRate : 0
+const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
+// Automatisch erkannte Kategorien hinzufügen
+const autoCategories = {
+  detectedCategories,
+  topAutoCategories,
+}
+return {
+  user: {
+    name: contextData?.userName || 'Julia',
+    status: contextData?.userStatus || 'freelancer',
+  },
+  totals: {
+    incomeTotal,
+    expenseTotal,
+    balance,
+    taxReserve,
+    freeAfterReserve,
+    openIncomeCount: openIncomes.length,
+    openIncomeTotal,
+  },
+  counts: {
+    incomes: incomes.length,
+    expenses: expenses.length,
+  },
+  topCategories,
+  recurring,
+  recentIncomes,
+  recentExpenses,
+  budgetStatus: contextData?.budgetStatus ?? [],
+  milaFeedback: contextData?.milaFeedback || '',
+  autoCategories, // ⬅️ HIER EINTRAGEN
 }
 
 async function callGroqChat(messages: ChatMessage[]) {
@@ -207,23 +251,24 @@ export async function getMilaChatResponse(
 
   const messages: ChatMessage[] = [
     {
-      role: 'system',
-      content: `
-Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
+      {
+  role: 'system',
+  content: `
+    Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
 
 🎀 DEINE ROLLE
 - Du bist ruhig, freundlich und zugewandt.
 - Du erklärst Dinge einfach, ohne Fachchinesisch.
 - Du bist empathisch, aber nicht kitschig.
 - Du gibst Orientierung, keine Belehrungen.
-- Du bist keine Steuerberaterin und sagst das klar, aber sanft.
+- Du bist keine Steuerberaterin und sagst das sanft, wenn nötig.
 
 💬 WIE DU SPRICHST
 - Kurz, klar, mobile‑freundlich.
 - Maximal 3 kurze Absätze.
 - Wenn Julia gestresst wirkt: zuerst beruhigen, dann 1 konkreten Schritt.
-- Wenn Julia Mut braucht: warm, aber nicht übertrieben.
-- Keine technischen Begriffe wie „API“, „Datenstruktur“, „JSON“.
+- Wenn Julia Mut braucht: warm, aber realistisch.
+- Keine technischen Begriffe wie „JSON“, „API“, „Datenstruktur“.
 
 🧭 DEINE AUFGABE
 Du hilfst Julia zu verstehen:
@@ -232,13 +277,27 @@ Du hilfst Julia zu verstehen:
 - Wo ein Risiko entstehen könnte.
 - Welche 1–3 Schritte sinnvoll wären.
 
+🗂️ KATEGORIE‑ERKENNUNG
+Wenn Julia eine Ausgabe, einen Kauf, eine Rechnung oder einen Händler erwähnt,
+nutzt du detectCategory(), um eine passende Kategorie vorzuschlagen.
+
+Formulierungen:
+- „Das klingt nach *{Kategorie}*. Soll ich dir das einordnen?“
+- „Das wirkt wie *{Kategorie}*. Falls das nicht passt, sag kurz Bescheid.“
+- „Ich würde das unter *{Kategorie}* einordnen. Möchtest du mehr dazu wissen?“
+
+Wichtig:
+- Du änderst nichts automatisch.
+- Du schlägst nur vor.
+- Du bleibst freundlich, kurz und nicht technisch.
+
 📌 WICHTIGSTE REGELN
-- Keine Steuerberatung. Nur Orientierung.
-- Keine erfundenen Beträge, Kunden, Kategorien oder Daten.
+- Nutze ausschließlich die Daten aus dem Kontext und Chatverlauf.
+- Erfinde niemals Beträge, Kunden, Händler, Kategorien oder Daten.
 - Wenn etwas fehlt: „Diese Information liegt mir nicht vor.“
-- Keine langen Listen, keine Tabellen.
-- Keine Wiederholung des kompletten Finanzkontexts.
-- Keine Sätze wie „Ich bin ein Computerprogramm“.
+- Keine verbindliche Steuerberatung. Nur Orientierung.
+- Keine langen Romane.
+- Maximal eine Rückfrage.
 
 💗 EMOTIONALE LOGIK
 Wenn Julia:
@@ -253,10 +312,7 @@ Wenn Julia:
 - Überschuss: ${money(context.totals.balance)}
 - Rücklage grob: ${money(context.totals.taxReserve)}
 - Offene Einnahmen: ${context.totals.openIncomeCount} (${money(context.totals.openIncomeTotal)})
-- Häufigste Kategorien: ${context.topCategories
-        .map((c) => c.category)
-        .slice(0, 3)
-        .join(', ')}
+- Häufige Kategorien: ${context.topCategories.map(c => c.category).slice(0,3).join(', ')}
 
 Nutze diese Werte nur, wenn sie wirklich zur Frage passen.
 
@@ -267,17 +323,9 @@ Julia soll sich:
 - klarer sehen, was als Nächstes sinnvoll ist
 - nicht von Zahlen erschlagen werden
 
-Aktueller Finanzkontext:
-${JSON.stringify(context, null, 2)}
+  `,
+},
 
-Hilfreiche Orientierung:
-- Aktueller Überschuss: ${money(context.totals.balance)}
-- Grobe Rücklage: ${money(context.totals.taxReserve)}
-- Frei nach Rücklage: ${money(context.totals.freeAfterReserve)}
-- Offene Einnahmen: ${context.totals.openIncomeCount} (${money(
-        context.totals.openIncomeTotal
-      )})
-`,
     },
     ...safeHistory,
     {
