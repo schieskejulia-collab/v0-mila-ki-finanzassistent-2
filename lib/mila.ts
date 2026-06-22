@@ -187,6 +187,7 @@ return {
   milaFeedback: contextData?.milaFeedback || '',
   autoCategories, // ⬅️ HIER EINTRAGEN
 }
+}
 
 async function callGroqChat(messages: ChatMessage[]) {
   const apiKey = process.env.GROQ_API_KEY
@@ -251,7 +252,8 @@ export async function getMilaChatResponse(
 
   const messages: ChatMessage[] = [
   {
-    role: 'system',
+  role: 'system',
+
     content: `
 Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
 
@@ -322,7 +324,6 @@ Julia soll sich:
 - klarer sehen, was als Nächstes sinnvoll ist
 - nicht von Zahlen erschlagen werden
 `,
-  },
   ...safeHistory,
   {
     role: 'user',
