@@ -134,7 +134,6 @@ export function FinanceProvider({children}:{children:ReactNode}){
   const [federalState,setFederalState]=useState('Sachsen-Anhalt')
   const [churchTax,setChurchTax]=useState(false)
   const [married,setMarried]=useState(false)
-  const [children,setChildren]=useState(0)
   const [assemblyWork,setAssemblyWork]=useState(false)
   const [isLoggedIn,setIsLoggedIn]=useState(true)
 
