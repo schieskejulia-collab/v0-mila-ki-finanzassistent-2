@@ -12,6 +12,7 @@ import {
 } from 'react'
 
 import { supabase } from '@/lib/supabase'
+
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
@@ -35,7 +36,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const appChildren = children
-
+}
 export type UserStatus =
   | 'angestellt'
   | 'minijob'
