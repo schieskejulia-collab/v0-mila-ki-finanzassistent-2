@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { useEffect, useState } from 'react'
 
 const STATUS_DETAILS = [
   {
@@ -229,6 +230,48 @@ if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus'
     <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
   </select>
 )}
+useEffect(() => {
+  const saved = localStorage.getItem('mila_profile')
+  if (!saved) return
+
+  const profile = JSON.parse(saved)
+
+  setUserStatus(profile.userStatus || 'freelancer')
+  setIndustry(profile.industry || 'webdesign')
+  setAnnualGross(profile.annualGross || '')
+  setVatStatus(profile.vatStatus || 'kleinunternehmer')
+  setFederalState(profile.federalState || 'Sachsen-Anhalt')
+  setChurchTax(profile.churchTax || 'none')
+  setMaritalStatus(profile.maritalStatus || 'single')
+  setChildren(profile.children || '')
+  setTravelType(profile.travelType || 'none')
+}, [])
+useEffect(() => {
+  localStorage.setItem(
+    'mila_profile',
+    JSON.stringify({
+      userStatus,
+      industry,
+      annualGross,
+      vatStatus,
+      federalState,
+      churchTax,
+      maritalStatus,
+      children,
+      travelType,
+    })
+  )
+}, [
+  userStatus,
+  industry,
+  annualGross,
+  vatStatus,
+  federalState,
+  churchTax,
+  maritalStatus,
+  children,
+  travelType,
+])
           <input
             value={federalState}
             onChange={(e) => setFederalState(e.target.value)}
