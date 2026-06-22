@@ -47,7 +47,16 @@ function getStatusInfo(status?: string, dueDate?: string) {
       className: 'bg-emerald-50 text-emerald-700',
     }
   }
-
+if (
+  due &&
+  due < today &&
+  status !== 'bezahlt'
+) {
+  return {
+    label: '🔴 Überfällig',
+    className: 'bg-rose-50 text-rose-700',
+  }
+}
   if (status === 'ueberfaellig' || (due && due < today)) {
     return {
       label: '🔴 Überfällig',
