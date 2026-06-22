@@ -426,11 +426,12 @@ const visibleEntries = filteredEntries.slice(0, 30)
     <p>Datum: {formatDate(entry.date)}</p>
   </>
 ) : (
-                                  <p>Händler: {entry.vendor || 'Nicht angegeben'}</p>
-                                  <p>Kategorie: {entry.category || 'Sonstiges'}</p>
-                                  <p>Datum: {formatDate(entry.date)}</p>
-                                </>
-                              )}
+  <>
+    <p>Händler: {entry.vendor || 'Nicht angegeben'}</p>
+    <p>Kategorie: {entry.category || 'Sonstiges'}</p>
+    <p>Datum: {formatDate(entry.date)}</p>
+  </>
+)}
 
                               {entry.note && <p>Notiz: {entry.note}</p>}
 
