@@ -89,22 +89,25 @@ useEffect(() => {
 
 useEffect(() => {
   localStorage.setItem(
+
     'mila_profile',
     JSON.stringify({
-      userStatus,
-      industry,
-      annualGross,
-      vatStatus,
-      federalState,
-      churchTax,
-      married,
-      children,
-      assemblyWork,
-    })
+  userStatus,
+  industry,
+  annualGross,
+  annualProfit,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
+})
   )
 }, [
   userStatus,
   industry,
+annualProfit,
   annualGross,
   vatStatus,
   federalState,
