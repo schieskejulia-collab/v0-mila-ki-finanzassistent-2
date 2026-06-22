@@ -207,14 +207,6 @@ const paidIncomeTotal = paidIncomes.reduce(
               {formatEuro(summary.totalIncomes)}
             </p>
             <p className="text-xs font-bold text-emerald-600">
-              {incomes.length} Buchungen
-            </p>
-          </div>
-
-          <div className="rounded-3xl bg-rose-50 p-4">
-            <p className="text-[10px] font-black uppercase text-rose-700">
-              Ausgaben
-            </p>
             <p className="mt-1 text-xl font-black text-rose-800">
               {formatEuro(summary.totalExpenses)}
             </p>
