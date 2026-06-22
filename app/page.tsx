@@ -158,7 +158,6 @@ const paidIncomeTotal = paidIncomes.reduce(
           </p>
         </div>
 
-        <div <div
   onClick={() => router.push('/buchungen?status=offen')}
   className="rounded-3xl bg-amber-50 p-3 cursor-pointer"
 >className="mt-4 grid grid-cols-2 gap-3">
