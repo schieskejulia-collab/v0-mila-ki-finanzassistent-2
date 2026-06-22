@@ -47,7 +47,6 @@ function getDate(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-// ✅ Optimiert für Punkt 2: Zeigt präzise an, wann Druck da ist
 function getDueText(status?: string, dueDate?: string) {
   if (!dueDate || status === 'bezahlt') return ''
 
@@ -98,7 +97,6 @@ function getStatusInfo(status?: string, dueDate?: string) {
 }
 
 export default function BuchungenPage() {
-  // ✅ Nutzen von "incomes", "expenses" und einer Zustand-Änderungsfunktion aus deinem Store
   const { expenses, incomes, deleteExpense, deleteIncome, summary, userName, setIncomes } = useFinance()
 
   const [openId, setOpenId] = useState<string | null>(null)
@@ -112,7 +110,6 @@ export default function BuchungenPage() {
   const [reminderText, setReminderText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // ✅ Punkt 1: Funktion, um den Status direkt auf "bezahlt" umzuswitchen
   const handleMarkAsPaid = (incomeId: string | number) => {
     if (!setIncomes) return
     const updated = incomes.map((inc) => {
@@ -345,7 +342,6 @@ export default function BuchungenPage() {
                           tabIndex={0}
                           onClick={() => setOpenId(isOpen ? null : id)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenId(isOpen ? null : id) }}
-                          {/* ✅ Punkt 3: Überfällige Karten erhalten einen dicken, roten Rahmen */}
                           className={`w-full text-left rounded-3xl p-4 transition-all outline-none cursor-pointer border ${
                             status.isOverdue 
                               ? 'bg-rose-50/60 border-rose-500 shadow-sm ring-1 ring-rose-500/20' 
@@ -368,7 +364,6 @@ export default function BuchungenPage() {
                               <p className="mt-1 text-xs font-semibold text-slate-500">
                                 {entry.displaySub} · {formatDate(entry.date)}
                               </p>
-                              {/* ✅ Punkt 2: Fälligkeits- oder Überfälligkeitstext direkt sichtbar */}
                               {isIncome && dueText && (
                                 <p className="mt-1 text-xs font-bold text-rose-600">{dueText}</p>
                               )}
@@ -398,7 +393,6 @@ export default function BuchungenPage() {
                               {entry.note && <p className="mt-1 bg-white/60 p-2 rounded-xl border border-slate-100 text-xs italic">Notiz: {entry.note}</p>}
 
                               <div className="mt-4 flex items-center gap-2 flex-wrap">
-                                {/* ✅ Punkt 1: "Als bezahlt markieren" Button */}
                                 {isIncome && entry.status !== 'bezahlt' && (
                                   <button
                                     type="button"
