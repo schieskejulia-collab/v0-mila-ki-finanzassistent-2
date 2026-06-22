@@ -68,7 +68,8 @@ export default function HomePage() {
   const insights = getMilaInsights(incomes, expenses, userStatus, industry)
   const topInsights = insights.slice(0, 3)
 const displayInsights = topInsights.filter(
-  (i) => i.title !== 'Offene Einnahmen'
+  (item) =>
+    !item.title?.toLowerCase().includes('offene einnahmen')
 )
 
  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
