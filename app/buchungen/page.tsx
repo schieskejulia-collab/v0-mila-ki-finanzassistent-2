@@ -32,6 +32,29 @@ function formatEuro(value: number | string) {
   })
 }
 function getStatusInfo(status?: string, dueDate?: string) {
+function getDueText(status?: string, dueDate?: string) {
+  if (!dueDate || status === 'bezahlt') return ''
+
+  const today = new Date()
+  const due = new Date(dueDate)
+
+  today.setHours(0, 0, 0, 0)
+  due.setHours(0, 0, 0, 0)
+
+  const diffDays = Math.ceil(
+    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  )
+
+  if (diffDays < 0) {
+    return `🔴 Seit ${Math.abs(diffDays)} Tag${Math.abs(diffDays) === 1 ? '' : 'en'} überfällig`
+  }
+
+  if (diffDays === 0) {
+    return '🟠 Heute fällig'
+  }
+
+  return `🟡 Fällig in ${diffDays} Tag${diffDays === 1 ? '' : 'en'}`
+}
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -392,6 +415,9 @@ const visibleEntries = filteredEntries.slice(0, 30)
                                  <p>Kunde: {entry.client || 'Nicht angegeben'}</p>
 <p>Status: {entry.status || 'offen'}</p>
 {entry.due_date && (
+{getDueText(entry.status, entry.due_date) && (
+  <p>{getDueText(entry.status, entry.due_date)}</p>
+)}
   <p>Fällig am: {formatDate(entry.due_date)}</p>
 )}
 {entry.due_date && <p>Fällig am: {formatDate(entry.due_date)}</p>}
