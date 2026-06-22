@@ -410,27 +410,23 @@ const visibleEntries = filteredEntries.slice(0, 30)
 
                           {isOpen && (
                             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
-                           {isIncome ? (
-  <>
+                          {isIncome ? (
+  <div className="space-y-1">
     <p>Kunde: {entry.client || 'Nicht angegeben'}</p>
     <p>Status: {entry.status || 'offen'}</p>
-
-    {getDueText(entry.status, entry.due_date) && (
-      <p>{getDueText(entry.status, entry.due_date)}</p>
-    )}
 
     {entry.due_date && (
       <p>Fällig am: {formatDate(entry.due_date)}</p>
     )}
 
     <p>Datum: {formatDate(entry.date)}</p>
-  </>
+  </div>
 ) : (
-  <>
+  <div className="space-y-1">
     <p>Händler: {entry.vendor || 'Nicht angegeben'}</p>
     <p>Kategorie: {entry.category || 'Sonstiges'}</p>
     <p>Datum: {formatDate(entry.date)}</p>
-  </>
+  </div>
 )}
 
                               {entry.note && <p>Notiz: {entry.note}</p>}
