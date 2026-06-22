@@ -260,7 +260,10 @@ const overdueIncomeTotal = overdueIncomes.reduce(
   </div>
 )}
           <div className="mt-4 space-y-3">
-            {topInsights.map((item) => (
+const displayInsights = topInsights.filter(
+  (i) => i.title !== 'Offene Einnahmen'
+)
+           {displayInsights.map((item) => (
               <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-base font-black text-slate-950">
                   {item.title}
