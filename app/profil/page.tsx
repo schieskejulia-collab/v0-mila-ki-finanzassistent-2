@@ -67,7 +67,53 @@ if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus'
   if (!annualProfit && userStatus !== 'angestellt') missing.push('Jahresgewinn')
 
   const completeness = Math.max(20, 100 - missing.length * 15)
+useEffect(() => {
+  const saved = localStorage.getItem('mila_profile')
+  if (!saved) return
 
+  try {
+    const profile = JSON.parse(saved)
+
+    setUserStatus(profile.userStatus || 'freelancer')
+    setIndustry(profile.industry || 'webdesign')
+    setAnnualGross(profile.annualGross || '')
+    setVatStatus(profile.vatStatus || 'kleinunternehmer')
+    setFederalState(profile.federalState || 'Sachsen-Anhalt')
+    setChurchTax(profile.churchTax || 'nein')
+    setMarried(profile.married || 'nein')
+    setChildren(profile.children || '')
+    setAssemblyWork(profile.assemblyWork || 'nein')
+  } catch (error) {
+    console.error('Fehler beim Laden des Profils', error)
+  }
+}, [])
+
+useEffect(() => {
+  localStorage.setItem(
+    'mila_profile',
+    JSON.stringify({
+      userStatus,
+      industry,
+      annualGross,
+      vatStatus,
+      federalState,
+      churchTax,
+      married,
+      children,
+      assemblyWork,
+    })
+  )
+}, [
+  userStatus,
+  industry,
+  annualGross,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
+])
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -231,45 +277,6 @@ if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus'
   </select>
 )}
 
-  const profile = JSON.parse(saved)
-
-  setUserStatus(profile.userStatus || 'freelancer')
-  setIndustry(profile.industry || 'webdesign')
-  setAnnualGross(profile.annualGross || '')
-  setVatStatus(profile.vatStatus || 'kleinunternehmer')
-  setFederalState(profile.federalState || 'Sachsen-Anhalt')
-  setChurchTax(profile.churchTax || 'none')
-  setMaritalStatus(profile.maritalStatus || 'single')
-  setChildren(profile.children || '')
-  setTravelType(profile.travelType || 'none')
-}, [])
-
-useEffect(() => {
-  localStorage.setItem(
-    'mila_profile',
-    JSON.stringify({
-      userStatus,
-      industry,
-      annualGross,
-      vatStatus,
-      federalState,
-      churchTax,
-      maritalStatus,
-      children,
-      travelType,
-    })
-  )
-}, [
-  userStatus,
-  industry,
-  annualGross,
-  vatStatus,
-  federalState,
-  churchTax,
-  maritalStatus,
-  children,
-  travelType,
-])
           <input
             value={federalState}
             onChange={(e) => setFederalState(e.target.value)}
