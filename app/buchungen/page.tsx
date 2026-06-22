@@ -31,7 +31,42 @@ function formatEuro(value: number | string) {
     currency: 'EUR',
   })
 }
+function getStatusInfo(status?: string, dueDate?: string) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
+  const due = dueDate ? new Date(dueDate) : null
+
+  if (due) {
+    due.setHours(0, 0, 0, 0)
+  }
+
+  if (status === 'bezahlt') {
+    return {
+      label: '🟢 Bezahlt',
+      className: 'bg-emerald-50 text-emerald-700',
+    }
+  }
+
+  if (status === 'ueberfaellig' || (due && due < today)) {
+    return {
+      label: '🔴 Überfällig',
+      className: 'bg-rose-50 text-rose-700',
+    }
+  }
+
+  if (dueDate) {
+    return {
+      label: `🟡 Offen bis ${formatDate(dueDate)}`,
+      className: 'bg-amber-50 text-amber-700',
+    }
+  }
+
+  return {
+    label: '🟡 Offen',
+    className: 'bg-amber-50 text-amber-700',
+  }
+}
 function formatDate(value?: string) {
   if (!value) return 'Kein Datum'
   try {
