@@ -12,6 +12,29 @@ import {
 } from 'react'
 
 import { supabase } from '@/lib/supabase'
+export const FinanceContext = createContext<FinanceContextValue | null>(null)
+
+export function FinanceProvider({ children }: { children: ReactNode }) {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [incomes, setIncomes] = useState<Income[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [milaFeedback, setMilaFeedback] = useState('')
+  const [morningBriefing, setMorningBriefing] = useState('')
+  const [userName, setUserName] = useState('Julia')
+  const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
+  const [industry, setIndustry] = useState<Industry>('sonstiges')
+  const [taxClass, setTaxClass] = useState('1')
+  const [annualGross, setAnnualGross] = useState(0)
+  const [annualProfit, setAnnualProfit] = useState(0)
+  const [vatStatus, setVatStatus] = useState('regelbesteuert')
+  const [federalState, setFederalState] = useState('berlin')
+  const [churchTax, setChurchTax] = useState(false)
+  const [married, setMarried] = useState(false)
+  const [children, setChildren] = useState(0)
+  const [assemblyWork, setAssemblyWork] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  const appChildren = children
 
 export type UserStatus =
   | 'angestellt'
