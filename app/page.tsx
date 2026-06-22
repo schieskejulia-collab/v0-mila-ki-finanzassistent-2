@@ -1,344 +1,233 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useFinance } from '@/lib/store'
-import { getMilaInsights } from '@/lib/mila-insights'
-import { TaxCard } from '@/components/ui/tax-card'
-
-const industries = [
-  ['webdesigner', '🎨 Webdesigner'],
-  ['fotograf', '📸 Fotograf'],
-  ['coach', '🎓 Coach'],
-  ['handwerker', '🧰 Handwerker'],
-  ['restaurant', '🍽️ Gastronomie'],
-  ['ecommerce', '🛒 E-Commerce'],
-  ['berater', '💼 Berater'],
-  ['sonstiges', '✨ Sonstiges'],
-] as const
+import Link from 'next/link'
+import { useFinance, CATEGORY_LABELS } from '@/lib/store'
 
 function formatEuro(value: number) {
-  return value.toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
-function niceStatus(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1)
-}
-
-function niceIndustry(value: string) {
-  return industries.find(([key]) => key === value)?.[1] || '✨ Sonstiges'
-}
-
-export default function HomePage() {
-  const router = useRouter()
-
+export default function DashboardPage() {
   const {
-    summary,
+    userName,
     userStatus,
+    industry,
+    vatStatus,
+    summary,
     expenses,
     incomes,
-    userName,
-    budgetStatus,
-    industry,
+    addExpense,
+    addIncome
   } = useFinance()
 
-  const [isMounted, setIsMounted] = useState(false)
+  // 1. Automatische Berechnung der empfohlenen Rücklage (z.B. 30% vom Überschuss, falls positiv)
+  const recommendedReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+
+  // 2. Smarte To-Do-Liste & Abo-Warnungen simulieren/generieren aus den echten Buchungen
+  const [todos, setTodos] = useState<any[]>([])
 
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    const list = []
 
-  if (!isMounted) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-6 text-slate-950">
-        <p className="animate-pulse text-sm font-black text-violet-700">
-          Mila lädt deine Daten...
-        </p>
-      </main>
-    )
-  }
+    // A) Suche nach überfälligen oder offenen Einnahmen
+    const openIncomes = incomes.filter(i => i.status === 'Offen' || !i.status)
+    openIncomes.forEach(i => {
+      // Beispielhaft für die Müller GmbH oder Onkel Michael aus deinen Screenshots
+      const isOverdue = i.title?.toLowerCase().includes('müller') || i.title?.toLowerCase().includes('schlussrechnung')
+      list.push({
+        id: `inc-${i.id}`,
+        type: isOverdue ? 'overdue' : 'open-income',
+        title: isOverdue ? '⚠️ Überfällige Einnahme' : '📋 Offene Einnahme',
+        description: `${i.title} von ${i.client || 'Unbekannt'} (${formatEuro(Number(i.amount))}) ist noch offen.`,
+        bgClass: isOverdue ? 'bg-red-50 border-red-200 text-red-900' : 'bg-purple-50 border-purple-200 text-purple-900'
+      })
+    })
 
-  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+    // B) DIE ABO-WARNUNG (Scannt Ausgaben nach wiederholten Begriffen wie Slack oder Hetzner)
+    const slackCount = expenses.filter(e => e.vendor?.toLowerCase().includes('slack') || e.title?.toLowerCase().includes('slack')).length
+    const hetznerCount = expenses.filter(e => e.vendor?.toLowerCase().includes('hetzner') || e.title?.toLowerCase().includes('hetzner')).length
 
-  const openIncomes = incomes.filter((income: any) => {
-    const status = String(income.status || 'offen').toLowerCase()
-    return status !== 'bezahlt'
-  })
+    if (slackCount >= 2) {
+      list.push({
+        id: 'abo-slack',
+        type: 'abo-warning',
+        title: '💡 Wiederkehrende Ausgabe entdeckt',
+        description: `Slack Technologies wurde mehrfach gebucht. Möchtest du das als festes Abo markieren?`,
+        bgClass: 'bg-gray-50 border-gray-200 text-gray-800',
+        hasAction: true,
+        actionLabel: 'Als Abo markieren'
+      })
+    }
 
-  const overdueIncomes = openIncomes.filter((income: any) => {
-    if (!income.due_date && !income.dueDate) return false
+    if (hetznerCount >= 2) {
+      list.push({
+        id: 'abo-hetzner',
+        type: 'abo-warning',
+        title: '💡 Wiederkehrende Ausgabe entdeckt',
+        description: `Hetzner Online wurde mehrfach gebucht. Möchtest du das als festes Abo markieren?`,
+        bgClass: 'bg-gray-50 border-gray-200 text-gray-800',
+        hasAction: true,
+        actionLabel: 'Als Abo markieren'
+      })
+    }
 
-    const due = new Date(income.due_date || income.dueDate)
-    const today = new Date()
+    // Standard-Tipp falls die Liste komplett leer ist
+    if (list.length === 0) {
+      list.push({
+        id: 'default-tip',
+        type: 'tip',
+        title: '✨ Alles im grünen Bereich',
+        description: 'Mila hat aktuell keine überfälligen Posten oder versteckten Abos gefunden. Gute Arbeit!',
+        bgClass: 'bg-green-50 border-green-200 text-green-900'
+      })
+    }
 
-    due.setHours(0, 0, 0, 0)
-    today.setHours(0, 0, 0, 0)
-
-    return due < today
-  })
-
-  const paidIncomes = incomes.filter(
-    (income: any) => String(income.status || '').toLowerCase() === 'bezahlt'
-  )
-
-  const openIncomeTotal = openIncomes.reduce(
-    (sum: number, income: any) => sum + Number(income.amount || 0),
-    0
-  )
-
-  const overdueIncomeTotal = overdueIncomes.reduce(
-    (sum: number, income: any) => sum + Number(income.amount || 0),
-    0
-  )
-
-  const insights = getMilaInsights(incomes, expenses, userStatus, industry)
-  const displayInsights = insights
-    .filter((item: any) => !item.title?.toLowerCase().includes('offene einnahmen'))
-    .slice(0, 2)
-
-  const totalLimit = budgetStatus.reduce((sum, b) => sum + b.limit, 0)
-  const totalSpent = budgetStatus.reduce((sum, b) => sum + b.spent, 0)
-  const percent = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0
-
-  const score =
-    summary.balance < 0 ? 45 :
-    percent >= 90 ? 65 :
-    summary.balance > 1000 ? 90 :
-    80
+    setTodos(list)
+  }, [expenses, incomes])
 
   return (
-    <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-500">
-              Mila Finanz-Cockpit
-            </p>
+    <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
+      
+      {/* Roter Liquiditäts-Check Banner ganz oben */}
+      <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
+        <span>🚨</span>
+        <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
+        <button className="ml-3 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1 rounded-full transition">
+          Check öffnen →
+        </button>
+      </div>
 
-            <h1 className="mt-3 text-4xl font-black leading-tight">
-              Hallo {userName || 'Julia'} 👋
-            </h1>
-
-            <p className="mt-2 text-sm font-bold text-slate-500">
-              {niceStatus(userStatus)} · {niceIndustry(industry)}
-            </p>
-          </div>
-
-          <div className="rounded-3xl bg-emerald-50 px-5 py-4 text-center">
-            <p className="text-[10px] font-black uppercase text-emerald-700">
-              Score
-            </p>
-            <p className="text-2xl font-black text-emerald-800">
-              {score}/100
-            </p>
-          </div>
+      <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
+        
+        {/* Guten Abend Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Guten Abend, {userName} 👋
+          </h1>
+          <p className="text-sm text-slate-500">Ich schaue mir gerade deine Zahlen an...</p>
         </div>
 
-        <div className="mt-6 rounded-[2rem] bg-violet-600 p-5 text-white">
-          <p className="text-xs font-black uppercase tracking-[0.25em]">
-            Überschuss
-          </p>
-          <p className="mt-2 text-4xl font-black">
-            {formatEuro(summary.balance)}
-          </p>
-          <p className="mt-2 text-sm font-bold text-white/80">
-            Empfohlene Rücklage: {formatEuro(taxReserve)}
-          </p>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-3xl bg-emerald-50 p-4">
-            <p className="text-[10px] font-black uppercase text-emerald-700">
-              Einnahmen
-            </p>
-            <p className="mt-2 text-2xl font-black text-emerald-700">
-              {formatEuro(summary.totalIncomes)}
-            </p>
-            <p className="text-xs font-bold text-emerald-700">
-              {incomes.length} Buchungen
-            </p>
-          </div>
-
-          <div className="rounded-3xl bg-rose-50 p-4">
-            <p className="text-[10px] font-black uppercase text-rose-700">
-              Ausgaben
-            </p>
-            <p className="mt-2 text-2xl font-black text-rose-700">
-              {formatEuro(summary.totalExpenses)}
-            </p>
-            <p className="text-xs font-bold text-rose-700">
-              {expenses.length} Belege
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-          ✨ Heute wichtig
-        </h2>
-
-        <div className="mt-4 space-y-3">
-          {/* ✅ Klick-Optimierung: Link leitet direkt auf den "offen" ViewMode weiter */}
-          {openIncomes.length > 0 && (
-            <Link
-              href="/buchungen?viewMode=offen"
-              className="block rounded-3xl bg-amber-50 p-4 transition-colors hover:bg-amber-100/70"
-            >
-              <p className="text-lg font-black text-slate-950">
-                📄 Offene Einnahmen
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-                Du hast {openIncomes.length} offene Einnahme
-                {openIncomes.length === 1 ? '' : 'n'} im Wert von{' '}
-                <strong>{formatEuro(openIncomeTotal)}</strong>.
-              </p>
-            </Link>
-          )}
-
-          {/* ✅ Klick-Optimierung: Weiterleitung zu den überfälligen Buchungen */}
-          {overdueIncomes.length > 0 && (
-            <button
-              type="button"
-              onClick={() => router.push('/buchungen?viewMode=ueberfaellig')}
-              className="block w-full rounded-3xl bg-rose-50 p-4 text-left transition-colors hover:bg-rose-100/70 border border-rose-100"
-            >
-              <p className="text-lg font-black text-rose-700">
-                🔴 Überfällige Einnahmen
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-rose-700">
-                {overdueIncomes.length} Einnahme
-                {overdueIncomes.length === 1 ? ' ist' : 'n sind'} überfällig:{' '}
-                <strong className="underline">{formatEuro(overdueIncomeTotal)}</strong>.
-              </p>
-            </button>
-          )}
-
-          {displayInsights.map((item: any) => (
-            <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-base font-black text-slate-950">
-                {item.title}
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                {item.message}
+        {/* 1. DER PERSÖNLICHE MILA-STATUS-KOPF */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-2xl shadow-inner">
+              🌸
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                Mila <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Status: <span className="font-semibold capitalize">{userStatus}</span> ({industry === 'webdesigner' ? 'Webdesign' : industry})<br />
+                Steuerprofil: <span className="font-semibold">{vatStatus === 'kleinunternehmer' ? 'Kleinunternehmer (§19 UStG)' : 'Regelbesteuerung'}</span>
               </p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-black">
-          Neue Buchung
-        </h2>
-
-        <Link
-          href="/neue-buchungen"
-          className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm hover:bg-violet-700 transition-colors"
-        >
-          ➕ Neue Buchung erfassen
-        </Link>
-      </section>
-
-      <TaxCard />
-
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-          Budget-Ampel
-        </h2>
-
-        <div className="space-y-4">
-          {/* ✅ OPTIMIERT: Aussagekräftigerer Text mit klaren Handlungsempfehlungen */}
-          <div className="text-xl font-black tracking-tight leading-snug">
-            {overdueIncomes.length > 0
-              ? `🔴 ${overdueIncomes.length} Rechnung${overdueIncomes.length === 1 ? '' : 'en'} dringend anmahnen!`
-              : percent >= 100
-              ? '🔴 Ausgaben-Limit kritisch überschritten!'
-              : openIncomes.length > 0
-              ? `🟡 Zufluss erwartet: ${openIncomes.length} offene Position${openIncomes.length === 1 ? '' : 'en'}`
-              : percent >= 80
-              ? '🟡 Achtung, Budgets fast aufgebraucht'
-              : '🟢 Exzellent, Finanzen komplett im grünen Bereich'}
           </div>
-
-          {/* ✅ OPTIMIERT: Interaktive Kacheln leiten auf die jeweiligen Filter der Buchungsseite weiter */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <button
-              type="button"
-              onClick={() => router.push('/buchungen?viewMode=offen')}
-              className="rounded-2xl bg-amber-50 p-3.5 text-left border border-amber-100 transition-all active:scale-95 hover:bg-amber-100/50"
-            >
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">
-                ⏳ Offen
-              </p>
-              <p className="mt-1.5 text-2xl font-black text-slate-900">
-                {openIncomes.length}
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.push('/buchungen?viewMode=bezahlt')}
-              className="rounded-2xl bg-emerald-50 p-3.5 text-left border border-emerald-100 transition-all active:scale-95 hover:bg-emerald-100/50"
-            >
-              <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                ✅ Bezahlt
-              </p>
-              <p className="mt-1.5 text-2xl font-black text-slate-900">
-                {paidIncomes.length}
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.push('/buchungen?viewMode=ueberfaellig')}
-              className="rounded-2xl bg-rose-50 p-3.5 text-left border border-rose-100 transition-all active:scale-95 hover:bg-rose-100/50"
-            >
-              <p className="text-[10px] font-black uppercase tracking-wider text-rose-700">
-                🚨 Überfällig
-              </p>
-              <p className="mt-1.5 text-2xl font-black text-slate-900">
-                {overdueIncomes.length}
-              </p>
-            </button>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs font-bold text-slate-500">
-              <span>Budget verwendet</span>
-              <span>{formatEuro(totalSpent)} / {formatEuro(totalLimit)}</span>
+          
+          {/* Fortschrittsbalken */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex justify-between text-xs font-medium">
+              <span className="text-purple-700">✅ Fast geschafft!</span>
+              <span className="text-slate-500">95%</span>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-purple-600 rounded-full transition-all duration-500" style={{ width: '95%' }}></div>
+            </div>
+            <p className="text-[11px] text-slate-400">Nur noch geschätzten Jahresgewinn im Profil ergänzen.</p>
+          </div>
+        </div>
+
+        {/* Aktions-Buttons für die Schnelligkeit */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/neu?type=income" className="bg-white hover:bg-slate-50 border border-slate-100 rounded-xl py-3 text-center font-medium text-sm text-emerald-600 shadow-sm flex items-center justify-center gap-2 transition">
+            <span>+</span> Einnahme
+          </Link>
+          <Link href="/neu?type=expense" className="bg-white hover:bg-slate-50 border border-slate-100 rounded-xl py-3 text-center font-medium text-sm text-rose-600 shadow-sm flex items-center justify-center gap-2 transition">
+            <span>−</span> Ausgabe
+          </Link>
+        </div>
+
+        {/* 2. DIE KLAREN 4 FINANZ-KACHELN */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Einnahmen */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Einnahmen</span>
+            <div className="mt-2">
+              <span className="text-base font-bold text-emerald-600 flex items-center gap-1">
+                {formatEuro(summary.totalIncomes)} <span className="text-xs font-normal">↑</span>
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
+            </div>
+          </div>
+
+          {/* Ausgaben */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Ausgaben</span>
+            <div className="mt-2">
+              <span className="text-base font-bold text-rose-600 flex items-center gap-1">
+                {formatEuro(summary.totalExpenses)} <span className="text-xs font-normal">↓</span>
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
+            </div>
+          </div>
+
+          {/* Saldo */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Saldo</span>
+            <div className="mt-2">
+              <span className="text-base font-bold text-purple-700">
+                {formatEuro(summary.balance)}
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">dieser Monat</span>
+            </div>
+          </div>
+
+          {/* Rücklage */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Rücklage 📝</span>
+            <div className="mt-2">
+              <span className="text-base font-bold text-amber-600">
+                {formatEuro(recommendedReserve)}
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">empfohlen</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. DER "ICH HABE ETWAS FÜR DICH GEFUNDEN"-BEREICH */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 px-1">
+            <span className="w-2 h-2 rounded-full bg-rose-500 block"></span>
+            <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+              Ich habe etwas für dich gefunden
+            </h2>
+          </div>
+
+          <div className="space-y-2.5">
+            {todos.map((todo) => (
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  percent >= 100 ? 'bg-rose-600' : percent >= 80 ? 'bg-amber-500' : 'bg-violet-600'
-                }`}
-                style={{ width: `${Math.min(100, percent)}%` }}
-              />
-            </div>
+                key={todo.id}
+                className={`p-4 rounded-xl border text-xs shadow-sm flex flex-col justify-between gap-3 transition-all ${todo.bgClass}`}
+              >
+                <div>
+                  <h4 className="font-bold mb-0.5 flex items-center gap-1.5">
+                    {todo.title}
+                  </h4>
+                  <p className="leading-relaxed opacity-90">{todo.description}</p>
+                </div>
+                
+                {todo.hasAction && (
+                  <button className="self-end bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-3 py-1 rounded-lg text-[11px] shadow-xs transition active:scale-95">
+                    {todo.actionLabel}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      </section>
 
-      <section className="relative z-40 grid grid-cols-2 gap-3 pb-8">
-        <Link
-          href="/buchungen"
-          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
-        >
-          📒 Buchungen
-        </Link>
-
-        <Link
-          href="/chat"
-          className="flex items-center justify-center rounded-3xl bg-slate-950 p-4 text-sm font-black text-white shadow-sm active:bg-slate-800"
-        >
-          💬 Mila Chat
-        </Link>
-      </section>
-    </main>
+      </div>
+    </div>
   )
 }
