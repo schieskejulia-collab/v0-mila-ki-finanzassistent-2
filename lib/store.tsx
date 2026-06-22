@@ -1,142 +1,135 @@
 'use client'
-import { createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,ReactNode } from 'react'
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode
+} from 'react'
+
 import { supabase } from '@/lib/supabase'
 
-export type UserStatus='angestellt'|'minijob'|'selbststaendig_gewerbe'|'freelancer'|'kleinunternehmer'|'handwerker'|'montagearbeiter'
-export type Industry='webdesigner'|'fotograf'|'coach'|'handwerker'|'restaurant'|'ecommerce'|'berater'|'sonstiges'
+export type UserStatus =
+  | 'angestellt'
+  | 'minijob'
+  | 'selbststaendig_gewerbe'
+  | 'freelancer'
+  | 'kleinunternehmer'
+  | 'handwerker'
+  | 'montagearbeiter'
 
-export type Expense={id:string|number,title:string,vendor:string,amount:number,date:string,category:string,note?:string|null}
-export type Income={id:string|number,title:string,client:string,amount:number,date:string,status?:string,due_date?:string,dueDate?:string,invoiceNumber?:string,note?:string|null}
-export type BudgetStatus={category:string,spent:number,limit:number,remaining:number,percent:number}
-type Summary={totalExpenses:number,totalIncomes:number,balance:number}
+export type Industry =
+  | 'webdesigner'
+  | 'fotograf'
+  | 'coach'
+  | 'handwerker'
+  | 'restaurant'
+  | 'ecommerce'
+  | 'berater'
+  | 'sonstiges'
 
-interface FinanceContextValue{
-  expenses:Expense[]
-  incomes:Income[]
-  setIncomes:(i:Income[])=>void
-  categories:string[]
-  milaFeedback:string
-  morningBriefing:string
-  refreshMorningBriefing:()=>Promise<void>
-  triggerMilaFeedback:(category:string)=>void
-  addExpense:(e:{title?:string,vendor?:string,amount:number|string,date?:string,category?:string,note?:string,hasReceipt?:boolean,vat?:number})=>Promise<void>
-  deleteExpense:(id:string|number)=>Promise<void>
-  addIncome:(i:{title?:string,client?:string,amount:number|string,date?:string,note?:string,vat?:number,status?:string,source?:string})=>Promise<void>
-  deleteIncome:(id:string|number)=>Promise<void>
-  userName:string
-  setUserName:(v:string)=>void
-  userStatus:UserStatus
-  setUserStatus:(v:UserStatus)=>void
-  industry:Industry
-  setIndustry:(v:Industry)=>void
-  isLoggedIn:boolean
-  login:(name:string,status:UserStatus)=>void
-  logout:()=>void
-  summary:Summary
-  budgetStatus:BudgetStatus[]
-  taxClass:string
-  setTaxClass:(v:string)=>void
-  annualGross:number
-  setAnnualGross:(v:number)=>void
-  annualProfit:number
-  setAnnualProfit:(v:number)=>void
-  vatStatus:string
-  setVatStatus:(v:string)=>void
-  federalState:string
-  setFederalState:(v:string)=>void
-  churchTax:boolean
-  setChurchTax:(v:boolean)=>void
-  married:boolean
-  setMarried:(v:boolean)=>void
-  children:number
-  setChildren:(v:number)=>void
-  assemblyWork:boolean
-  setAssemblyWork:(v:boolean)=>void
+export type Expense = {
+  id: string | number
+  title: string
+  vendor: string
+  amount: number
+  date: string
+  category: string
+  note?: string | null
 }
 
-const DEFAULT_CATEGORIES=['software','hardware','elektronik','telefon & internet','marketing','buerobedarf','reisen','fahrtkosten','bewirtung','weiterbildung','versicherung','miete','bankgebühren','material','werkzeug','arbeitskleidung','sonstiges']
-
-export const CATEGORY_LABELS:Record<string,string>={
-  software:'Software & IT',hardware:'Hardware',elektronik:'Elektronik','telefon & internet':'Telefon & Internet',marketing:'Marketing',buerobedarf:'Büro & Arbeitsmittel',reisen:'Reisekosten',fahrtkosten:'Fahrtkosten',bewirtung:'Bewirtung',weiterbildung:'Weiterbildung',versicherung:'Versicherung',miete:'Miete & Coworking',bankgebühren:'Bankgebühren',material:'Material',werkzeug:'Werkzeug',arbeitskleidung:'Arbeitskleidung',sonstiges:'Sonstiges'
+export type Income = {
+  id: string | number
+  title: string
+  client: string
+  amount: number
+  date: string
+  status?: string
+  due_date?: string
+  dueDate?: string
+  invoiceNumber?: string
+  note?: string | null
 }
 
-const BUDGET_LIMITS:Record<string,number>={software:200,reisen:500,weiterbildung:300,marketing:250,buerobedarf:150,bewirtung:200,versicherung:100,hardware:400,'telefon & internet':150,miete:600,fahrtkosten:250,bankgebühren:80,sonstiges:100}
-
-const STATUS_VALUES:UserStatus[]=['angestellt','minijob','selbststaendig_gewerbe','freelancer','kleinunternehmer','handwerker','montagearbeiter']
-const FinanceContext=createContext<FinanceContextValue|null>(null)
-function isUserStatus(v:any):v is UserStatus{return typeof v==='string'&&STATUS_VALUES.includes(v)}
-
-export function toNumber(v:any){if(typeof v==='number')return v||0;const raw=String(v??'').trim();if(!raw)return 0;const normalized=raw.includes(',')?raw.replace(/\./g,'').replace(',','.'):raw;const cleaned=normalized.replace(/[^\d.-]/g,'');const num=Number(cleaned);return Number.isFinite(num)?num:0}
-
-const CATEGORY_RULES=[
-  {regex:/laptop|notebook|computer|macbook|monitor|pc|tastatur|maus|headset/,category:'hardware'},
-  {regex:/werkzeug|bohrer|akkuschrauber|maschine|hammer|zange/,category:'werkzeug'},
-  {regex:/arbeitskleidung|arbeitsschuhe|schutzbrille|helm|handschuhe|blaumann/,category:'arbeitskleidung'},
-  {regex:/hotel|bahn|flug|reise|airbnb|unterkunft|übernachtung/,category:'reisen'},
-  {regex:/kurs|seminar|weiterbildung|coaching/,category:'weiterbildung'},
-  {regex:/restaurant|essen|bewirtung|lunch|dinner|cafe/,category:'bewirtung'},
-  {regex:/versicherung|haftpflicht|rechtsschutz/,category:'versicherung'},
-  {regex:/miete|coworking|bürofläche/,category:'miete'},
-  {regex:/tank|diesel|benzin|fahrt|parken|uber|taxi/,category:'fahrtkosten'},
-  {regex:/material|farbe|holz|metall|rohr|baustoff/,category:'material'},
-  {regex:/telefon|internet|vodafone|telekom|o2/,category:'telefon & internet'},
-  {regex:/hosting|server|canva|figma|adobe|openai|notion|saas/,category:'software'}
-]
-
-export function inferCategory(input:string){
-  const t=input.toLowerCase()
-  for(const r of CATEGORY_RULES){if(r.regex.test(t))return r.category}
-  return 'sonstiges'
+export type BudgetStatus = {
+  category: string
+  spent: number
+  limit: number
+  remaining: number
+  percent: number
 }
 
-const TIPS:any={
-  montagearbeiter:{
-    reisen:'🛏️ Unterkunft auf Montage: zählt zur doppelten Haushaltsführung – bringt hohe Erstattungen.',
-    fahrtkosten:'🚗 Jeder km zur Baustelle: 0,30 € (ab km 21 → 0,38 €).',
-    arbeitskleidung:'🦺 Arbeitskleidung & Werkzeug: 100% sofort absetzbar.',
-    werkzeug:'🛠️ Werkzeug: komplett absetzbar.',
-    default:'✨ Montagekosten erfasst – Mila optimiert deine Erstattung.'
-  },
-  angestellt:{
-    software:'💻 Geräte & Tools unter 952 € brutto → sofort 100% absetzbar.',
-    hardware:'💻 Arbeitsmittel sofort absetzbar.',
-    buerobedarf:'📝 Homeoffice-Pauschale: 6 €/Tag, bis 1.260 €/Jahr.',
-    default:'✨ Werbungskosten erkannt – Mila prüft deine Vorteile.'
-  },
-  kleinunternehmer:{
-    default:'🌱 Bruttobetrag verbucht – ohne Vorsteuerabzug schützt das deine Liquidität.'
-  },
-  default:{
-    software:'⚙️ Software-Abos mindern sofort deinen Gewinn.',
-    bewirtung:'🍽️ Geschäftsessen: 70% absetzbar – Anlass auf den Beleg!',
-    default:'✨ Buchung erfasst – Mila prüft steuerliche Vorteile.'
-  }
+type Summary = {
+  totalExpenses: number
+  totalIncomes: number
+  balance: number
 }
 
-function getMilaTip(category:string,status:UserStatus){
-  return TIPS[status]?.[category]||TIPS[status]?.default||TIPS.default[category]||TIPS.default.default
+interface FinanceContextValue {
+  expenses: Expense[]
+  incomes: Income[]
+  setIncomes: (i: Income[]) => void
+  categories: string[]
+  milaFeedback: string
+  morningBriefing: string
+  refreshMorningBriefing: () => Promise<void>
+  triggerMilaFeedback: (category: string) => void
+  addExpense: (e: {
+    title?: string
+    vendor?: string
+    amount: number | string
+    date?: string
+    category?: string
+    note?: string
+    hasReceipt?: boolean
+    vat?: number
+  }) => Promise<void>
+  deleteExpense: (id: string | number) => Promise<void>
+  addIncome: (i: {
+    title?: string
+    client?: string
+    amount: number | string
+    date?: string
+    note?: string
+    vat?: number
+    status?: string
+    source?: string
+  }) => Promise<void>
+  deleteIncome: (id: string | number) => Promise<void>
+  userName: string
+  setUserName: (v: string) => void
+  userStatus: UserStatus
+  setUserStatus: (v: UserStatus) => void
+  industry: Industry
+  setIndustry: (v: Industry) => void
+  isLoggedIn: boolean
+  login: (name: string, status: UserStatus) => void
+  logout: () => void
+  summary: Summary
+  budgetStatus: BudgetStatus[]
+  taxClass: string
+  setTaxClass: (v: string) => void
+  annualGross: number
+  setAnnualGross: (v: number) => void
+  annualProfit: number
+  setAnnualProfit: (v: number) => void
+  vatStatus: string
+  setVatStatus: (v: string) => void
+  federalState: string
+  setFederalState: (v: string) => void
+  churchTax: boolean
+  setChurchTax: (v: boolean) => void
+  married: boolean
+  setMarried: (v: boolean) => void
+  children: number
+  setChildren: (v: number) => void
+  assemblyWork: boolean
+  setAssemblyWork: (v: boolean) => void
 }
-
-export function FinanceProvider({ children: appChildren }: { children: ReactNode }) {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [incomes, setIncomes] = useState<Income[]>([])
-  const [categories] = useState(DEFAULT_CATEGORIES)
-  const [milaFeedback, setMilaFeedback] = useState('Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.')
-  const [industry, setIndustry] = useState<Industry>('webdesigner')
-  const [morningBriefing, setMorningBriefing] = useState('')
-  const [userName, setUserName] = useState('Julia')
-  const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
-
-  const [taxClass, setTaxClass] = useState('1')
-  const [annualGross, setAnnualGross] = useState(0)
-  const [annualProfit, setAnnualProfit] = useState(0)
-  const [vatStatus, setVatStatus] = useState('kleinunternehmer')
-  const [federalState, setFederalState] = useState('Sachsen-Anhalt')
-  const [churchTax, setChurchTax] = useState(false)
-  const [married, setMarried] = useState(false)
-  const [children, setChildren] = useState(0)
-  const [assemblyWork, setAssemblyWork] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(true)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
