@@ -250,11 +250,10 @@ export async function getMilaChatResponse(
   const context = buildFinancialContext(contextData)
 
   const messages: ChatMessage[] = [
-    {
-      {
-  role: 'system',
-  content: `
-    Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
+  {
+    role: 'system',
+    content: `
+Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
 
 🎀 DEINE ROLLE
 - Du bist ruhig, freundlich und zugewandt.
@@ -322,17 +321,11 @@ Julia soll sich:
 - weniger gestresst
 - klarer sehen, was als Nächstes sinnvoll ist
 - nicht von Zahlen erschlagen werden
-
-  `,
-},
-
-    },
-    ...safeHistory,
-    {
-      role: 'user',
-      content: userMessage,
-    },
-  ]
-
-  return await callGroqChat(messages)
-}
+`,
+  },
+  ...safeHistory,
+  {
+    role: 'user',
+    content: userMessage,
+  },
+]
