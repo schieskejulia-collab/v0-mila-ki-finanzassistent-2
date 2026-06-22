@@ -1,579 +1,264 @@
- 'use client'
+'use client'
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useFinance } from '@/lib/store'
 
-import { supabase } from '@/lib/supabase'
-export type UserStatus =
-  | 'angestellt'
-  | 'selbstständig'
-  | 'freelancer'
-  | 'kleinunternehmer'
-export type Industry =
-  | 'webdesigner'
-  | 'fotograf'
-  | 'coach'
-  | 'handwerker'
-  | 'restaurant'
-  | 'ecommerce'
-  | 'berater'
-  | 'sonstiges'
+const STATUS_DETAILS = [
+  {
+    key: 'angestellt',
+    label: 'Angestellt',
+    info: 'Fester Job. Mila achtet besonders auf Steuerklasse, Arbeitsmittel, Fahrtkosten und Weiterbildung.',
+  },
+  {
+    key: 'freelancer',
+    label: 'Freelancer / Freiberufler',
+    info: 'Projektbasiert oder freiberuflich. Mila achtet besonders auf Rücklagen, Software, Fortbildung und Reisekosten.',
+  },
+  {
+    key: 'kleinunternehmer',
+    label: 'Kleinunternehmer',
+    info: 'Keine Umsatzsteuer auf Rechnungen, aber Einkommensteuer auf Gewinn kann trotzdem relevant sein.',
+  },
+  {
+    key: 'selbstständig',
+    label: 'Selbstständig / Gewerbe',
+    info: 'Gewerblich tätig. Mila achtet auf Rücklagen, Umsatzsteuer, Gewerbesteuer und Betriebsausgaben.',
+  },
+] as const
 
-export type Expense = {
-  id: string | number
-  title: string
-  vendor: string
-  amount: number
-  date: string
-  category: string
-  note?: string | null
-}
+const INDUSTRIES = [
+  ['webdesigner', '🎨 Webdesigner'],
+  ['fotograf', '📸 Fotograf'],
+  ['coach', '🎓 Coach'],
+  ['handwerker', '🧰 Handwerker'],
+  ['restaurant', '🍽️ Gastronomie'],
+  ['ecommerce', '🛒 E-Commerce'],
+  ['berater', '💼 Berater'],
+  ['sonstiges', '✨ Sonstiges'],
+] as const
 
-export type Income = {
-  id: string | number
-  title: string
-  client: string
-  amount: number
-  date: string
-  note?: string | null
-}
-
-export type BudgetStatus = {
-  category: string
-  spent: number
-  limit: number
-  remaining: number
-  percent: number
-}
-
-type Summary = {
-  totalExpenses: number
-  totalIncomes: number
-  balance: number
-}
-
-interface FinanceContextValue {
-  expenses: Expense[]
-  incomes: Income[]
-  categories: string[]
-  milaFeedback: string
-morningBriefing: string
-refreshMorningBriefing: () => Promise<void>
-  triggerMilaFeedback: (category: string) => void
-  addExpense: (expense: {
-    title?: string
-    vendor?: string
-    amount: number | string
-    date?: string
-    category?: string
-    note?: string
-    hasReceipt?: boolean
-    vat?: number
-  }) => Promise<void>
-  deleteExpense: (id: string | number) => Promise<void>
-  addIncome: (income: {
-    title?: string
-    client?: string
-    amount: number | string
-    date?: string
-    note?: string
-    vat?: number
-    status?: string
-    source?: string
-  }) => Promise<void>
-  deleteIncome: (id: string | number) => Promise<void>
-  userName: string
-  setUserName: (name: string) => void
-  userStatus: UserStatus
-  setUserStatus: (status: UserStatus) => void
-industry: Industry
-setIndustry: (industry: Industry) => void
-  isLoggedIn: boolean
-  login: (name: string, status: UserStatus) => void
-  logout: () => void
-  summary: Summary
-  budgetStatus: BudgetStatus[]
-taxClass: string
-setTaxClass: (value: string) => void
-annualGross: string
-setAnnualGross: (value: string) => void
-annualProfit: string
-setAnnualProfit: (value: string) => void
-vatStatus: string
-setVatStatus: (value: string) => void
-}
-
-// Einheitliche, kleingeschriebene Keys passend zum Formular & der DB
-const DEFAULT_CATEGORIES = [
-  'software',
-  'hardware',
-  'elektronik',
-  'telefon & internet',
-  'marketing',
-  'buerobedarf',
-  'reisen',
-  'fahrtkosten',
-  'bewirtung',
-  'weiterbildung',
-  'versicherung',
-  'miete',
-  'bankgebühren',
-  'material',
-  'werkzeug',
-  'arbeitskleidung',
-  'sonstiges',
-]
-
-// Schönes Mapping für die Anzeige im Budget-Check
-
-export const CATEGORY_LABELS: Record<string, string> = {
-  software: 'Software & IT',
-  hardware: 'Hardware',
-  elektronik: 'Elektronik',
-  'telefon & internet': 'Telefon & Internet',
-  marketing: 'Marketing',
-  buerobedarf: 'Büro & Arbeitsmittel',
-  reisen: 'Reisekosten',
-  fahrtkosten: 'Fahrtkosten',
-  bewirtung: 'Bewirtung',
-  weiterbildung: 'Weiterbildung',
-  versicherung: 'Versicherung',
-  miete: 'Miete & Coworking',
-  bankgebühren: 'Bankgebühren',
-  material: 'Material',
-  werkzeug: 'Werkzeug',
-  arbeitskleidung: 'Arbeitskleidung',
-  sonstiges: 'Sonstiges',
-}
-const BUDGET_LIMITS: Record<string, number> = {
-  software: 200,
-  reisen: 500,
-  weiterbildung: 300,
-  marketing: 250,
-  buerobedarf: 150,
-  bewirtung: 200,
-  versicherung: 100,
-  hardware: 400,
-  'telefon & internet': 150,
-  miete: 600,
-  fahrtkosten: 250,
-  bankgebühren: 80,
-  sonstiges: 100,
-}
-
-const STATUS_VALUES: UserStatus[] = [
-  'angestellt', 'selbstständig', 'freelancer', 'kleinunternehmer',
-]
-
-const FinanceContext = createContext<FinanceContextValue | null>(null)
-
-function isUserStatus(value: unknown): value is UserStatus {
-  return typeof value === 'string' && STATUS_VALUES.includes(value as UserStatus)
-}
-
-export function toNumber(value: number | string | undefined | null): number {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
-  const raw = String(value ?? '').trim()
-  if (!raw) return 0
-  const normalized = raw.includes(',')
-    ? raw.replace(/\./g, '').replace(',', '.')
-    : raw
-  const cleaned = normalized.replace(/[^\d.-]/g, '')
-  const number = Number(cleaned)
-  return Number.isFinite(number) ? number : 0
-}
-
-export function inferCategory(input: string): string {
-  const text = input.toLowerCase()
-
-  if (/laptop|notebook|computer|pc|macbook|monitor|bildschirm|maus|funkmaus|tastatur|keyboard|drucker|scanner|webcam|headset|usb|adapter|kabel|dock|hardware/.test(text)) return 'hardware'
-  if (/mediamarkt|saturn|elektronik|technik/.test(text)) return 'elektronik'
-  if (/werkzeug|bohrer|akkuschrauber|maschine|schrauben|zange|hammer/.test(text)) return 'werkzeug'
-  if (/material|farbe|holz|metall|rohr|kabelkanal|baustoff/.test(text)) return 'material'
-  if (/arbeitskleidung|arbeitsschuhe|schutzbrille|handschuhe|helm/.test(text)) return 'arbeitskleidung'
-  if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app\b|tool\b|saas/.test(text)) return 'software'
-  if (/telefon|internet|mobilfunk|vodafone|telekom|\bo2\b/.test(text)) return 'telefon & internet'
-  if (/hotel|bahn|\bdb\b|flug|reise|airbnb|booking/.test(text)) return 'reisen'
-  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(text)) return 'weiterbildung'
-  if (/instagram|meta\b|facebook|google ads|werbung|marketing/.test(text)) return 'marketing'
-  if (/büro|buero|papier|stift|toner/.test(text)) return 'buerobedarf'
-  if (/restaurant|caf[eé]|essen|bewirtung|lunch|dinner/.test(text)) return 'bewirtung'
-  if (/versicherung|haftpflicht|rechtsschutz/.test(text)) return 'versicherung'
-  if (/miete|coworking|bürofläche|buero/.test(text)) return 'miete'
-  if (/taxi|uber|bolt|tank|parken|fahrt/.test(text)) return 'fahrtkosten'
-  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(text)) return 'bankgebühren'
-
-  return 'sonstiges'
-}
-export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [incomes, setIncomes] = useState<Income[]>([])
-  const [categories] = useState<string[]>(DEFAULT_CATEGORIES)
-  const [milaFeedback, setMilaFeedback] = useState(
-  'Hi, ich bin Mila. Ich helfe dir beim Sortieren deiner Finanzen.'
-)
-const [industry, setIndustry] = useState<Industry>('webdesigner')
-const [morningBriefing, setMorningBriefing] = useState('')
-  const [userName, setUserName] = useState('Julia')
-  
-  // Voreinstellung direkt auf "freelancer" für den perfekten Start
-  const [userStatus, setUserStatus] = useState<UserStatus>('freelancer')
-const [taxClass, setTaxClass] = useState('')
-const [annualGross, setAnnualGross] = useState('')
-const [annualProfit, setAnnualProfit] = useState('')
-const [vatStatus, setVatStatus] = useState('kleinunternehmer')
-const [isLoggedIn, setIsLoggedIn] = useState(true)
-const refreshMorningBriefing = async () => {
-  const income = incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
-  const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
-  const profit = income - expensesTotal
-
-  let tip = 'Behalte deine Steuerrücklage im Auge.'
-
-  if (profit > 1000) {
-    tip = 'Dein Monat läuft stark. Prüfe, ob du einen Teil des Überschusses zurücklegen möchtest.'
-  }
-
-  if (expenses.length > incomes.length) {
-    tip = 'Du hast aktuell mehr Ausgaben als Einnahmen erfasst. Prüfe offene Rechnungen.'
-  }
-
-  if (profit < 0) {
-    tip = 'Deine Ausgaben liegen aktuell über den Einnahmen. Schau auf größere Kostenblöcke.'
-  }
-
-  setMorningBriefing(`
-🌸 Guten Tag ${userName}
-
-Einnahmen: ${income.toFixed(2)} €
-Ausgaben: ${expensesTotal.toFixed(2)} €
-Überschuss: ${profit.toFixed(2)} €
-
-Ich habe aktuell ${expenses.length} Ausgaben und ${incomes.length} Einnahmen für dich im Blick.
-
-💜 Mein Tipp:
-${tip}
-`)
-}
-  const income = incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
-  const expensesTotal = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
-  const profit = income - expensesTotal
-
-useEffect(() => {
-  refreshMorningBriefing()
-}, [incomes, expenses, userName])
-
-  const mountedRef = useRef(true)
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  const loadData = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const [expRes, incRes] = await Promise.all([
-        fetch('/api/expenses', { signal }),
-        fetch('/api/incomes',  { signal }),
-      ])
-
-      if (signal?.aborted) return
-
-      const [expJson, incJson] = await Promise.all([
-        expRes.json(),
-        incRes.json(),
-      ])
-
-      if (!mountedRef.current) return
-
-      if (expJson.success) setExpenses(expJson.data ?? [])
-      if (incJson.success) setIncomes(incJson.data ?? [])
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      if (mountedRef.current) console.error('Laden fehlgeschlagen:', e)
-    }
-  }, [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    loadData(controller.signal)
-    return () => controller.abort()
-  }, [loadData])
-
-  const login = useCallback((name: string, status: UserStatus) => {
-    const safeName   = name?.trim() || 'Julia'
-    const safeStatus = isUserStatus(status) ? status : 'freelancer'
-    setUserName(safeName)
-    setUserStatus(safeStatus)
-    setIsLoggedIn(true)
-    setMilaFeedback(`Willkommen zurück, ${safeName} ✨`)
-    loadData()
-  }, [loadData])
-
-  const logout = useCallback(() => {
-    setIsLoggedIn(false)
-    setUserName('Julia')
-    setUserStatus('freelancer')
-    setExpenses([])
-    setIncomes([])
-    setMilaFeedback('Du wurdest ausgeloggt. Ich bin bereit, wenn du zurück bist.')
-  }, [])
-
-  const triggerMilaFeedback = useCallback((category: string) => {
-    setMilaFeedback(getMilaTip(category, userStatus))
-  }, [userStatus])
-
-  const addExpense: FinanceContextValue['addExpense'] = useCallback(async (expense) => {
+export default function ProfilPage() {
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    userName,
+    setUserName,
+    userStatus,
+    setUserStatus,
+    industry,
+    setIndustry,
+    taxClass,
+    setTaxClass,
+    annualGross,
+    setAnnualGross,
+    annualProfit,
+    setAnnualProfit,
+    vatStatus,
+    setVatStatus,
+    federalState,
+    setFederalState,
+    churchTax,
+    setChurchTax,
+    married,
+    setMarried,
+    children,
+    setChildren,
+    assemblyWork,
+    setAssemblyWork,
+    logout,
+  } = useFinance()
 
-  if (!user) {
-    setMilaFeedback('Bitte zuerst einloggen, bevor du Buchungen speicherst.')
-    return
-  }
+  // Validierung für die Fortschrittsanzeige
+  const missing: string[] = []
+  if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
+  if (!userName) missing.push('Name')
+  if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
+  if (!federalState) missing.push('Bundesland')
+  if (!annualGross && userStatus === 'angestellt') missing.push('Jahresbrutto')
+  if (!annualProfit && userStatus !== 'angestellt') missing.push('Jahresgewinn')
 
-  const title = expense.title?.trim() || 'Ausgabe'
-  const vendor = expense.vendor?.trim() || ''
-  const autoCategory = inferCategory(`${title} ${vendor} ${expense.note ?? ''}`)
-  const category =
-  expense.category &&
-  expense.category !== 'Automatisch' &&
-  expense.category !== 'sonstiges'
-    ? expense.category
-    : autoCategory
+  const completeness = Math.max(20, 100 - missing.length * 15)
 
-  const payload = {
-    title,
-    vendor,
-    amount: toNumber(expense.amount),
-    date: expense.date || new Date().toISOString().slice(0, 10),
-    category,
-    note: expense.note?.trim() || '',
-    vat: expense.vat ?? 19,
-    
-    user_id: user.id,
-  }
+  return (
+    <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
+          Profil
+        </p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight">Dein Mila-Profil</h1>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Je besser dein Profil ausgefüllt ist, desto genauer kann Mila Rücklagen, Hinweise und Erinnerungen einschätzen.
+        </p>
+      </section>
 
-  try {
-    const res = await fetch('/api/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Datenqualität</p>
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-violet-600" style={{ width: `${completeness}%` }} />
+        </div>
+        <p className="mt-2 text-sm font-black text-slate-700">{completeness}% vollständig</p>
+        {missing.length > 0 && (
+          <p className="mt-2 text-xs font-semibold text-slate-500">Fehlt noch: {missing.join(', ')}</p>
+        )}
+      </section>
 
-    const data = await res.json()
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Name</label>
+        <input
+          value={userName || ''}
+          onChange={(e) => setUserName(e.target.value)}
+          placeholder="Dein Name"
+          className="mt-2 w-full rounded-2xl border border-violet-100 bg-white p-4 text-lg font-bold outline-none"
+        />
+      </section>
 
-    if (!data.success) {
-      console.error('Supabase Fehler (Expense):', data)
-      setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
-      return
-    }
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Nutzertyp</p>
+        <div className="mt-4 space-y-3">
+          {STATUS_DETAILS.map((item) => {
+            const isSelected = userStatus === item.key
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setUserStatus(item.key)}
+                className={
+                  isSelected
+                    ? 'w-full rounded-2xl bg-violet-600 p-4 text-left text-white shadow-sm'
+                    : 'w-full rounded-2xl bg-violet-50 p-4 text-left text-slate-700'
+                }
+              >
+                <p className="font-black">{isSelected ? '🔘 ' : '⚪ '}{item.label}</p>
+                <p className={isSelected ? 'mt-1 text-xs font-semibold text-white/80' : 'mt-1 text-xs font-semibold text-slate-500'}>
+                  {item.info}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
-    const saved: Expense | undefined = data.data?.[0]
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Branche</p>
+        <select
+          value={industry || 'sonstiges'}
+          onChange={(e) => setIndustry(e.target.value as any)}
+          className="mt-3 w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold text-slate-700 outline-none"
+        >
+          {INDUSTRIES.map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+      </section>
 
-    if (!saved) {
-      console.error('Keine gespeicherte Expense zurückerhalten:', data)
-      setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
-      return
-    }
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Steuerprofil</p>
+        <div className="mt-4 space-y-3">
+          {userStatus === 'angestellt' && (
+            <>
+              <select
+                value={taxClass}
+                onChange={(e) => setTaxClass(e.target.value)}
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              >
+                <option value="1">Steuerklasse I</option>
+                <option value="2">Steuerklasse II</option>
+                <option value="3">Steuerklasse III</option>
+                <option value="4">Steuerklasse IV</option>
+                <option value="5">Steuerklasse V</option>
+                <option value="6">Steuerklasse VI</option>
+              </select>
 
-    if (mountedRef.current) {
-      setExpenses((prev) => [saved, ...prev])
-      setMilaFeedback(getMilaTip(category, userStatus))
-    }
-  } catch (e) {
-    console.error('Netzwerkfehler (Expense):', e)
+              <input
+                value={annualGross}
+                onChange={(e) => setAnnualGross(e.target.value)}
+                inputMode="decimal"
+                placeholder="Jahresbrutto z.B. 38000"
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              />
+            </>
+          )}
 
-    if (mountedRef.current) {
-      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
-    }
-  }
-}, [userStatus])
-const deleteExpense: FinanceContextValue['deleteExpense'] = useCallback(async (id) => {
-  try {
-    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
-    const data = await res.json()
+          {userStatus !== 'angestellt' && (
+            <input
+              value={annualProfit}
+              onChange={(e) => setAnnualProfit(e.target.value)}
+              inputMode="decimal"
+              placeholder="Geschätzter Jahresgewinn"
+              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+            />
+          )}
 
-    if (!data.success) {
-      console.error('Supabase Fehler (Delete Expense):', data)
-      return
-    }
+          {userStatus !== 'angestellt' && (
+            <select
+              value={vatStatus}
+              onChange={(e) => setVatStatus(e.target.value)}
+              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+            >
+              <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
+              <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
+              <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
+            </select>
+          )}
 
-    if (mountedRef.current) {
-      setExpenses((prev) => prev.filter((e) => String(e.id) !== String(id)))
-      setMilaFeedback('Die Ausgabe wurde gelöscht.')
-    }
-  } catch (e) {
-    console.error('Netzwerkfehler (Delete Expense):', e)
-  }
-}, [])
+          <input
+            value={federalState}
+            onChange={(e) => setFederalState(e.target.value)}
+            placeholder="Bundesland"
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          />
 
-const addIncome: FinanceContextValue['addIncome'] = useCallback(async (income) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+          <select
+            value={churchTax}
+            onChange={(e) => setChurchTax(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Keine Kirchensteuer</option>
+            <option value="ja">Kirchensteuerpflichtig</option>
+          </select>
 
-  if (!user) {
-    setMilaFeedback('Bitte zuerst einloggen, bevor du Einnahmen speicherst.')
-    return
-  }
+          <select
+            value={married}
+            onChange={(e) => setMarried(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Nicht verheiratet</option>
+            <option value="ja">Verheiratet</option>
+          </select>
 
-  const payload = {
-  title: income.title?.trim() || 'Einnahme',
-  client: income.client?.trim() || '',
-  amount: toNumber(income.amount),
-  date: income.date || new Date().toISOString().slice(0, 10),
-  note: income.note?.trim() || '',
-  user_id: user.id,
-created_at: new Date().toISOString(),
+          <input
+            value={children}
+            onChange={(e) => setChildren(e.target.value)}
+            inputMode="numeric"
+            placeholder="Kinderanzahl"
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          />
+
+          <select
+            value={assemblyWork}
+            onChange={(e) => setAssemblyWork(e.target.value)}
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+          >
+            <option value="nein">Keine Montage/Außendienst</option>
+            <option value="ja">Montage/Außendienst vorhanden</option>
+          </select>
+        </div>
+
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">
+          Diese Angaben verbessern Milas Einschätzung. Sie ersetzen keine Steuerberatung und werden aktuell nur für Orientierung genutzt.
+        </p>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('Möchtest du dich wirklich abmelden? Lokale Daten können zurückgesetzt werden.')) {
+              logout()
+            }
+          }}
+          className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
+        >
+          Abmelden
+        </button>
+      </section>
+    </main>
+  )
 }
-
-  try {
-    const res = await fetch('/api/incomes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await res.json()
-
-    if (!data.success) {
-      console.error('Supabase Fehler (Income):', data)
-      setMilaFeedback('Da ging etwas schief. Versuch es gleich nochmal.')
-      return
-    }
-
-    const saved: Income | undefined = data.data?.[0]
-
-    if (!saved) {
-      console.error('Keine gespeicherte Income zurückerhalten:', data)
-      setMilaFeedback('Gespeichert, aber die Antwort war unerwartet. Bitte Seite neu laden.')
-      return
-    }
-
-    if (mountedRef.current) {
-      setIncomes((prev) => [saved, ...prev])
-      setMilaFeedback('💰 Einnahme gespeichert. Ich habe deinen Überblick aktualisiert.')
-    }
-  } catch (e) {
-    console.error('Netzwerkfehler (Income):', e)
-
-    if (mountedRef.current) {
-      setMilaFeedback('Die Verbindung war kurz weg. Versuch es gleich nochmal.')
-    }
-  }
-}, [])
-
-const deleteIncome: FinanceContextValue['deleteIncome'] = useCallback(async (id) => {
-  try {
-    const res = await fetch(`/api/incomes?id=${id}`, { method: 'DELETE' })
-    const data = await res.json()
-
-    if (!data.success) {
-      console.error('Supabase Fehler (Delete Income):', data)
-      return
-    }
-
-    if (mountedRef.current) {
-      setIncomes((prev) => prev.filter((i) => String(i.id) !== String(id)))
-      setMilaFeedback('Die Einnahme wurde gelöscht.')
-    }
-  } catch (e) {
-    console.error('Netzwerkfehler (Delete Income):', e)
-  }
-}, [])
-const summary = useMemo<Summary>(() => {
-    const totalExpenses = expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
-    const totalIncomes  = incomes.reduce((sum,  i) => sum + toNumber(i.amount), 0)
-    return { totalExpenses, totalIncomes, balance: totalIncomes - totalExpenses }
-  }, [expenses, incomes])
-
-  const budgetStatus = useMemo<BudgetStatus[]>(() => {
-    return categories.map((category) => {
-      const spent = expenses
-        .filter((e) => e.category === category)
-        .reduce((sum, e) => sum + toNumber(e.amount), 0)
-      const limit     = BUDGET_LIMITS[category] ?? 100
-      const remaining = limit - spent
-      const percent   = limit > 0 ? Math.min(100, Math.max(0, (spent / limit) * 100)) : 0
-      
-      // Verwende lesbare Labels für die UI ("software" -> "Software & Tools")
-      const readableLabel = CATEGORY_LABELS[category] || category
-      return { category: readableLabel, spent, limit, remaining, percent }
-    })
-  }, [categories, expenses])
-
-  const value = useMemo<FinanceContextValue>(() => ({
-  expenses,
-  incomes,
-  categories,
-  milaFeedback,
-  morningBriefing,
-  refreshMorningBriefing,
-  triggerMilaFeedback,
-  addExpense,
-  deleteExpense,
-  addIncome,
-  deleteIncome,
-  userName,
-  setUserName,
-  userStatus,
-  setUserStatus,
-  industry,
-  setIndustry,
-taxClass,
-setTaxClass,
-annualGross,
-setAnnualGross,
-annualProfit,
-setAnnualProfit,
-vatStatus,
-setVatStatus,
-  isLoggedIn,
-  login,
-  logout,
-  summary,
-  budgetStatus,
-}), [
-  expenses,
-  incomes,
-  categories,
-  milaFeedback,
-  morningBriefing,
-  refreshMorningBriefing,
-  triggerMilaFeedback,
-  addExpense,
-  deleteExpense,
-  addIncome,
-  deleteIncome,
-  userName,
-  userStatus,
-  industry,
-taxClass,
-annualGross,
-annualProfit,
-vatStatus,
-  isLoggedIn,
-  login,
-  logout,
-  summary,
-  budgetStatus,
-])
-  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
-}
-
-export function useFinance() {
-  const ctx = useContext(FinanceContext)
-  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
-  return ctx
-}
-
-
