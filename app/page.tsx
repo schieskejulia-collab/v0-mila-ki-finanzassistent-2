@@ -68,8 +68,33 @@ export default function HomePage() {
   const insights = getMilaInsights(incomes, expenses, userStatus, industry)
   const topInsights = insights.slice(0, 3)
 
-  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+ const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
+const openIncomes = incomes.filter((income: any) => {
+  const status = String(income.status || 'offen').toLowerCase()
+  return status !== 'bezahlt'
+})
 
+const overdueIncomes = openIncomes.filter((income: any) => {
+  if (!income.due_date) return false
+
+  const due = new Date(income.due_date)
+  const today = new Date()
+
+  due.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+
+  return due < today
+})
+
+const openIncomeTotal = openIncomes.reduce(
+  (sum, income: any) => sum + Number(income.amount || 0),
+  0
+)
+
+const overdueIncomeTotal = overdueIncomes.reduce(
+  (sum, income: any) => sum + Number(income.amount || 0),
+  0
+)
   const totalLimit = budgetStatus.reduce((sum, b) => sum + b.limit, 0)
   const totalSpent = budgetStatus.reduce((sum, b) => sum + b.spent, 0)
   const percent = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0
@@ -206,7 +231,31 @@ export default function HomePage() {
           <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
             ✨ Heute wichtig
           </h2>
+{openIncomes.length > 0 && (
+  <div className="rounded-3xl bg-amber-50 p-4">
+    <p className="text-lg font-black text-slate-950">
+      📄 Offene Einnahmen
+    </p>
+    <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+      Du hast {openIncomes.length} offene Einnahme
+      {openIncomes.length === 1 ? '' : 'n'} im Wert von{' '}
+      <strong>{formatEuro(openIncomeTotal)}</strong>.
+    </p>
+  </div>
+)}
 
+{overdueIncomes.length > 0 && (
+  <div className="rounded-3xl bg-rose-50 p-4">
+    <p className="text-lg font-black text-rose-700">
+      🔴 Überfällige Einnahmen
+    </p>
+    <p className="mt-2 text-sm font-semibold leading-relaxed text-rose-700">
+      {overdueIncomes.length} Einnahme
+      {overdueIncomes.length === 1 ? ' ist' : 'n sind'} überfällig:{' '}
+      <strong>{formatEuro(overdueIncomeTotal)}</strong>.
+    </p>
+  </div>
+)}
           <div className="mt-4 space-y-3">
             {topInsights.map((item) => (
               <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
