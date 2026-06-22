@@ -36,7 +36,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const appChildren = children
-}
+return(
+ <FinanceContext.Provider value={value}>
+      {appChildren}
+    </FinanceContext.Provider>
+  )
+} 
 export type UserStatus =
   | 'angestellt'
   | 'minijob'
@@ -486,12 +491,6 @@ ${tip}`)
   budgetStatus,
 ])
 
-return (
-  <FinanceContext.Provider value={value}>
-    {appChildren}
-  </FinanceContext.Provider>
-)
-}
 
 export function useFinance() {
   const ctx = useContext(FinanceContext)
