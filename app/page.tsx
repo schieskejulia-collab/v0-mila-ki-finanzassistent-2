@@ -67,6 +67,9 @@ export default function HomePage() {
 
   const insights = getMilaInsights(incomes, expenses, userStatus, industry)
   const topInsights = insights.slice(0, 3)
+const displayInsights = topInsights.filter(
+  (i) => i.title !== 'Offene Einnahmen'
+)
 
  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
 const openIncomes = incomes.filter((income: any) => {
@@ -260,9 +263,6 @@ const overdueIncomeTotal = overdueIncomes.reduce(
   </div>
 )}
           <div className="mt-4 space-y-3">
-const displayInsights = topInsights.filter(
-  (i) => i.title !== 'Offene Einnahmen'
-)
            {displayInsights.map((item) => (
               <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-base font-black text-slate-950">
