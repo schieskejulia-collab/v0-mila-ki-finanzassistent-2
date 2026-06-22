@@ -323,7 +323,8 @@ Julia soll sich:
 - weniger gestresst
 - klarer sehen, was als Nächstes sinnvoll ist
 - nicht von Zahlen erschlagen werden
-`,
+    `,
+  },
   ...safeHistory,
   {
     role: 'user',
