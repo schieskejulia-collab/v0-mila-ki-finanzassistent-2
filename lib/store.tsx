@@ -127,15 +127,16 @@ export function FinanceProvider({children}:{children:ReactNode}){
   const [userName,setUserName]=useState('Julia')
   const [userStatus,setUserStatus]=useState<UserStatus>('freelancer')
 
-  const [taxClass,setTaxClass]=useState('1')
-  const [annualGross,setAnnualGross]=useState(0)
-  const [annualProfit,setAnnualProfit]=useState(0)
-  const [vatStatus,setVatStatus]=useState('kleinunternehmer')
-  const [federalState,setFederalState]=useState('Sachsen-Anhalt')
-  const [churchTax,setChurchTax]=useState(false)
-  const [married,setMarried]=useState(false)
-  const [assemblyWork,setAssemblyWork]=useState(false)
-  const [isLoggedIn,setIsLoggedIn]=useState(true)
+  const [taxClass, setTaxClass] = useState('1')
+const [annualGross, setAnnualGross] = useState(0)
+const [annualProfit, setAnnualProfit] = useState(0)
+const [vatStatus, setVatStatus] = useState('kleinunternehmer')
+const [federalState, setFederalState] = useState('Sachsen-Anhalt')
+const [churchTax, setChurchTax] = useState(false)
+const [married, setMarried] = useState(false)
+const [children, setChildren] = useState(0)   // ← MUSS GENAU EINMAL VORKOMMEN
+const [assemblyWork, setAssemblyWork] = useState(false)
+const [isLoggedIn, setIsLoggedIn] = useState(true)
 
   useEffect(()=>{
     if(typeof window==='undefined')return
