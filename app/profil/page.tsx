@@ -230,9 +230,6 @@ if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus'
     <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
   </select>
 )}
-useEffect(() => {
-  const saved = localStorage.getItem('mila_profile')
-  if (!saved) return
 
   const profile = JSON.parse(saved)
 
