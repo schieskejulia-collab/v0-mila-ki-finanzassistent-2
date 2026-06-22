@@ -331,3 +331,6 @@ Julia soll sich:
     content: userMessage,
   },
 ]
+return await callGroqChat(messages)
+}
+
