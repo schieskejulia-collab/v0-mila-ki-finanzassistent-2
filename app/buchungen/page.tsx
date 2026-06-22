@@ -434,10 +434,14 @@ export default function BuchungenPage() {
         )}
       </section>
 
-      {/* ✅ DAS ERINNERUNGS-MODAL (Overlay Popup) */}
+            {/* ✅ DAS ERINNERUNGS-MODAL (Optimiert für mobile Bottom-Bar) */}
       {reminderText && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-xl space-y-4 mb-4 sm:mb-0 transform transition-all animate-slide-up">
+          {/* Hintergrund-Klick schließt das Modal */}
+          <div className="absolute inset-0" onClick={() => setReminderText(null)} />
+          
+          {/* pb-28 sorgt dafür, dass der Inhalt über der Navigationsleiste steht */}
+          <div className="relative w-full max-w-md rounded-[2rem] bg-white p-6 pb-28 sm:pb-6 shadow-xl space-y-4 transform transition-all animate-slide-up">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-black text-slate-900">Zahlungserinnerung</h3>
               <button 
@@ -450,7 +454,7 @@ export default function BuchungenPage() {
             </div>
 
             {/* Die Textvorschau */}
-            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 whitespace-pre-wrap text-sm text-slate-800 font-medium leading-relaxed shadow-inner max-h-60 overflow-y-auto">
+            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 whitespace-pre-wrap text-sm text-slate-800 font-medium leading-relaxed shadow-inner max-h-48 overflow-y-auto">
               {reminderText}
             </div>
 
@@ -465,7 +469,7 @@ export default function BuchungenPage() {
                     : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
                 }`}
               >
-                {copied ? '✅ Kopiert!' : '📋 Text kopieren'}
+                {copied ? '✅ Kopiert!' : '📋 Kopieren'}
               </button>
 
               <button
@@ -473,12 +477,9 @@ export default function BuchungenPage() {
                 onClick={handleNativeShare}
                 className="rounded-2xl bg-violet-600 py-3 text-sm font-black text-white shadow-sm hover:bg-violet-700 transition-all"
               >
-                🚀 Senden / Teilen
+                🚀 Senden
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
-  )
-}
