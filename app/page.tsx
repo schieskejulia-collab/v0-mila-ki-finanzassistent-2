@@ -317,10 +317,10 @@ export default function HomePage() {
       </section>
 
       <section className="relative z-40 grid grid-cols-2 gap-3 pb-8">
-        <Link
-          href="/buchungen"
-          className="flex items-center justify-center rounded-3xl bg-white p-4 text-sm font-black text-violet-700 shadow-sm active:bg-violet-50"
-        >
+     <Link
+  href="/buchungen?status=offen"
+  className="block rounded-3xl bg-amber-50 p-4 active:scale-[0.98]"
+>
           📒 Buchungen
         </Link>
 
