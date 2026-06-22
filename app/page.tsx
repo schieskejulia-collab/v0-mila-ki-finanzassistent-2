@@ -70,9 +70,9 @@ export default function HomePage() {
   })
 
   const overdueIncomes = openIncomes.filter((income: any) => {
-    if (!income.due_date) return false
+    if (!income.due_date && !income.dueDate) return false
 
-    const due = new Date(income.due_date)
+    const due = new Date(income.due_date || income.dueDate)
     const today = new Date()
 
     due.setHours(0, 0, 0, 0)
@@ -183,10 +183,11 @@ export default function HomePage() {
         </h2>
 
         <div className="mt-4 space-y-3">
+          {/* ✅ Klick-Optimierung: Link leitet direkt auf den "offen" ViewMode weiter */}
           {openIncomes.length > 0 && (
             <Link
-              href="/buchungen"
-              className="block rounded-3xl bg-amber-50 p-4"
+              href="/buchungen?viewMode=offen"
+              className="block rounded-3xl bg-amber-50 p-4 transition-colors hover:bg-amber-100/70"
             >
               <p className="text-lg font-black text-slate-950">
                 📄 Offene Einnahmen
@@ -199,11 +200,12 @@ export default function HomePage() {
             </Link>
           )}
 
+          {/* ✅ Klick-Optimierung: Weiterleitung zu den überfälligen Buchungen */}
           {overdueIncomes.length > 0 && (
             <button
               type="button"
-              onClick={() => router.push('/buchungen?status=ueberfaellig')}
-              className="block w-full rounded-3xl bg-rose-50 p-4 text-left"
+              onClick={() => router.push('/buchungen?viewMode=ueberfaellig')}
+              className="block w-full rounded-3xl bg-rose-50 p-4 text-left transition-colors hover:bg-rose-100/70 border border-rose-100"
             >
               <p className="text-lg font-black text-rose-700">
                 🔴 Überfällige Einnahmen
@@ -211,7 +213,7 @@ export default function HomePage() {
               <p className="mt-2 text-sm font-semibold leading-relaxed text-rose-700">
                 {overdueIncomes.length} Einnahme
                 {overdueIncomes.length === 1 ? ' ist' : 'n sind'} überfällig:{' '}
-                <strong>{formatEuro(overdueIncomeTotal)}</strong>.
+                <strong className="underline">{formatEuro(overdueIncomeTotal)}</strong>.
               </p>
             </button>
           )}
@@ -236,7 +238,7 @@ export default function HomePage() {
 
         <Link
           href="/neue-buchungen"
-          className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm"
+          className="block rounded-2xl bg-violet-600 py-4 text-center text-lg font-black text-white shadow-sm hover:bg-violet-700 transition-colors"
         >
           ➕ Neue Buchung erfassen
         </Link>
@@ -249,69 +251,75 @@ export default function HomePage() {
           Budget-Ampel
         </h2>
 
-        <div className="space-y-3">
-          <div className="text-xl font-black">
-         {overdueIncomes.length > 0
-  ? `🔴 ${overdueIncomes.length} überfällige Einnahme${overdueIncomes.length === 1 ? '' : 'n'} prüfen`
-  : openIncomes.length > 0
-  ? `🟡 ${openIncomes.length} offene Einnahme${openIncomes.length === 1 ? '' : 'n'} prüfen`
-  : percent >= 100
-  ? '🔴 Budget überschritten'
-  : percent >= 80
-  ? '🟡 Kategorien beobachten'
-  : '🟢 Alles im grünen Bereich'}
+        <div className="space-y-4">
+          {/* ✅ OPTIMIERT: Aussagekräftigerer Text mit klaren Handlungsempfehlungen */}
+          <div className="text-xl font-black tracking-tight leading-snug">
+            {overdueIncomes.length > 0
+              ? `🔴 ${overdueIncomes.length} Rechnung${overdueIncomes.length === 1 ? '' : 'en'} dringend anmahnen!`
+              : percent >= 100
+              ? '🔴 Ausgaben-Limit kritisch überschritten!'
+              : openIncomes.length > 0
+              ? `🟡 Zufluss erwartet: ${openIncomes.length} offene Position${openIncomes.length === 1 ? '' : 'en'}`
+              : percent >= 80
+              ? '🟡 Achtung, Budgets fast aufgebraucht'
+              : '🟢 Exzellent, Finanzen komplett im grünen Bereich'}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* ✅ OPTIMIERT: Interaktive Kacheln leiten auf die jeweiligen Filter der Buchungsseite weiter */}
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               type="button"
-              onClick={() => router.push('/buchungen?status=offen')}
-              className="rounded-3xl bg-amber-50 p-3 text-left"
+              onClick={() => router.push('/buchungen?viewMode=offen')}
+              className="rounded-2xl bg-amber-50 p-3.5 text-left border border-amber-100 transition-all active:scale-95 hover:bg-amber-100/50"
             >
-              <p className="text-[10px] font-black uppercase text-amber-700">
-                Offen
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                ⏳ Offen
               </p>
-              <p className="mt-1 text-lg font-black text-slate-950">
+              <p className="mt-1.5 text-2xl font-black text-slate-900">
                 {openIncomes.length}
               </p>
             </button>
 
             <button
               type="button"
-              onClick={() => router.push('/buchungen?status=bezahlt')}
-              className="rounded-3xl bg-emerald-50 p-3 text-left"
+              onClick={() => router.push('/buchungen?viewMode=bezahlt')}
+              className="rounded-2xl bg-emerald-50 p-3.5 text-left border border-emerald-100 transition-all active:scale-95 hover:bg-emerald-100/50"
             >
-              <p className="text-[10px] font-black uppercase text-emerald-700">
-                Bezahlt
+              <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                ✅ Bezahlt
               </p>
-              <p className="mt-1 text-lg font-black text-slate-950">
+              <p className="mt-1.5 text-2xl font-black text-slate-900">
                 {paidIncomes.length}
               </p>
             </button>
 
             <button
               type="button"
-              onClick={() => router.push('/buchungen?status=ueberfaellig')}
-              className="rounded-3xl bg-rose-50 p-3 text-left"
+              onClick={() => router.push('/buchungen?viewMode=ueberfaellig')}
+              className="rounded-2xl bg-rose-50 p-3.5 text-left border border-rose-100 transition-all active:scale-95 hover:bg-rose-100/50"
             >
-              <p className="text-[10px] font-black uppercase text-rose-700">
-                Überfällig
+              <p className="text-[10px] font-black uppercase tracking-wider text-rose-700">
+                🚨 Überfällig
               </p>
-              <p className="mt-1 text-lg font-black text-slate-950">
+              <p className="mt-1.5 text-2xl font-black text-slate-900">
                 {overdueIncomes.length}
               </p>
             </button>
           </div>
 
-          <div className="text-sm text-slate-600">
-            Verwendet: {formatEuro(totalSpent)}
-          </div>
-
-          <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-violet-600"
-              style={{ width: `${Math.min(100, percent)}%` }}
-            />
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs font-bold text-slate-500">
+              <span>Budget verwendet</span>
+              <span>{formatEuro(totalSpent)} / {formatEuro(totalLimit)}</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  percent >= 100 ? 'bg-rose-600' : percent >= 80 ? 'bg-amber-500' : 'bg-violet-600'
+                }`}
+                style={{ width: `${Math.min(100, percent)}%` }}
+              />
+            </div>
           </div>
         </div>
       </section>
