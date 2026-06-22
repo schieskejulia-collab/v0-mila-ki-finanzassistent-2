@@ -217,20 +217,10 @@ export default function BuchungenPage() {
     }
   }
 
-  const handleNativeShare = async () => {
+  // ✅ Geändert: Kein störendes iOS-Share Menü mehr, sondern direkter Link
+  const handleWhatsAppShare = () => {
     if (!reminderText) return
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Zahlungserinnerung',
-          text: reminderText,
-        })
-      } catch (err) {
-        console.log('Share abgebrochen', err)
-      }
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(reminderText)}`, '_blank')
-    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(reminderText)}`, '_blank')
   }
 
   return (
@@ -425,7 +415,7 @@ export default function BuchungenPage() {
         )}
       </section>
 
-      {/* ✅ OPTIMIERTES ERINNERUNGS-MODAL (Garantiert fehlerfrei geschlossen) */}
+      {/* ✅ KONTROLLIERTES MODAL (Ohne iOS Share-Sheet Konflikt) */}
       {reminderText && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setReminderText(null)} />
@@ -452,19 +442,19 @@ export default function BuchungenPage() {
                 onClick={handleCopy}
                 className={`rounded-2xl py-3 text-sm font-black transition-all ${
                   copied 
-                    ? 'bg-emerald-600 text-white' 
+                    ? 'bg-emerald-600 text-white shadow-sm' 
                     : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
                 }`}
               >
-                {copied ? '✅ Kopiert!' : '📋 Kopieren'}
+                {copied ? '✅ Kopiert!' : '📋 Nur Kopieren'}
               </button>
 
               <button
                 type="button"
-                onClick={handleNativeShare}
-                className="rounded-2xl bg-violet-600 py-3 text-sm font-black text-white shadow-sm hover:bg-violet-700 transition-all"
+                onClick={handleWhatsAppShare}
+                className="rounded-2xl bg-emerald-600 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-700 transition-all"
               >
-                🚀 Senden
+                💬 WhatsApp
               </button>
             </div>
           </div>
