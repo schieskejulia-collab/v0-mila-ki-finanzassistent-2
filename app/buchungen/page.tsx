@@ -1,262 +1,339 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { useState, useMemo } from 'react'
 import { useFinance } from '@/lib/store'
+import Link from 'next/link'
 
+// --- HELFER-FUNKTIONEN ---
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
-// --- HELFER-FUNKTIONEN ---
-function getGreeting() {
-  const hour = new Date().getHours()
-  if (hour < 11) return 'Guten Morgen'
-  if (hour < 17) return 'Guten Tag'
-  return 'Guten Abend'
+function formatDate(dateString: string) {
+  if (!dateString) return ''
+  const d = new Date(dateString)
+  if (isNaN(d.getTime())) return dateString
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function getText(entry: any) {
-  return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${
-    entry.category || ''
-  } ${entry.note || ''}`.toLowerCase()
-}
+export default function BuchungenPage() {
+  const { expenses, incomes, summary, deleteExpense, deleteIncome } = useFinance()
 
-function findRecurringExpenses(expenses: any[]) {
-  if (!expenses || !Array.isArray(expenses)) return []
-  const groups: Record<string, { count: number; total: number; name: string }> = {}
-  expenses.forEach((expense) => {
-    const name = String(expense.vendor || expense.title || '').trim()
-    if (!name) return
-    const key = name.toLowerCase()
-    const amount = Number(expense.amount || 0)
-    if (!groups[key]) groups[key] = { count: 0, total: 0, name }
-    groups[key].count += 1
-    groups[key].total += amount
-  })
-  return Object.values(groups).filter((item) => item.count >= 2)
-}
+  // --- STATES FÜR SUCHE & FILTER ---
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'alle' | 'einnahme' | 'ausgabe'>('alle')
+  const [statusFilter, setStatusFilter] = useState<'alle' | 'offen' | 'bezahlt' | 'ueberfaellig'>('alle')
+  const [selectedYear, setSelectedYear] = useState<string>('alle')
+  const [selectedMonth, setSelectedMonth] = useState<string>('alle')
 
-function getSoftwareExpenses(expenses: any[]) {
-  if (!expenses || !Array.isArray(expenses)) return []
-  return expenses.filter((expense) =>
-    /adobe|canva|figma|chatgpt|openai|claude|notion|hetzner|ionos|domain|hosting|vercel|github|software|tool|saas/.test(
-      getText(expense)
-    )
-  )
-}
+  // State für aufklappbare Karten (IDs der geöffneten Karten)
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({})
+  // State für das Auf-/Zuklappen ganzer Monatsgruppen
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
 
-function getFinanceScore(summary: any, expenses: any[], incomes: any[]) {
-  if (!summary) return 60
-  const income = Number(summary.totalIncomes || 0)
-  const expense = Number(summary.totalExpenses || 0)
-  const balance = Number(summary.balance || 0)
-  if (income === 0 && expense === 0) return 60
+  // 1. Alle Transaktionen zusammenführen und vereinheitlichen
+  const alleTransaktionen = useMemo(() => {
+    const exps = (expenses || []).map((e) => ({
+      id: `exp-${e.id}`,
+      rawId: e.id,
+      title: e.title || '',
+      party: e.vendor || '', // Händler
+      amount: Number(e.amount || 0),
+      date: e.date,
+      category: e.category || 'sonstiges',
+      note: e.note || '',
+      typ: 'ausgabe',
+      status: 'bezahlt', // Ausgaben sind direkt bezahlt
+    }))
 
-  let score = 75
-  if (balance < 0) score -= 35
-  if (income > 0 && expense / income > 0.8) score -= 15
-  if (income > 0 && expense / income < 0.4) score += 10
-  if (balance > 1000) score += 10
-  if (expenses && incomes && expenses.length > incomes.length * 4 && incomes.length > 0) score -= 5
-  return Math.max(0, Math.min(100, score))
-}
+    const incs = (incomes || []).map((i) => {
+      // Bestimme Status (Fallbacks für deine Felder)
+      const currentStatus = (i.status || 'Offen').toLowerCase()
+      
+      return {
+        id: `inc-${i.id}`,
+        rawId: i.id,
+        title: i.title || '',
+        party: i.client || '', // Kunde
+        amount: Number(i.amount || 0),
+        date: i.date,
+        category: 'Einnahme',
+        note: i.note || '',
+        typ: 'einnahme',
+        status: currentStatus === 'bezahlt' ? 'bezahlt' : currentStatus === 'überfällig' || currentStatus === 'ueberfaellig' ? 'ueberfaellig' : 'offen',
+        dueDate: i.dueDate || i.due_date || '',
+      }
+    })
 
-function getMainTip({ summary, expenses, incomes, userStatus, industry }: any) {
-  if (!summary) return 'Lade deine Finanzdaten...'
-  const balance = Number(summary.balance || 0)
-  const recurring = findRecurringExpenses(expenses || [])
-  const software = getSoftwareExpenses(expenses || [])
-  const branch = String(industry || '').toLowerCase()
+    return [...exps, ...incs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [expenses, incomes])
 
-  if (summary.totalIncomes === 0 && summary.totalExpenses === 0) {
-    return 'Starte mit deiner ersten Buchung. Danach kann Mila Rücklagen, Muster und Hinweise für dich ableiten.'
+  // 2. Filter & Suche anwenden
+  const gefilterteTransaktionen = useMemo(() => {
+    return alleTransaktionen.filter((t) => {
+      // Suchfeld (Händler, Kunde, Kategorie, Titel)
+      const matchSearch =
+        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.party.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.category.toLowerCase().includes(searchTerm.toLowerCase())
+
+      if (!matchSearch) return false
+
+      // Typ-Filter (Alle, Einnahmen, Ausgaben)
+      if (typeFilter === 'einnahme' && t.typ !== 'einnahme') return false
+      if (typeFilter === 'ausgabe' && t.typ !== 'ausgabe') return false
+
+      // Status-Filter (Offen, Bezahlt, Überfällig)
+      if (statusFilter !== 'alle' && t.status !== statusFilter) return false
+
+      // Datums-Filter (Jahr / Monat)
+      if (t.date) {
+        const d = new Date(t.date)
+        const j = d.getFullYear().toString()
+        const m = d.getMonth().toString() // 0 = Jan, 11 = Dez
+
+        if (selectedYear !== 'alle' && j !== selectedYear) return false
+        if (selectedMonth !== 'alle' && m !== selectedMonth) return false
+      }
+
+      return true
+    })
+  }, [alleTransaktionen, searchTerm, typeFilter, statusFilter, selectedYear, selectedMonth])
+
+  // 3. Nach Monaten gruppieren (z.B. "Juni 2026")
+  const gruppierteTransaktionen = useMemo(() => {
+    const groups: Record<string, typeof gefilterteTransaktionen> = {}
+    
+    gefilterteTransaktionen.forEach((t) => {
+      if (!t.date) return
+      const d = new Date(t.date)
+      const monatsName = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+      
+      if (!groups[monatsName]) groups[monatsName] = []
+      groups[monatsName].push(t)
+    })
+    
+    return groups
+  }, [gefilterteTransaktionen])
+
+  // --- LOGIK-FUNKTIONEN ---
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }))
   }
-  if (balance < 0) {
-    return 'Deine Ausgaben liegen über deinen Einnahmen. Prüfe zuerst Fixkosten, Abos und offene Einnahmen.'
-  }
-  if (userStatus === 'angestellt') {
-    return 'Prüfe Arbeitsmittel, Weiterbildung, Fahrtkosten und wiederkehrende Kosten. Mila hilft dir beim Sortieren.'
-  }
-  if (recurring.length > 0) {
-    return `Mila hat ${recurring.length} wiederkehrende Ausgaben erkannt. Prüfe, ob diese Kosten noch sinnvoll sind.`
-  }
-  if (balance > 1000) {
-    return `Dein Monat läuft stark. Plane ungefähr ${formatEuro(balance * 0.3)} als vorsichtige Rücklage ein.`
-  }
-  if (branch.includes('web')) {
-    return 'Für Webdesign sind Software, Hosting, Domains und KI-Tools wichtige Kostenblöcke. Mila behält sie im Blick.'
-  }
-  if (software.length >= 3) {
-    return `Du hast ${software.length} Software-/Tool-Kosten erkannt. Prüfe regelmäßig, ob alle Tools aktiv genutzt werden.`
-  }
-  return 'Deine Finanzen wirken aktuell stabil. Behalte Rücklagen, Fixkosten und neue Ausgaben weiter im Blick.'
-}
 
-// --- HAUPTKOMPONENTE ---
-export default function DashboardPage() {
-  const { summary, expenses, incomes, userName, userStatus, industry, vatStatus } = useFinance()
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Sanfter, neutraler Ladezustand statt Redirect-Falle
-  if (!isClient || !summary) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FC] flex flex-col items-center justify-center p-6 text-center">
-        <div className="space-y-3">
-          <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-xs text-slate-500 font-medium">Mila lädt deine Schaltzentrale...</p>
-        </div>
-      </div>
-    )
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }))
   }
 
-  // Ab hier laufen die echten Live-Berechnungen mit sicheren Fallbacks
-  const safeExpenses = expenses || []
-  const safeIncomes = incomes || []
+  const handleWhatsAppReminder = (t: any) => {
+    const text = `Hallo ${t.party}, ich wollte kurz an die offene Rechnung für "${t.title}" über ${formatEuro(t.amount)} erinnern. Liebe Grüße!`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
 
-  const recurringExpenses = findRecurringExpenses(safeExpenses)
-  const softwareExpenses = getSoftwareExpenses(safeExpenses)
-  const financeScore = getFinanceScore(summary, safeExpenses, safeIncomes)
-  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
-  const tip = getMainTip({ summary, expenses: safeExpenses, incomes: safeIncomes, userStatus, industry })
-
-  const openIncomes = safeIncomes.filter(i => i.status === 'Offen' || !i.status)
-  const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
-  const openCount = openIncomes.length
-
-  const availableInTwoWeeks = summary.balance + totalOpenAmount
-  const nextPayments = summary.totalExpenses * 0.8
-
-  let trafficLight = { status: '🟢 Alles gut', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' }
-  if (financeScore < 50 || summary.balance < 0) {
-    trafficLight = { status: '🔴 Liquiditätsrisiko in 10 Tagen', color: 'bg-rose-50 border-rose-200 text-rose-900', dot: 'bg-rose-500' }
-  } else if (financeScore < 75 || (summary.totalExpenses > summary.totalIncomes * 0.7)) {
-    trafficLight = { status: '🟡 Achtung: Hohe Ausgaben', color: 'bg-amber-50 border-amber-200 text-amber-900', dot: 'bg-amber-500' }
+  const handleDelete = async (t: any) => {
+    if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) return
+    if (t.typ === 'ausgabe') {
+      await deleteExpense(t.rawId)
+    } else {
+      await deleteIncome(t.rawId)
+    }
   }
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
-      <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
-        <span>🚨</span>
-        <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
+      {/* Sticky Header */}
+      <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-10 shadow-sm space-y-3">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-slate-950">Deine Buchungen</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Filterbare Finanzübersicht</p>
+          </div>
+          <Link href="/neue-buchungen" className="bg-purple-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm hover:bg-purple-700">
+            + Neu
+          </Link>
+        </div>
+
+        {/* --- SUCHFELD --- */}
+        <div className="max-w-md mx-auto">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+            <input
+              type="text"
+              placeholder="Suche nach Händler, Kunde, Kategorie..."
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-purple-500 focus:bg-white transition"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* --- FILTER LEISTE (Horizontal Scroll) --- */}
+        <div className="max-w-md mx-auto overflow-x-auto no-scrollbar flex gap-2 pb-1 text-[11px]">
+          {/* Typ-Filter */}
+          <button onClick={() => { setTypeFilter('alle'); setStatusFilter('alle'); }} className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap border transition ${typeFilter === 'alle' && statusFilter === 'alle' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            Alle
+          </button>
+          <button onClick={() => { setTypeFilter('einnahme'); setStatusFilter('alle'); }} className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap border transition ${typeFilter === 'einnahme' && statusFilter === 'alle' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            Einnahmen
+          </button>
+          <button onClick={() => { setTypeFilter('ausgabe'); setStatusFilter('alle'); }} className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap border transition ${typeFilter === 'ausgabe' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            Ausgaben
+          </button>
+
+          {/* Status-Filter */}
+          <button onClick={() => { setTypeFilter('einnahme'); setStatusFilter('offen'); }} className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap border transition ${statusFilter === 'offen' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            🟡 Offen
+          </button>
+          <button onClick={() => { setTypeFilter('einnahme'); setStatusFilter('ueberfaellig'); }} className={`px-3 py-1.5 rounded-full font-bold whitespace-nowrap border transition ${statusFilter === 'ueberfaellig' ? 'bg-red-600 border-red-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+            🔴 Überfällig
+          </button>
+        </div>
+
+        {/* Datumsfilter Grid */}
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-2 text-xs">
+          <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-slate-50 border border-slate-200 p-2 rounded-xl font-medium focus:outline-none text-slate-700">
+            <option value="alle">Alle Jahre</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-slate-50 border border-slate-200 p-2 rounded-xl font-medium focus:outline-none text-slate-700">
+            <option value="alle">Alle Monate</option>
+            <option value="0">Januar</option>
+            <option value="1">Februar</option>
+            <option value="2">März</option>
+            <option value="3">April</option>
+            <option value="4">Mai</option>
+            <option value="5">Juni</option>
+            <option value="6">Juli</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">Oktober</option>
+            <option value="10">November</option>
+            <option value="11">Dezember</option>
+          </select>
+        </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
-
-        {/* --- MORNING BRIEFING SECTION --- */}
-        <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-600">Heute für dich</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950 flex items-center gap-2">
-              {getGreeting()}, {userName || 'Julia'} 🌸
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Status: <span className="font-semibold capitalize">{userStatus}</span> ({industry === 'webdesigner' ? 'Webdesign' : industry}) · <span className="font-semibold">{vatStatus === 'kleinunternehmer' ? 'Kleinunternehmer' : 'Regelbest.'}</span>
-            </p>
+      {/* --- INHALT / TRANSAKTIONSLISTE --- */}
+      <div className="max-w-md mx-auto px-4 mt-4 space-y-6">
+        
+        {Object.keys(gruppierteTransaktionen).length === 0 ? (
+          <div className="bg-white rounded-2xl p-8 text-center border border-slate-100 shadow-sm space-y-2">
+            <span className="text-3xl">📒</span>
+            <p className="text-xs font-medium text-slate-500">Keine Buchungen für die gewählten Filter gefunden.</p>
           </div>
+        ) : (
+          Object.entries(gruppierteTransaktionen).map(([monat, liste]) => {
+            const isCollapsed = collapsedGroups[monat] || false
 
-          <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
-            <p className="mt-1 text-3xl font-black">{formatEuro(summary.balance)}</p>
-            <p className="mt-2 text-xs font-bold text-white/80">
-              Einnahmen {formatEuro(summary.totalIncomes)} · Ausgaben {formatEuro(summary.totalExpenses)}
-            </p>
-          </div>
+            return (
+              <div key={monat} className="space-y-2">
+                {/* Monatsgruppe Header mit Toggle-Funktion */}
+                <button
+                  onClick={() => toggleGroup(monat)}
+                  className="w-full flex items-center justify-between px-2 py-1 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 transition"
+                >
+                  <span>📅 {monat} ({liste.length})</span>
+                  <span>{isCollapsed ? '🔼 Aufklappen' : '🔽 Zuklappen'}</span>
+                </button>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
-              <p className="text-[10px] font-black uppercase text-emerald-700 tracking-wider">Finanzgesundheit</p>
-              <p className="mt-1 text-2xl font-black text-emerald-800">{financeScore}/100</p>
-              <p className="mt-0.5 text-xs font-bold text-slate-600">
-                {financeScore >= 80 ? '🟢 Stabil' : financeScore >= 50 ? '🟡 Beobachten' : '🔴 Achtung'}
-              </p>
-            </div>
+                {/* Wenn die Gruppe nicht zugeklappt ist, zeige die Karten */}
+                {!isCollapsed && (
+                  <div className="space-y-2.5">
+                    {liste.map((t) => {
+                      const isExpanded = expandedCards[t.id] || false
 
-            <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100">
-              <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
-              <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
-              <p className="mt-0.5 text-xs font-bold text-slate-600">Orientierung</p>
-            </div>
-          </div>
+                      return (
+                        <div
+                          key={t.id}
+                          className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition"
+                        >
+                          {/* Hauptkarte (Klickbar zum Aufklappen) */}
+                          <div
+                            onClick={() => toggleCard(t.id)}
+                            className="p-4 flex items-center justify-between gap-3 cursor-pointer active:bg-slate-50/80 transition select-none"
+                          >
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-xs text-slate-950 truncate">{t.title}</p>
+                                {/* Status-Badge für Einnahmen */}
+                                {t.typ === 'einnahme' && (
+                                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wide ${
+                                    t.status === 'bezahlt' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                    t.status === 'ueberfaellig' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                    'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}>
+                                    {t.status === 'bezahlt' ? '🟢 Bezahlt' : t.status === 'ueberfaellig' ? '🔴 Überfällig' : '🟡 Offen'}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 truncate">
+                                {t.party ? `${t.typ === 'einnahme' ? 'Kunde' : 'Händler'}: ${t.party}` : 'Keine Angabe'}
+                              </p>
+                            </div>
 
-          <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">Mila Tipp ✨</p>
-            <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-700">{tip}</p>
-          </div>
+                            {/* Rechter Part: Betrag (Farbcodiert) */}
+                            <div className="text-right shrink-0">
+                              <p className={`font-black text-sm ${t.typ === 'ausgabe' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {t.typ === 'ausgabe' ? '-' : '+'}{formatEuro(t.amount)}
+                              </p>
+                              <p className="text-[9px] text-slate-400 font-medium">{formatDate(t.date)}</p>
+                            </div>
+                          </div>
 
-          {(recurringExpenses.length > 0 || softwareExpenses.length > 0) && (
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
-                <p className="text-[10px] font-black uppercase text-blue-700">Wiederkehrend</p>
-                <p className="mt-0.5 text-xl font-black text-blue-800">{recurringExpenses.length}</p>
-                <p className="text-[10px] font-bold text-slate-500">Muster erkannt</p>
+                          {/* Aufklappbarer Detailbereich */}
+                          {isExpanded && (
+                            <div className="bg-slate-50/50 border-t border-slate-100 p-4 text-[11px] space-y-3 animate-fadeIn">
+                              <div className="grid grid-cols-2 gap-3 text-slate-600">
+                                <div>
+                                  <span className="font-bold block text-[9px] uppercase text-slate-400">Kategorie</span>
+                                  <span className="font-semibold text-slate-800 capitalize">{t.category}</span>
+                                </div>
+                                {t.dueDate && (
+                                  <div>
+                                    <span className="font-bold block text-[9px] uppercase text-slate-400">Fälligkeitsdatum</span>
+                                    <span className="font-semibold text-rose-700">{formatDate(t.dueDate)}</span>
+                                  </div>
+                                )}
+                                <div className="col-span-2">
+                                  <span className="font-bold block text-[9px] uppercase text-slate-400">Notiz / Details</span>
+                                  <p className="text-slate-700 font-medium mt-0.5 bg-white border border-slate-100 p-2 rounded-lg italic">
+                                    {t.note || 'Keine Notiz hinterlegt.'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Aktions-Buttons */}
+                              <div className="flex gap-2 pt-1.5 justify-end">
+                                {/* WhatsApp Erinnerungs-Button (Nur für offene Einnahmen) */}
+                                {t.typ === 'einnahme' && t.status !== 'bezahlt' && (
+                                  <button
+                                    onClick={() => handleWhatsAppReminder(t)}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95"
+                                  >
+                                    💬 Erinnern
+                                  </button>
+                                )}
+                                {/* Löschen Button */}
+                                <button
+                                  onClick={() => handleDelete(t)}
+                                  className="bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 font-bold px-3 py-2 rounded-xl transition active:scale-95"
+                                >
+                                  🗑️ Löschen
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
-                <p className="text-[10px] font-black uppercase text-slate-600">Tools</p>
-                <p className="mt-0.5 text-xl font-black text-slate-800">{softwareExpenses.length}</p>
-                <p className="text-[10px] font-bold text-slate-500">Softwarekosten</p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* --- PRIORITÄTEN --- */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-            🥇 Priorität 1 – Cashflow-Prognose
-          </h2>
-          <div className="grid grid-cols-2 gap-4 pt-1">
-            <div>
-              <p className="text-[11px] text-slate-500 font-medium">In 14 Tagen verfügbar</p>
-              <p className="text-lg font-bold text-slate-800 mt-0.5">
-                {availableInTwoWeeks > 0 ? formatEuro(availableInTwoWeeks) : '0,00 €'}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-500 font-medium">Nächste Zahlungen</p>
-              <p className="text-lg font-bold text-slate-600 mt-0.5">
-                {nextPayments > 0 ? formatEuro(nextPayments) : '0,00 €'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
-            🥈 Priorität 2 – Mila-Ampel
-          </h2>
-          <div className={`p-4 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2.5 transition-all ${trafficLight.color}`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${trafficLight.dot} animate-pulse`}></span>
-            {trafficLight.status}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
-            🥉 Priorität 3 – KI-Erkenntnisse
-          </h2>
-          <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
-            <li className="flex gap-2.5">
-              <span>📊</span>
-              <span>Mila analysiert deine Ausgabetrends, sobald die ersten Belege erfasst sind.</span>
-            </li>
-            <li className="flex gap-2.5">
-              <span>💼</span>
-              <span>Du hast <strong>{openCount} offene Forderungen</strong> über <strong>{formatEuro(totalOpenAmount)}</strong>.</span>
-            </li>
-          </ul>
-        </div>
-
-        <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
-          💬 Mit Mila sprechen (Dein Anker)
-        </Link>
-
+            )
+          })
+        )}
       </div>
     </div>
   )
