@@ -414,11 +414,16 @@ const visibleEntries = filteredEntries.slice(0, 30)
                                 <>
                                  <p>Kunde: {entry.client || 'Nicht angegeben'}</p>
 <p>Status: {entry.status || 'offen'}</p>
-{entry.due_date && (
+
 {getDueText(entry.status, entry.due_date) && (
   <p>{getDueText(entry.status, entry.due_date)}</p>
 )}
+
+{entry.due_date && (
   <p>Fällig am: {formatDate(entry.due_date)}</p>
+)}
+
+<p>Datum: {formatDate(entry.date)}</p>
 )}
 {entry.due_date && <p>Fällig am: {formatDate(entry.due_date)}</p>}
 <p>Datum: {formatDate(entry.date)}</p>
