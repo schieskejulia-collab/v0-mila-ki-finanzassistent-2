@@ -397,77 +397,82 @@ ${tip}`)
     [categories, expenses]
   )
 
-  const value = useMemo<FinanceContextValue>(
-    () => ({
-      expenses,
-      incomes,
-      setIncomes,
-      categories,
-      milaFeedback,
-      morningBriefing,
-      refreshMorningBriefing,
-      triggerMilaFeedback,
-      addExpense,
-      deleteExpense,
-      addIncome,
-      deleteIncome,
-      userName,
-      setUserName,
-      userStatus,
-      setUserStatus,
-      industry,
-      setIndustry,
-      taxClass,
-      setTaxClass,
-      annualGross,
-      setAnnualGross,
-      annualProfit,
-      setAnnualProfit,
-      vatStatus,
-      setVatStatus,
-      federalState,
-      setFederalState,
-      churchTax,
-      setChurchTax,
-      married,
-      setMarried,
-      children,
-      setChildren,
-      assemblyWork,
-      setAssemblyWork,
-      isLoggedIn,
-      login,
-      logout,
-      summary,
-      budgetStatus,
-    }),
-    [
-      expenses,
-      incomes,
-      categories,
-      milaFeedback,
-      morningBriefing,
-      userName,
-      userStatus,
-      industry,
-      taxClass,
-      annualGross,
-      annualProfit,
-      vatStatus,
-      federalState,
-      churchTax,
-      married,
-      children,
-      assemblyWork,
-      isLoggedIn,
-      summary,
-      budgetStatus,
-    ]
-  )
+  const value = useMemo<FinanceContextValue>(() => ({
+  expenses,
+  incomes,
+  setIncomes,
+  categories,
+  milaFeedback,
+  morningBriefing,
+  refreshMorningBriefing,
+  triggerMilaFeedback,
+  addExpense,
+  deleteExpense,
+  addIncome,
+  deleteIncome,
+  userName,
+  setUserName,
+  userStatus,
+  setUserStatus,
+  industry,
+  setIndustry,
+  taxClass,
+  setTaxClass,
+  annualGross,
+  setAnnualGross,
+  annualProfit,
+  setAnnualProfit,
+  vatStatus,
+  setVatStatus,
+  federalState,
+  setFederalState,
+  churchTax,
+  setChurchTax,
+  married,
+  setMarried,
+  children,
+  setChildren,
+  assemblyWork,
+  setAssemblyWork,
+  isLoggedIn,
+  login,
+  logout,
+  summary,
+  budgetStatus,
+}), [
+  expenses,
+  incomes,
+  categories,
+  milaFeedback,
+  morningBriefing,
+  userName,
+  userStatus,
+  industry,
+  taxClass,
+  annualGross,
+  annualProfit,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
+  isLoggedIn,
+  summary,
+  budgetStatus,
+])
 
-  return (
-    <FinanceContext.Provider value={value}>
-      {appChildren}
-    </FinanceContext.Provider>
-  )
+return (
+  <FinanceContext.Provider value={value}>
+    {appChildren}
+  </FinanceContext.Provider>
+)
 }
+
+export function useFinance() {
+  const ctx = useContext(FinanceContext)
+  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
+  return ctx
+}
+
+export { FinanceProvider }
