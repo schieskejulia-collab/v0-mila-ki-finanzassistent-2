@@ -32,16 +32,6 @@ function findRecurringExpenses(expenses: any[]) {
     if (!groups[key]) groups[key] = { count: 0, total: 0, name }
     groups[key].count += 1
     groups[key].total += amount
-  function findRecurringExpenses(expenses: any[]) {
-  const groups: Record<string, { count: number; total: number; name: string }> = {}
-  expenses.forEach((expense) => {
-    const name = String(expense.vendor || expense.title || '').trim()
-    if (!name) return
-    const key = name.toLowerCase()
-    const amount = Number(expense.amount || 0)
-    if (!groups[key]) groups[key] = { count: 0, total: 0, name }
-    groups[key].count += 1
-    groups[key].total += amount
   })
   return Object.values(groups).filter((item) => item.count >= 2)
 }
@@ -53,7 +43,6 @@ function getSoftwareExpenses(expenses: any[]) {
     )
   )
 }
-
 
 function getFinanceScore(summary: any, expenses: any[], incomes: any[]) {
   const income = Number(summary.totalIncomes || 0)
