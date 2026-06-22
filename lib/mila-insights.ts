@@ -1,3 +1,5 @@
+import { CategoryId } from './types'
+
 export type MilaInsight = {
   id: string
   title: string
@@ -76,6 +78,9 @@ export function getMilaInsights(
   const availableAfterReserve = profit - taxReserve
   const costRatio = incomeTotal > 0 ? expenseTotal / incomeTotal : 0
 
+  // -----------------------------
+  // 1) Startzustand
+  // -----------------------------
   if (incomeTotal === 0 && expenseTotal === 0) {
     insights.push({
       id: 'start-empty',
@@ -88,6 +93,9 @@ export function getMilaInsights(
     return insights
   }
 
+  // -----------------------------
+  // 2) Steuern & Liquidität
+  // -----------------------------
   if (profit > 0) {
     insights.push({
       id: 'tax-reserve',
@@ -112,6 +120,9 @@ export function getMilaInsights(
     })
   }
 
+  // -----------------------------
+  // 3) Kostenquote
+  // -----------------------------
   if (incomeTotal > 0 && costRatio >= 0.8) {
     insights.push({
       id: 'high-cost-ratio',
@@ -133,6 +144,9 @@ export function getMilaInsights(
     })
   }
 
+  // -----------------------------
+  // 4) Offene Rechnungen
+  // -----------------------------
   const openIncomes = incomes.filter((income) => {
     const status = String(income.status || '').toLowerCase()
     return status === 'offen' || status === 'pending'
@@ -153,6 +167,9 @@ export function getMilaInsights(
     })
   }
 
+  // -----------------------------
+  // 5) Wiederkehrende Ausgaben
+  // -----------------------------
   const vendors: Record<string, { label: string; count: number; total: number }> =
     {}
 
@@ -187,6 +204,9 @@ export function getMilaInsights(
     }
   })
 
+  // -----------------------------
+  // 6) Software & Tools
+  // -----------------------------
   const softwareExpenses = expenses.filter((expense) =>
     /hetzner|adobe|figma|canva|openai|chatgpt|notion|slack|software|hosting|domain|tool|saas/.test(
       getText(expense)
@@ -209,6 +229,9 @@ export function getMilaInsights(
     })
   }
 
+  // -----------------------------
+  // 7) Status-spezifische Hinweise
+  // -----------------------------
   if (userStatus === 'angestellt' && expenseTotal > 0) {
     insights.push({
       id: 'employee-expenses',
@@ -247,6 +270,9 @@ export function getMilaInsights(
     })
   }
 
+  // -----------------------------
+  // 8) Branchenfokus
+  // -----------------------------
   const industryMessages: Record<string, string> = {
     webdesigner:
       'Achte besonders auf Domains, Hosting, Design-Tools, KI-Tools, Projektmargen und wiederkehrende Softwarekosten.',
