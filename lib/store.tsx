@@ -15,7 +15,6 @@ export interface FinanceContextValue {
   expenses: any[]
   incomes: any[]
   setIncomes: (i: any[]) => void
-updateIncomeStatus: (id: any, status: string) => Promise<void>
   categories: string[]
   milaFeedback: string
   morningBriefing: string
@@ -54,6 +53,7 @@ updateIncomeStatus: (id: any, status: string) => Promise<void>
   logout: () => void
   summary: any
   budgetStatus: any[]
+updateIncomeStatus: (id: any, status: string) => Promise<void>
 }
 
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
@@ -146,20 +146,25 @@ if (incomesError) {
     setExpenses((p) => p.filter((e) => e.id !== id))
   }, [])
 
-  const addIncome = useCallback(async (inc: any) => {
-    const { data, error } = await supabase
-      .from('incomes')
-      .insert([inc])
-      .select()
-      .single()
+  const updateIncomeStatus = useCallback(async (id: any, status: string) => {
+  const normalizedStatus = status.toLowerCase()
 
-    if (error) {
-      console.error('Einnahme speichern fehlgeschlagen:', error)
-      throw error
-    }
+  const { data, error } = await supabase
+    .from('incomes')
+    .update({ status: normalizedStatus })
+    .eq('id', id)
+    .select()
+    .single()
 
-    setIncomes((p) => [data, ...p])
-  }, [])
+  if (error) {
+    console.error('Status ändern fehlgeschlagen:', error)
+    throw error
+  }
+
+  setIncomes((prev) =>
+    prev.map((income) => (income.id === id ? data : income))
+  )
+}, [])
 const updateIncomeStatus = useCallback(async (id: any, status: string) => {
   const normalizedStatus = status.toLowerCase()
 
@@ -208,7 +213,6 @@ const updateIncomeStatus = useCallback(async (id: any, status: string) => {
       expenses,
       incomes,
       setIncomes,
-updateIncomeStatus,
       categories,
       milaFeedback,
       morningBriefing,
@@ -247,6 +251,7 @@ updateIncomeStatus,
       logout,
       summary,
       budgetStatus,
+updateIncomeStatus,
     }),
     [
       expenses,
