@@ -104,7 +104,7 @@ export default function BuchungenPage() {
   // --- ACTIONS ---
   const handleMarkAsPaid = async (id: string) => {
     if (updateIncomeStatus) {
-      await updateIncomeStatus(id, 'Bezahlt')
+      await updateIncomeStatus(id, 'bezahlt')
     }
   }
 
