@@ -275,6 +275,7 @@ updateIncomeStatus,
       deleteExpense,
       addIncome,
       deleteIncome,
+updateIncomeStatus,
     ]
   )
 
