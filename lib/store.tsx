@@ -15,6 +15,7 @@ export interface FinanceContextValue {
   expenses: any[]
   incomes: any[]
   setIncomes: (i: any[]) => void
+updateIncomeStatus: (id: any, status: string) => Promise<void>
   categories: string[]
   milaFeedback: string
   morningBriefing: string
@@ -159,7 +160,25 @@ if (incomesError) {
 
     setIncomes((p) => [data, ...p])
   }, [])
+const updateIncomeStatus = useCallback(async (id: any, status: string) => {
+  const normalizedStatus = status.toLowerCase()
 
+  const { data, error } = await supabase
+    .from('incomes')
+    .update({ status: normalizedStatus })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Status ändern fehlgeschlagen:', error)
+    throw error
+  }
+
+  setIncomes((prev) =>
+    prev.map((income) => (income.id === id ? data : income))
+  )
+}, [])
   const deleteIncome = useCallback(async (id: any) => {
     const { error } = await supabase.from('incomes').delete().eq('id', id)
 
@@ -189,6 +208,7 @@ if (incomesError) {
       expenses,
       incomes,
       setIncomes,
+updateIncomeStatus,
       categories,
       milaFeedback,
       morningBriefing,
