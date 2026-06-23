@@ -284,7 +284,7 @@ updateIncomeStatus,
     ]
   )
 
-    return (
+   return (
     <FinanceContext.Provider value={value}>
       {children}
     </FinanceContext.Provider>
