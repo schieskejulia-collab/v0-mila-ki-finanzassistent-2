@@ -278,7 +278,11 @@ updateIncomeStatus,
     ]
   )
 
-  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
+  return (
+    <FinanceContext.Provider value={value}>
+      {children}
+    </FinanceContext.Provider>
+  )
 }
 
 export function useFinance() {
