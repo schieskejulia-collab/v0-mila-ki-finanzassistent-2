@@ -208,11 +208,12 @@ const updateIncomeStatus = useCallback(async (id: any, status: string) => {
 
   const budgetStatus = useMemo(() => [], [categories, expenses])
 
-  const value = useMemo(
+    const value = useMemo(
     () => ({
       expenses,
       incomes,
       setIncomes,
+      updateIncomeStatus,
       categories,
       milaFeedback,
       morningBriefing,
@@ -251,7 +252,6 @@ const updateIncomeStatus = useCallback(async (id: any, status: string) => {
       logout,
       summary,
       budgetStatus,
-updateIncomeStatus,
     }),
     [
       expenses,
@@ -280,11 +280,11 @@ updateIncomeStatus,
       deleteExpense,
       addIncome,
       deleteIncome,
-updateIncomeStatus,
+      updateIncomeStatus,
     ]
   )
 
-   return (
+  return (
     <FinanceContext.Provider value={value}>
       {children}
     </FinanceContext.Provider>
