@@ -91,9 +91,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (expensesError) console.error('Expenses laden fehlgeschlagen:', expensesError)
     if (incomesError) console.error('Incomes laden fehlgeschlagen:', incomesError)
 
-    setExpenses(expensesData || [])
-    setIncomes(incomesData || [])
-  }, [])
+    if (expensesError) {
+  console.error('Expenses laden fehlgeschlagen:', expensesError)
+} else {
+  setExpenses(expensesData || [])
+}
+
+if (incomesError) {
+  console.error('Incomes laden fehlgeschlagen:', incomesError)
+} else {
+  setIncomes(incomesData || [])
+}
 
   useEffect(() => {
     fetchFinanceData()
