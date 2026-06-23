@@ -33,6 +33,7 @@ type MilaContextData = {
   incomes?: Income[]
   userName?: string
   userStatus?: string
+  systemInstruction?: string
   summary?: any
   budgetStatus?: any[]
   milaFeedback?: string
@@ -208,7 +209,7 @@ async function callGroqChat(messages: ChatMessage[]) {
         model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.35,
-        max_tokens: 700,
+        max_tokens: 260,
       }),
     })
 
@@ -256,7 +257,7 @@ export async function getMilaChatResponse(
 
     content: `
 Du bist Mila – eine warme, klare, menschliche Finanzbegleiterin für Julia.
-
+${contextData?.systemInstruction || ''}
 🎀 DEINE ROLLE
 - Du bist ruhig, freundlich und zugewandt.
 - Du erklärst Dinge einfach, ohne Fachchinesisch.
