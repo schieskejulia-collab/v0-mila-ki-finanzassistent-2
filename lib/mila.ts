@@ -311,6 +311,7 @@ Julia soll:
 - weniger Stress empfinden,
 - wissen, was als Nächstes sinnvoll ist,
 - sich begleitet statt bewertet fühlen.
+    `,
   },
   ...safeHistory,
   {
