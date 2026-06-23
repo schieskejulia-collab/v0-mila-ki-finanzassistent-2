@@ -103,7 +103,11 @@ if (incomesError) {
 } else {
   setIncomes(incomesData || [])
 }
-
+export function useFinance() {
+  const ctx = useContext(FinanceContext)
+  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
+  return ctx
+}
   useEffect(() => {
     fetchFinanceData()
   }, [fetchFinanceData])
@@ -278,11 +282,7 @@ updateIncomeStatus,
 updateIncomeStatus,
     ]
   )
-export function useFinance() {
-  const ctx = useContext(FinanceContext)
-  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
-  return ctx
-}
+
   return (
     <FinanceContext.Provider value={value}>
       {children}
