@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     const context = body?.context || {}
     const userName = body?.userName
     const userStatus = body?.userStatus
+    const systemInstruction = String(body?.systemInstruction || '').trim()
 
     if (!message) {
       return NextResponse.json(
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
       ...context,
       userName,
       userStatus,
+      systemInstruction,
     })
 
     return NextResponse.json({
