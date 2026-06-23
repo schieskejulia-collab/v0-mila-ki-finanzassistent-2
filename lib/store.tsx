@@ -279,13 +279,15 @@ updateIncomeStatus,
     ]
   )
 
-  return (
+    return (
+    <FinanceContext.Provider value={value}>
+      {children}
+    </FinanceContext.Provider>
+  )
+}
+
 export function useFinance() {
   const ctx = useContext(FinanceContext)
   if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
   return ctx
 }
-    <FinanceContext.Provider value={value}>
-      {children}
-    </FinanceContext.Provider>
-  )
