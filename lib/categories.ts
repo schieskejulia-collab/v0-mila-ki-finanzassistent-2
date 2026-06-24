@@ -35,6 +35,9 @@ export interface Category {
   icon: string
   color: string
 }
+export function getCategoryLabel(categoryId: CategoryId) {
+  return CATEGORIES[categoryId]?.label ?? 'Sonstiges'
+}
 export const CATEGORIES: Partial<Record<CategoryId, Category>> = {
   software: {
     id: 'software',
