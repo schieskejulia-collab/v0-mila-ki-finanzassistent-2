@@ -255,8 +255,8 @@ const anchorMessage =
         {/* --- PRIORITÄT 1: CASHFLOW PROGNOSE --- */}
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-            🥇 Priorität 1 – Cashflow-Prognose
-          </h2>
+  🎯 Dein nächster Schritt
+</h2>
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div>
               <p className="text-[11px] text-slate-500 font-medium">Potenziell verfügbar</p>
