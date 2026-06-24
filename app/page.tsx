@@ -218,19 +218,6 @@ const anchorMessage =
             </div>
           </div>
 
-          {/* Mila Tipp Box */}
-          <div className="rounded-2xl bg-purple-50 p-4 border border-purple-100">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">Mila Tipp ✨</p>
-            <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-700">{tip}</p>
-          </div>
-<div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
-    🪬 Mila-Anker
-  </p>
-  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
-    {anchorMessage}
-  </p>
-</div>
 {/* Mila-Anker */}
 <div className="rounded-2xl bg-violet-50 p-4 border border-violet-100">
   <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-700">
