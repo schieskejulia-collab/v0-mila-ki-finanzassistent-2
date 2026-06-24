@@ -121,7 +121,18 @@ export default function DashboardPage() {
   const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
   const tip = getMainTip({ summary, expenses: expenses || [], incomes: incomes || [], userStatus, industry })
 
-  const openIncomes = (incomes || []).filter(i => i.status === 'Offen' || !i.status)
+  const openIncomes = (incomes || []).filter(
+  (i) => String(i.status || '').toLowerCase() === 'offen' || !i.status
+)
+
+const overdueIncomes = (incomes || []).filter(
+  (i) => String(i.status || '').toLowerCase() === 'ueberfaellig'
+)
+
+const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+const totalOverdueAmount = overdueIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+const openCount = openIncomes.length
+const overdueCount = overdueIncomes.length
   const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
   const openCount = openIncomes.length
 
@@ -157,6 +168,23 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-500 mt-1">
               Status: <span className="font-semibold capitalize">{userStatus}</span> ({industry === 'webdesigner' ? 'Webdesign' : industry}) · <span className="font-semibold">{vatStatus === 'kleinunternehmer' ? 'Kleinunternehmer' : 'Regelbest.'}</span>
             </p>
+<div className="rounded-2xl bg-violet-50 p-4 border border-violet-100">
+  <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-700">
+    🪬 Heute wichtig
+  </p>
+
+  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-800">
+    {overdueCount > 0
+      ? `Du hast ${overdueCount} überfällige Einnahme(n) über ${formatEuro(totalOverdueAmount)}. Das sollte heute zuerst geprüft werden.`
+      : openCount > 0
+      ? `Du hast ${openCount} offene Einnahme(n) über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon bezahlt wurde.`
+      : 'Heute sind keine offenen Einnahmen sichtbar. Dein Fokus darf auf Rücklagen und neuen Buchungen liegen.'}
+  </p>
+
+  <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-600">
+    Du musst nicht alles auf einmal lösen. Mila zeigt dir den nächsten sinnvollen Schritt.
+  </p>
+</div>
           </div>
 
           {/* Lila Hauptkarte */}
