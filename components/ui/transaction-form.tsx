@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ReceiptUpload } from "@/components/ui/receipt-upload"
 import { formatEuro } from '@/lib/utils'
 import { useFinance } from '@/lib/store'
@@ -136,8 +136,69 @@ export function TransactionForm({
     Produktverkauf: 'produktverkauf',
 
   }
+const detectCategoryFromText = (text: string) => {
 
-  return map[label] || 'sonstiges'
+  const lower = text.toLowerCase()
+
+  const rules: { label: string; words: string[] }[] = [
+
+    {
+
+      label: 'Software & KI',
+
+      words: ['adobe', 'canva', 'openai', 'chatgpt', 'claude', 'figma', 'notion', 'hosting', 'domain'],
+
+    },
+
+    {
+
+      label: 'Werkzeug & Material',
+
+      words: ['obi', 'bauhaus', 'hornbach', 'würth', 'werkzeug', 'schrauben', 'material'],
+
+    },
+
+    {
+
+      label: 'Fahrtkosten & Fahrzeuge',
+
+      words: ['aral', 'shell', 'total', 'diesel', 'benzin', 'tankstelle', 'reifen', 'werkstatt'],
+
+    },
+
+    {
+
+      label: 'Reisen & Unterkünfte',
+
+      words: ['hotel', 'bahn', 'db', 'airbnb', 'flug', 'übernachtung'],
+
+    },
+
+    {
+
+      label: 'Bewirtung',
+
+      words: ['restaurant', 'café', 'essen', 'bewirtung', 'mittagessen'],
+
+    },
+
+    {
+
+      label: 'Telefon & Internet',
+
+      words: ['vodafone', 'telekom', 'o2', 'telefon', 'internet', 'mobilfunk'],
+
+    },
+
+  ]
+
+  const match = rules.find((rule) =>
+
+    rule.words.some((word) => lower.includes(word))
+
+  )
+
+  return match?.label || ''
 
 }
 
@@ -150,6 +211,16 @@ export function TransactionForm({
 
   // Wird aufgerufen, wenn Mila den Beleg erfolgreich ausgelesen hat
   const handleScanSuccess = (data: { amount: number; vendor: string; category: string; title: string }) => {
+useEffect(() => {
+  if (type !== 'expense') return
+  if (category) return
+
+  const detected = detectCategoryFromText(title)
+
+  if (detected) {
+    setCategory(detected)
+  }
+}, [title, type, category])
     setType('expense') // Belege sind immer Ausgaben
     setAmount(data.amount.toString())
     setTitle(data.vendor || data.title)
