@@ -327,6 +327,187 @@ export const CATEGORY_KEYWORDS = {
     'werbung',
     'marketing',
   ],
+  bewirtung: [
+    'restaurant',
+    'café',
+    'cafe',
+    'bistro',
+    'essen',
+    'mittagessen',
+    'abendessen',
+    'bewirtung',
+    'lieferando',
+  ],
+
+  reisen: [
+    'hotel',
+    'airbnb',
+    'booking',
+    'bahn',
+    'deutsche bahn',
+    'db',
+    'flug',
+    'reise',
+    'übernachtung',
+  ],
+
+  fahrzeug: [
+    'aral',
+    'shell',
+    'total',
+    'esso',
+    'jet',
+    'star',
+    'tankstelle',
+    'diesel',
+    'benzin',
+    'reifen',
+    'werkstatt',
+    'parken',
+  ],
+
+  weiterbildung: [
+    'kurs',
+    'seminar',
+    'coaching',
+    'fortbildung',
+    'weiterbildung',
+    'training',
+    'workshop',
+  ],
+
+  fachliteratur: [
+    'buch',
+    'ebook',
+    'fachbuch',
+    'zeitschrift',
+    'magazin',
+    'report',
+  ],
+
+  miete: [
+    'miete',
+    'büro',
+    'coworking',
+    'lager',
+    'raum',
+    'praxis',
+    'studio',
+  ],
+  homeoffice: [
+    'homeoffice',
+    'arbeitszimmer',
+    'schreibtisch',
+    'bürostuhl',
+    'lampe',
+    'strom',
+  ],
+
+  dienstleister: [
+    'freelancer',
+    'entwickler',
+    'designer',
+    'texter',
+    'berater',
+    'agentur',
+    'subunternehmer',
+  ],
+
+  recht: [
+    'anwalt',
+    'rechtsanwalt',
+    'vertrag',
+    'agb',
+    'datenschutz',
+    'dsgvo',
+    'notar',
+  ],
+
+  versicherung: [
+    'haftpflicht',
+    'versicherung',
+    'berufshaftpflicht',
+    'rechtsschutz',
+    'krankenversicherung',
+    'unfallversicherung',
+  ],
+
+  bank: [
+    'kontoführung',
+    'bank',
+    'paypal',
+    'stripe',
+    'sumup',
+    'gebühr',
+    'transaktion',
+  ],
+
+  mitgliedschaften: [
+    'ihk',
+    'hwk',
+    'kammer',
+    'mitgliedschaft',
+    'verband',
+    'verein',
+  ],
+
+  geschenke: [
+    'geschenk',
+    'gutschein',
+    'aufmerksamkeit',
+    'präsent',
+  ],
+
+  versand: [
+    'dhl',
+    'hermes',
+    'ups',
+    'dpd',
+    'porto',
+    'briefmarke',
+    'paket',
+  ],
+  gesundheit: [
+    'erste hilfe',
+    'verbandskasten',
+    'schutzbrille',
+    'gehörschutz',
+    'arbeitsschutz',
+    'ergonomie',
+    'bildschirmbrille',
+  ],
+
+  material: [
+    'material',
+    'verbrauchsmaterial',
+    'holz',
+    'farbe',
+    'kabel',
+    'schrauben',
+    'kleinteile',
+    'baustoff',
+  ],
+
+  steuern: [
+    'finanzamt',
+    'umsatzsteuer',
+    'gewerbesteuer',
+    'lohnsteuer',
+    'steuerberater',
+    'steuer',
+  ],
+
+  privat: [
+    'netto',
+    'aldi',
+    'lidl',
+    'rewe',
+    'edeka',
+    'privat',
+    'lebensmittel',
+  ],
+
+  sonstiges: [],
 }
 
 export function detectCategory(text: string) {
