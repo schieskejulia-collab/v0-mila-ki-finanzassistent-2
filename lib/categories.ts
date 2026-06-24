@@ -259,7 +259,75 @@ sonstiges: {
 
 },
 }
-export const CATEGORY_KEYWORDS = {}
+export const CATEGORY_KEYWORDS = {
+  software: [
+    'adobe',
+    'openai',
+    'chatgpt',
+    'hosting',
+    'domain',
+    'hetzner',
+    'notion',
+    'figma',
+    'canva',
+    'webflow',
+    'github',
+    'vercel',
+    'cloudflare',
+    'microsoft',
+    'google workspace',
+  ],
+
+  hardware: [
+    'laptop',
+    'computer',
+    'monitor',
+    'maus',
+    'tastatur',
+    'drucker',
+    'scanner',
+    'webcam',
+    'iphone',
+    'samsung',
+  ],
+
+  werkzeug: [
+    'würth',
+    'obi',
+    'hornbach',
+    'toom',
+    'werkzeug',
+    'schrauben',
+    'bohrer',
+    'maschine',
+  ],
+
+  arbeitskleidung: [
+    'engelbert strauss',
+    'arbeitskleidung',
+    'sicherheitsschuhe',
+    'arbeitshose',
+    'schutzkleidung',
+  ],
+
+  telefon: [
+    'vodafone',
+    'telekom',
+    'o2',
+    'telefon',
+    'internet',
+    'mobilfunk',
+  ],
+
+  marketing: [
+    'facebook',
+    'instagram',
+    'linkedin',
+    'google ads',
+    'werbung',
+    'marketing',
+  ],
+}
 
 export function detectCategory(text: string) {
   return 'sonstiges'
