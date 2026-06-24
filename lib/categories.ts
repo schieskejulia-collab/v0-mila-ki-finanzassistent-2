@@ -29,7 +29,20 @@ export type CategoryId =
   | 'steuern'
   | 'privat'
   | 'sonstiges'
-export const CATEGORIES = {}
+export interface Category {
+  id: CategoryId
+  label: string
+  icon: string
+  color: string
+}
+export const CATEGORIES: Record<CategoryId, Category> = {
+  software: {
+    id: 'software',
+    label: 'Software & KI',
+    icon: 'Laptop',
+    color: 'var(--chart-1)',
+  },
+}
 
 export const CATEGORY_KEYWORDS = {}
 
