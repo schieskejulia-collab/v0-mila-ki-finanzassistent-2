@@ -370,18 +370,21 @@ const anchorMessage =
         </div>
 
         {/* --- PRIORITÄT 3: KI-ERKENNTNISSE --- */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
-            🥉 Priorität 3 – KI-Erkenntnisse
-          </h2>
-          <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
-            <li className="flex gap-2.5">
-  <span>📊</span>
-  <span>
-    Mila erkennt aktuell {recurringExpenses.length} wiederkehrende Ausgabe(n)
-    und {softwareExpenses.length} Software-/Tool-Kosten.
-  </span>
-</li>
+<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+    🥉 Priorität 3 – KI-Erkenntnisse
+  </h2>
+
+  <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
+    <li className="flex gap-2.5">
+      <span>📊</span>
+      <span>
+        Mila erkennt aktuell {recurringExpenses.length} wiederkehrende Ausgabe(n)
+        und {softwareExpenses.length} Software-/Tool-Kosten.
+      </span>
+    </li>
+  </ul>
+</div>
 
         {/* Chat-Anker Link */}
         <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
