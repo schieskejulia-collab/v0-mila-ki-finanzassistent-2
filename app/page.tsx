@@ -217,7 +217,7 @@ const anchorMessage =
               <p className="mt-0.5 text-xs font-bold text-slate-600">Orientierung</p>
             </div>
           </div>
-
+</section>
 
 {/* --- MILA HAT ETWAS GEFUNDEN --- */}
 
