@@ -260,46 +260,87 @@ export default function BuchungenPage() {
                               </div>
 
                               {/* Action Buttons */}
-                              <div className="flex flex-col gap-2 pt-1">
-                                {/* Als bezahlt markieren Button */}
-                                {t.typ === 'einnahme' && t.status !== 'bezahlt' && (
-                                  <button
-                                    onClick={() => handleMarkAsPaid(t.rawId)}
-                                    className="w-full bg-[#00A86B] hover:bg-emerald-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
-                                  >
-                                    ✅ Als bezahlt markieren
-                                  </button>
-                                )}
 
-                                <div className="grid grid-cols-2 gap-2">
-                                  {t.typ === 'einnahme' && t.status !== 'bezahlt' ? (
-                                    <button
-                                      onClick={() => handleWhatsAppReminder(t)}
-                                      className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
-                                    >
-                                      🔔 Erinnern
-                                    </button>
-                                  ) : <div />}
-                                  <button
-                                    onClick={() => handleDelete(t)}
-                                    className="bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98] ml-auto w-full"
-                                  >
-                                    Löschen
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+<div className="flex flex-col gap-2 pt-1">
+
+  {t.typ === 'einnahme' && (
+
+    <div className="grid grid-cols-3 gap-2">
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'bezahlt')}
+
+        className="rounded-xl bg-emerald-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        ✅ Bezahlt
+
+      </button>
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'offen')}
+
+        className="rounded-xl bg-amber-400 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        🟡 Offen
+
+      </button>
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'ueberfaellig')}
+
+        className="rounded-xl bg-rose-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        🚨 Überfällig
+
+      </button>
+
     </div>
-  )
-}
+
+  )}
+
+  <div className="grid grid-cols-2 gap-2">
+
+    {t.typ === 'einnahme' && t.status !== 'bezahlt' ? (
+
+      <button
+
+        onClick={() => handleWhatsAppReminder(t)}
+
+        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+
+      >
+
+        🔔 Erinnern
+
+      </button>
+
+    ) : (
+
+      <div />
+
+    )}
+
+    <button
+
+      onClick={() => handleDelete(t)}
+
+      className="bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98] ml-auto w-full"
+
+    >
+
+      Löschen
+
+    </button>
+
+  </div>
+
+</div>
