@@ -234,54 +234,7 @@ const anchorMessage =
     Such dir nur eine Einnahme aus und prüfe sie zuerst.
   </p>
 </div>
-          {/* Muster & Software Tracker */}
-          {(recurringExpenses.length > 0 || softwareExpenses.length > 0) && (
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
-                <p className="text-[10px] font-black uppercase text-blue-700">Wiederkehrend</p>
-                <p className="mt-0.5 text-xl font-black text-blue-800">{recurringExpenses.length}</p>
-                <p className="text-[10px] font-bold text-slate-500">Muster erkannt</p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
-                <p className="text-[10px] font-black uppercase text-slate-600">Tools</p>
-                <p className="mt-0.5 text-xl font-black text-slate-800">{softwareExpenses.length}</p>
-                <p className="text-[10px] font-bold text-slate-500">Softwarekosten</p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* --- PRIORITÄT 1: DEIN NÄCHSTER SCHRITT --- */}
-<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-    🎯 Dein nächster Schritt
-  </h2>
-
-  <div className="space-y-3">
-    <p className="text-lg font-bold text-slate-800">
-      {overdueCount > 0
-        ? `${overdueCount} überfällige Rechnung(en) erinnern`
-        : openCount > 0
-        ? `${openCount} offene Einnahme(n) prüfen`
-        : 'Alles erledigt 🎉'}
-    </p>
-
-    <p className="text-sm text-slate-600 leading-relaxed">
-      {overdueCount > 0
-        ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
-        : openCount > 0
-        ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
-        : 'Aktuell sind keine offenen Aufgaben erkannt.'}
-    </p>
-
-    {(overdueCount > 0 || openCount > 0) && (
-      <p className="text-sm font-semibold text-emerald-700">
-        Potenzieller Betrag: {formatEuro(totalOpenAmount)}
-      </p>
-    )}
-  </div>
-</div>
+         
 {/* --- MILA HAT ETWAS GEFUNDEN --- */}
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
   <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
@@ -331,6 +284,38 @@ const anchorMessage =
           Mila hat aktuell nichts Kritisches gefunden.
         </p>
       </div>
+    )}
+  </div>
+</div>
+
+
+        {/* --- PRIORITÄT 1: DEIN NÄCHSTER SCHRITT --- */}
+<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+    🎯 Dein nächster Schritt
+  </h2>
+
+  <div className="space-y-3">
+    <p className="text-lg font-bold text-slate-800">
+      {overdueCount > 0
+        ? `${overdueCount} überfällige Rechnung(en) erinnern`
+        : openCount > 0
+        ? `${openCount} offene Einnahme(n) prüfen`
+        : 'Alles erledigt 🎉'}
+    </p>
+
+    <p className="text-sm text-slate-600 leading-relaxed">
+      {overdueCount > 0
+        ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
+        : openCount > 0
+        ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
+        : 'Aktuell sind keine offenen Aufgaben erkannt.'}
+    </p>
+
+    {(overdueCount > 0 || openCount > 0) && (
+      <p className="text-sm font-semibold text-emerald-700">
+        Potenzieller Betrag: {formatEuro(totalOpenAmount)}
+      </p>
     )}
   </div>
 </div>
