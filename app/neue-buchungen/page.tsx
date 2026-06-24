@@ -32,11 +32,15 @@ const [isSaving, setIsSaving] = useState(false)
   const taxHint = deductible ? numericAmount * 0.3 : 0
 
   function updateTitle(value: string) {
-    setTitle(value)
+  setTitle(value)
 
-    if (type === 'expense') {
-     
-  function updatePartner(value: string) {
+  if (type === 'expense') {
+    const detected = detectCategory(value)
+    setCategory(getCategoryLabel(detected))
+  }
+}
+
+function updatePartner(value: string) {
   setPartner(value)
 }
 
