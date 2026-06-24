@@ -291,9 +291,12 @@ const anchorMessage =
           </h2>
           <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
             <li className="flex gap-2.5">
-              <span>📊</span>
-              <span>Mila analysiert deine Ausgabetrends, sobald die ersten Belege synchronisiert sind.</span>
-            </li>
+  <span>📊</span>
+  <span>
+    Mila erkennt aktuell {recurringExpenses.length} wiederkehrende Ausgabe(n)
+    und {softwareExpenses.length} Software-/Tool-Kosten.
+  </span>
+</li>
             <li className="flex gap-2.5">
               <span>💼</span>
               <span>Du hast <strong>{openCount} offene Forderungen</strong> über <strong>{formatEuro(totalOpenAmount)}</strong>.</span>
