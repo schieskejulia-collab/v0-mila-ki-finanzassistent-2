@@ -263,18 +263,29 @@ const anchorMessage =
 <p className="text-[10px] text-slate-400 font-medium">
   Wenn offene Einnahmen bezahlt werden
 </p>
-              <p className="text-lg font-bold text-slate-800 mt-0.5">
-                {availableInTwoWeeks > 0 ? formatEuro(availableInTwoWeeks) : '0,00 €'}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-500 font-medium">Nächste Zahlungen</p>
-              <p className="text-lg font-bold text-slate-600 mt-0.5">
-                {nextPayments > 0 ? formatEuro(nextPayments) : '0,00 €'}
-              </p>
-            </div>
-          </div>
-        </div>
+           <div className="space-y-3">
+  <p className="text-lg font-bold text-slate-800">
+    {overdueCount > 0
+      ? `${overdueCount} überfällige Rechnung(en) erinnern`
+      : openCount > 0
+      ? `${openCount} offene Einnahme(n) prüfen`
+      : 'Alles erledigt 🎉'}
+  </p>
+
+  <p className="text-sm text-slate-600 leading-relaxed">
+    {overdueCount > 0
+      ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
+      : openCount > 0
+      ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
+      : 'Aktuell sind keine offenen Aufgaben erkannt.'}
+  </p>
+
+  {(overdueCount > 0 || openCount > 0) && (
+    <p className="text-sm font-semibold text-emerald-700">
+      Potenzieller Betrag: {formatEuro(totalOpenAmount)}
+    </p>
+  )}
+</div>
 
         {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
         <div className="space-y-2">
