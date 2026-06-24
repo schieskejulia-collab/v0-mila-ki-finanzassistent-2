@@ -237,56 +237,125 @@ const anchorMessage =
 </section>
          
 {/* --- MILA HAT ETWAS GEFUNDEN --- */}
+
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+
   <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+
     🚨 Mila hat etwas gefunden
+
   </h2>
 
   <div className="space-y-3 text-xs text-slate-700 leading-relaxed">
+
     {overdueCount > 0 && (
+
       <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3">
+
         <p className="font-black text-rose-700">
-          🚨 Überfällige Einnahmen
+
+          🚨 Überfällige Rechnung
+
         </p>
+
         <p className="mt-1 font-semibold text-slate-700">
-          {overdueCount} Forderung(en) brauchen deine Aufmerksamkeit.
+
+          {overdueCount} Einnahme(n) sind überfällig. Bitte zuerst erinnern oder Status prüfen.
+
         </p>
+
       </div>
+
     )}
 
     {openCount > 0 && (
+
       <div className="rounded-2xl bg-amber-50 border border-amber-100 p-3">
+
         <p className="font-black text-amber-700">
-          ⚠️ Offene Einnahmen
+
+          ⚠️ Offene Rechnung
+
         </p>
+
         <p className="mt-1 font-semibold text-slate-700">
-          {openCount} offene Forderung(en) über {formatEuro(totalOpenAmount)}.
+
+          {openCount} offene Forderung(en) über {formatEuro(totalOpenAmount)} sind noch nicht abgeschlossen.
+
         </p>
+
       </div>
+
     )}
 
     {recurringExpenses.length > 0 && (
+
       <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3">
+
         <p className="font-black text-blue-700">
-          💡 Wiederkehrende Ausgaben
+
+          💡 Wiederkehrende Ausgabe
+
         </p>
+
         <p className="mt-1 font-semibold text-slate-700">
-          Mila erkennt {recurringExpenses.length} wiederkehrende Kosten. Prüfe, ob sie noch sinnvoll sind.
+
+          Mila erkennt {recurringExpenses.length} wiederkehrende Kosten. Prüfe, ob du sie wirklich noch brauchst.
+
         </p>
+
       </div>
+
     )}
 
-    {openCount === 0 && overdueCount === 0 && recurringExpenses.length === 0 && (
-      <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3">
-        <p className="font-black text-emerald-700">
-          🟢 Keine dringenden Auffälligkeiten
+    {softwareExpenses.length > 0 && (
+
+      <div className="rounded-2xl bg-violet-50 border border-violet-100 p-3">
+
+        <p className="font-black text-violet-700">
+
+          💻 Software & Tools
+
         </p>
+
         <p className="mt-1 font-semibold text-slate-700">
-          Mila hat aktuell nichts Kritisches gefunden.
+
+          {softwareExpenses.length} Tool-Kosten erkannt. Gerade bei KI-Tools lohnt sich regelmäßiges Aufräumen.
+
         </p>
+
       </div>
+
     )}
+
+    {openCount === 0 &&
+
+      overdueCount === 0 &&
+
+      recurringExpenses.length === 0 &&
+
+      softwareExpenses.length === 0 && (
+
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3">
+
+          <p className="font-black text-emerald-700">
+
+            🟢 Keine dringenden Auffälligkeiten
+
+          </p>
+
+          <p className="mt-1 font-semibold text-slate-700">
+
+            Mila hat aktuell nichts Kritisches gefunden. Behalte Rücklage und nächste Zahlungen im Blick.
+
+          </p>
+
+        </div>
+
+      )}
+
   </div>
+
 </div>
 
 
