@@ -74,6 +74,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
 
 }
 
+
 /* 2) Kategorie‑Erkennung */
 function detectCategory(text: string): string {
   const lower = text.toLowerCase()
