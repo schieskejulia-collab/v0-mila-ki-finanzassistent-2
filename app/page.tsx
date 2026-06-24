@@ -254,7 +254,7 @@ const anchorMessage =
 
         <p className="font-black text-rose-700">
 
-          🚨 Überfällige Rechnung
+          🚨 Überfällige Zahlung
 
         </p>
 
@@ -274,13 +274,13 @@ const anchorMessage =
 
         <p className="font-black text-amber-700">
 
-          ⚠️ Offene Rechnung
+          ⚠️ Offene Zahlung
 
         </p>
 
         <p className="mt-1 font-semibold text-slate-700">
 
-          {openCount} offene Forderung(en) über {formatEuro(totalOpenAmount)} sind noch nicht abgeschlossen.
+          {openCount} offene Zahlung(en) über {formatEuro(totalOpenAmount)} sind noch nicht abgeschlossen.
 
         </p>
 
@@ -370,7 +370,7 @@ const anchorMessage =
       {overdueCount > 0
         ? `${overdueCount} überfällige Rechnung(en) erinnern`
         : openCount > 0
-        ? `${openCount} offene Einnahme(n) prüfen`
+        ? `${openCount} offene Zahlung(en) prüfen`
         : 'Alles erledigt 🎉'}
     </p>
 
