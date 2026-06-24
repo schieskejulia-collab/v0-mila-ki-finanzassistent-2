@@ -262,6 +262,7 @@ sonstiges: {
 
 },
 }
+export const CATEGORY_LIST = Object.values(CATEGORIES)
 export const CATEGORY_KEYWORDS = {
   software: [
     'adobe',
