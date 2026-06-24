@@ -2,11 +2,76 @@ import { Expense, Income } from './store'
 
 /* 1) Kategorie‑Keywords */
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  reisen: ['hotel', 'übernacht', 'reise', 'bahn', 'db', 'flug', 'airbnb'],
-  software: ['adobe', 'canva', 'hosting', 'domain', 'webflow', 'notion', 'software', 'abo'],
-  bewirtung: ['essen', 'restaurant', 'bewirt', 'café', 'mittag', 'dinner'],
-  hardware: ['laptop', 'handy', 'iphone', 'kamera', 'monitor', 'maus', 'tastatur'],
-  weiterbildung: ['kurs', 'coaching', 'weiterbildung', 'seminar', 'schule', 'training'],
+
+  software: [
+    'adobe','canva','openai','chatgpt','hosting',
+    'domain','notion','figma','webflow','abo'
+  ],
+
+  reisen: [
+    'hotel','airbnb','bahn','db','flug',
+    'reise','übernachtung','spesen'
+  ],
+
+  bewirtung: [
+    'restaurant','essen','mittagessen',
+    'dinner','café','bewirtung'
+  ],
+
+  arbeitskleidung: [
+    'arbeitshose','sicherheitsschuhe',
+    'arbeitsjacke','schutzkleidung',
+    'handschuhe'
+  ],
+
+  werkzeug: [
+    'werkzeug','bohrmaschine','akku',
+    'schrauben','hammer','stichsäge',
+    'fräser'
+  ],
+
+  fahrzeug: [
+    'tankstelle','diesel','benzin',
+    'leasing','werkstatt','reifen',
+    'autowäsche'
+  ],
+
+  weiterbildung: [
+    'kurs','seminar','coaching',
+    'fortbildung','fachbuch'
+  ],
+
+  fachliteratur: [
+    'buch','magazin','zeitschrift',
+    'ebook'
+  ],
+
+  miete: [
+    'büro','lager','halle',
+    'coworking','miete'
+  ],
+
+  gesundheit: [
+    'erste hilfe','bildschirmbrille',
+    'ergonomie','arbeitsschutz'
+  ],
+
+  dienstleister: [
+    'designer','entwickler',
+    'freelancer','subunternehmer'
+  ],
+
+  recht: [
+    'anwalt','vertrag',
+    'dsgvo','agb'
+  ],
+
+  hardware: [
+    'laptop','monitor','iphone',
+    'kamera','tablet','maus',
+    'tastatur'
+  ]
+
 }
 
 /* 2) Kategorie‑Erkennung */
