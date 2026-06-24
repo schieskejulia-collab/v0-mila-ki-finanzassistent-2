@@ -238,42 +238,34 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   }, [])
 
-  const deleteExpense = useCallback(async (id: any) => {
+  const deleteExpense = useCallback(async (item: any) => {
+  const title = item?.title || ''
+  const amount = Number(item?.amount || 0)
+  const date = item?.date || ''
 
-  const idAsString = String(id)
-
-  const idAsNumber = Number(id)
-
-  let query = supabase.from('expenses').delete()
-
-  if (!Number.isNaN(idAsNumber)) {
-
-    query = query.eq('id', idAsNumber)
-
-  } else {
-
-    query = query.eq('id', idAsString)
-
-  }
-
-  const { error } = await query
+  const { error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('title', title)
+    .eq('amount', amount)
+    .eq('date', date)
 
   if (error) {
-
     console.error('Ausgabe löschen fehlgeschlagen:', error)
-
     alert(`Ausgabe konnte nicht gelöscht werden: ${error.message}`)
-
     throw error
-
   }
 
   setExpenses((p) =>
-
-    p.filter((e) => String(e.id) !== idAsString)
-
+    p.filter(
+      (e) =>
+        !(
+          e.title === title &&
+          Number(e.amount || 0) === amount &&
+          e.date === date
+        )
+    )
   )
-
 }, [])
 
   const addIncome = useCallback(async (inc: any) => {
