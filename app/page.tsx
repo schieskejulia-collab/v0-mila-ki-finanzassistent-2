@@ -382,12 +382,6 @@ const anchorMessage =
     und {softwareExpenses.length} Software-/Tool-Kosten.
   </span>
 </li>
-            <li className="flex gap-2.5">
-              <span>💼</span>
-              <span>Du hast <strong>{openCount} offene Forderungen</strong> über <strong>{formatEuro(totalOpenAmount)}</strong>.</span>
-            </li>
-          </ul>
-        </div>
 
         {/* Chat-Anker Link */}
         <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
