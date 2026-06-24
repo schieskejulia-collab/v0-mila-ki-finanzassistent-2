@@ -314,4 +314,3 @@ const anchorMessage =
     </div>
   )
 }
-
