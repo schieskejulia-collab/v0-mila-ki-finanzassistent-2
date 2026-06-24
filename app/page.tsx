@@ -218,24 +218,7 @@ const anchorMessage =
             </div>
           </div>
 
-{/* Mila-Anker */}
-<div className="rounded-2xl bg-violet-50 p-4 border border-violet-100">
-  <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-700">
-    🌸 Mila sagt
-  </p>
 
-  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
-    Du hast aktuell {openCount} offene Einnahmen.
-  </p>
-
-  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-    Das wirkt viel.
-    Aber du musst heute nicht alles lösen.
-    Such dir nur eine Einnahme aus und prüfe sie zuerst.
-  </p>
-</div>
-</section>
-         
 {/* --- MILA HAT ETWAS GEFUNDEN --- */}
 
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
