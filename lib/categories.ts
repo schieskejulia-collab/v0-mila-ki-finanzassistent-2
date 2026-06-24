@@ -132,6 +132,133 @@ fachliteratur: {
   color: 'var(--chart-1)',
 
 },
+
+miete: {
+
+  id: 'miete',
+  label: 'Miete & Räume',
+  icon: 'Building',
+  color: 'var(--chart-2)',
+
+},
+
+homeoffice: {
+
+  id: 'homeoffice',
+  label: 'Homeoffice',
+  icon: 'Home',
+  color: 'var(--chart-3)',
+
+},
+
+dienstleister: {
+
+  id: 'dienstleister',
+  label: 'Leistungen Dritter',
+  icon: 'Users',
+  color: 'var(--chart-4)',
+
+},
+
+recht: {
+
+  id: 'recht',
+  label: 'Rechtsberatung',
+  icon: 'Scale',
+  color: 'var(--chart-5)',
+
+},
+
+versicherung: {
+
+  id: 'versicherung',
+  label: 'Versicherungen',
+  icon: 'Shield',
+  color: 'var(--chart-1)',
+
+},
+
+bank: {
+
+  id: 'bank',
+  label: 'Bankgebühren & Finanzen',
+  icon: 'Landmark',
+  color: 'var(--chart-2)',
+
+},
+
+mitgliedschaften: {
+
+  id: 'mitgliedschaften',
+  label: 'Mitgliedschaften & Beiträge',
+  icon: 'BadgeCheck',
+  color: 'var(--chart-3)',
+
+},
+
+geschenke: {
+
+  id: 'geschenke',
+  label: 'Geschenke & Aufmerksamkeiten',
+  icon: 'Gift',
+  color: 'var(--chart-4)',
+
+},
+
+versand: {
+
+  id: 'versand',
+  label: 'Versand & Porto',
+  icon: 'Package',
+  color: 'var(--chart-5)',
+
+},
+
+gesundheit: {
+
+  id: 'gesundheit',
+  label: 'Gesundheit & Arbeitsschutz',
+  icon: 'HeartPulse',
+  color: 'var(--chart-1)',
+
+},
+
+material: {
+
+  id: 'material',
+  label: 'Material & Verbrauch',
+  icon: 'Hammer',
+  color: 'var(--chart-2)',
+
+},
+
+steuern: {
+
+  id: 'steuern',
+  label: 'Steuern & Abgaben',
+  icon: 'Receipt',
+  color: 'var(--chart-3)',
+
+},
+
+privat: {
+
+  id: 'privat',
+  label: 'Privat / Nicht absetzbar',
+  icon: 'User',
+  color: 'var(--chart-4)',
+
+},
+
+sonstiges: {
+
+  id: 'sonstiges',
+  label: 'Sonstiges',
+  icon: 'Tag',
+  color: 'var(--chart-5)',
+
+},
+}
 export const CATEGORY_KEYWORDS = {}
 
 export function detectCategory(text: string) {
