@@ -39,9 +39,9 @@ export default function BuchungenPage() {
       amount: Number(e.amount || 0),
       date: e.date,
       category: e.category || 'Ausgabe',
-      note: e.note || '',
-      typ: 'ausgabe',
-      status: 'bezahlt',
+note: e.note || '',
+typ: 'ausgabe',
+status: e.status || 'bezahlt',
     }))
 
     const incs = (incomes || []).map((i) => {
