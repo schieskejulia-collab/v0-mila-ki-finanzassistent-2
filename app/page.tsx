@@ -252,39 +252,35 @@ const anchorMessage =
           )}
         </section>
 
-        {/* --- PRIORITÄT 1: CASHFLOW PROGNOSE --- */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-  🎯 Dein nächster Schritt
-</h2>
-          <div className="grid grid-cols-2 gap-4 pt-1">
-            <div>
-              <p className="text-[11px] text-slate-500 font-medium">Potenziell verfügbar</p>
-<p className="text-[10px] text-slate-400 font-medium">
-  Wenn offene Einnahmen bezahlt werden
-</p>
-           <div className="space-y-3">
-  <p className="text-lg font-bold text-slate-800">
-    {overdueCount > 0
-      ? `${overdueCount} überfällige Rechnung(en) erinnern`
-      : openCount > 0
-      ? `${openCount} offene Einnahme(n) prüfen`
-      : 'Alles erledigt 🎉'}
-  </p>
+        {/* --- PRIORITÄT 1: DEIN NÄCHSTER SCHRITT --- */}
+<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
+  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
+    🎯 Dein nächster Schritt
+  </h2>
 
-  <p className="text-sm text-slate-600 leading-relaxed">
-    {overdueCount > 0
-      ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
-      : openCount > 0
-      ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
-      : 'Aktuell sind keine offenen Aufgaben erkannt.'}
-  </p>
-
-  {(overdueCount > 0 || openCount > 0) && (
-    <p className="text-sm font-semibold text-emerald-700">
-      Potenzieller Betrag: {formatEuro(totalOpenAmount)}
+  <div className="space-y-3">
+    <p className="text-lg font-bold text-slate-800">
+      {overdueCount > 0
+        ? `${overdueCount} überfällige Rechnung(en) erinnern`
+        : openCount > 0
+        ? `${openCount} offene Einnahme(n) prüfen`
+        : 'Alles erledigt 🎉'}
     </p>
-  )}
+
+    <p className="text-sm text-slate-600 leading-relaxed">
+      {overdueCount > 0
+        ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
+        : openCount > 0
+        ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
+        : 'Aktuell sind keine offenen Aufgaben erkannt.'}
+    </p>
+
+    {(overdueCount > 0 || openCount > 0) && (
+      <p className="text-sm font-semibold text-emerald-700">
+        Potenzieller Betrag: {formatEuro(totalOpenAmount)}
+      </p>
+    )}
+  </div>
 </div>
 
         {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
