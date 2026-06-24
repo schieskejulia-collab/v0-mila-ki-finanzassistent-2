@@ -2,87 +2,8 @@
 
 import { useState } from 'react'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
-
-const categories = [
-  'Sonstiges',
-  'Software & IT',
-  'Marketing',
-  'Bewirtung',
-  'Reisen/Fahrtkosten',
-  'Bürobedarf',
-  'Telefon & Internet',
-  'Weiterbildung',
-  'Miete/Arbeitsplatz',
-]
-
-function detectCategory(text: string) {
-  const value = text.toLowerCase()
-
-  if (
-    value.includes('hetzner') ||
-    value.includes('herzner') ||
-    value.includes('hosting') ||
-    value.includes('software') ||
-    value.includes('openai') ||
-    value.includes('chatgpt')
-  ) {
-    return 'Software & IT'
-  }
-
-  if (
-    value.includes('instagram') ||
-    value.includes('facebook') ||
-    value.includes('werbung') ||
-    value.includes('canva')
-  ) {
-    return 'Marketing'
-  }
-
-  if (
-    value.includes('restaurant') ||
-    value.includes('café') ||
-    value.includes('bewirtung')
-  ) {
-    return 'Bewirtung'
-  }
-
-  if (
-    value.includes('tank') ||
-    value.includes('bahn') ||
-    value.includes('fahrt') ||
-    value.includes('reise')
-  ) {
-    return 'Reisen/Fahrtkosten'
-  }
-
-  if (
-    value.includes('papier') ||
-    value.includes('stift') ||
-    value.includes('drucker') ||
-    value.includes('büro')
-  ) {
-    return 'Bürobedarf'
-  }
-
-  if (
-    value.includes('telefon') ||
-    value.includes('internet') ||
-    value.includes('vodafone') ||
-    value.includes('telekom')
-  ) {
-    return 'Telefon & Internet'
-  }
-
-  if (
-    value.includes('kurs') ||
-    value.includes('seminar') ||
-    value.includes('weiterbildung')
-  ) {
-    return 'Weiterbildung'
-  }
-
-  return 'Sonstiges'
-}
+import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
+const categories = CATEGORY_LIST.map((category) => category.label)
 
 function isDeductible(category: string) {
   return category !== 'Sonstiges'
@@ -115,7 +36,7 @@ const [isSaving, setIsSaving] = useState(false)
 
     if (type === 'expense') {
       const detected = detectCategory(`${value} ${partner} ${note}`)
-      setCategory(detected)
+setCategory(getCategoryLabel(detected))
     }
   }
 
