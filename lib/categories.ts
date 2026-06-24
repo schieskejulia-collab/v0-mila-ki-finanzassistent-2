@@ -35,7 +35,7 @@ export interface Category {
   icon: string
   color: string
 }
-export const CATEGORIES: Record<CategoryId, Category> = {
+export const CATEGORIES: Partial<Record<CategoryId, Category>> = {
   software: {
     id: 'software',
     label: 'Software & KI',
