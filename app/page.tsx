@@ -144,7 +144,14 @@ const overdueCount = overdueIncomes.lengt
   } else if (financeScore < 75 || (summary.totalExpenses > summary.totalIncomes * 0.7)) {
     trafficLight = { status: '🟡 Achtung: Hohe Ausgaben', color: 'bg-amber-50 border-amber-200 text-amber-900', dot: 'bg-amber-500' }
   }
-
+const anchorMessage =
+  overdueCount > 0
+    ? `Es gibt ${overdueCount} überfällige Forderung(en). Kein Drama — aber das ist heute deine wichtigste Baustelle.`
+    : openCount > 0
+    ? `Du hast ${openCount} offene Einnahme(n). Such dir heute nur eine davon aus und prüfe sie zuerst.`
+    : summary.balance > 0
+    ? 'Dein Cashflow wirkt stabil. Nutze den ruhigen Moment, um Rücklagen und nächste Zahlungen im Blick zu behalten.'
+    : 'Heute geht es nicht um Perfektion. Wir sortieren Schritt für Schritt, was wirklich wichtig ist.'
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
@@ -216,7 +223,14 @@ const overdueCount = overdueIncomes.lengt
             <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">Mila Tipp ✨</p>
             <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-700">{tip}</p>
           </div>
-
+<div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
+  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+    🪬 Mila-Anker
+  </p>
+  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
+    {anchorMessage}
+  </p>
+</div>
           {/* Muster & Software Tracker */}
           {(recurringExpenses.length > 0 || softwareExpenses.length > 0) && (
             <div className="grid grid-cols-2 gap-3 pt-1">
@@ -242,7 +256,10 @@ const overdueCount = overdueIncomes.lengt
           </h2>
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div>
-              <p className="text-[11px] text-slate-500 font-medium">In 14 Tagen verfügbar</p>
+              <p className="text-[11px] text-slate-500 font-medium">Potenziell verfügbar</p>
+<p className="text-[10px] text-slate-400 font-medium">
+  Wenn offene Einnahmen bezahlt werden
+</p>
               <p className="text-lg font-bold text-slate-800 mt-0.5">
                 {availableInTwoWeeks > 0 ? formatEuro(availableInTwoWeeks) : '0,00 €'}
               </p>
