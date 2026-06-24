@@ -358,37 +358,6 @@ const anchorMessage =
 
 </div>
 
-
-        {/* --- PRIORITÄT 1: DEIN NÄCHSTER SCHRITT --- */}
-<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
-    🎯 Dein nächster Schritt
-  </h2>
-
-  <div className="space-y-3">
-    <p className="text-lg font-bold text-slate-800">
-      {overdueCount > 0
-        ? `${overdueCount} überfällige Rechnung(en) erinnern`
-        : openCount > 0
-        ? `${openCount} offene Zahlung(en) prüfen`
-        : 'Alles erledigt 🎉'}
-    </p>
-
-    <p className="text-sm text-slate-600 leading-relaxed">
-      {overdueCount > 0
-        ? 'Überfällige Einnahmen haben aktuell die höchste Priorität.'
-        : openCount > 0
-        ? 'Prüfe zuerst offene Einnahmen und aktualisiere ihren Status.'
-        : 'Aktuell sind keine offenen Aufgaben erkannt.'}
-    </p>
-
-    {(overdueCount > 0 || openCount > 0) && (
-      <p className="text-sm font-semibold text-emerald-700">
-        Potenzieller Betrag: {formatEuro(totalOpenAmount)}
-      </p>
-    )}
-  </div>
-</div>
         {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
         <div className="space-y-2">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
