@@ -18,35 +18,128 @@ export function TransactionForm({
   const { addExpense, addIncome } = useFinance()
 
   // Dynamische Kategorien je nachdem, ob der User angestellt oder selbstständig ist
-  const categories = userStatus === 'angestellt' 
-    ? {
-        income: ['Gehalt', 'Nebenjob', 'Rückerstattung', 'Sonstiges'],
-        expense: ['Arbeitsmittel', 'Fahrtkosten / Pendeln', 'Homeoffice', 'Fachbücher / Kurse', 'Miete / Wohnen', 'Freizeit & Abo']
-      }
-    : {
-        income: ['Kunden-Projekt', 'Dienstleistung', 'Produktverkauf', 'Sonstiges'],
-        expense: ['Software & Tools', 'Büro & Coworking', 'Reisekosten', 'Bewirtung', 'Marketing']
-      }
+  const categories = {
+
+  income:
+
+    userStatus === 'angestellt'
+
+      ? ['Gehalt', 'Nebenjob', 'Rückerstattung', 'Sonstiges']
+
+      : ['Kunden-Projekt', 'Dienstleistung', 'Produktverkauf', 'Sonstiges'],
+
+  expense: [
+
+    'Software & KI',
+
+    'Werkzeug & Material',
+
+    'Arbeitskleidung',
+
+    'Gesundheit & Arbeitsschutz',
+
+    'Fahrtkosten & Fahrzeuge',
+
+    'Reisen & Unterkünfte',
+
+    'Bewirtung',
+
+    'Weiterbildung & Fachliteratur',
+
+    'Telefon & Internet',
+
+    'Marketing & Werbung',
+
+    'Miete & Räume',
+
+    'Leistungen Dritter',
+
+    'Rechtsberatung',
+
+    'Versicherungen',
+
+    'Bankgebühren & Finanzen',
+
+    'Mitgliedschaften & Beiträge',
+
+    'Geschenke & Aufmerksamkeiten',
+
+    'Versand & Porto',
+
+    'Homeoffice',
+
+    'Prüfung nötig',
+
+    'Sonstiges',
+
+  ],
+
+}
 
   // Mappt die angezeigten Labels auf deine Datenbank-Werte
   const normalizeCategory = (label: string) => {
-    const map: Record<string, string> = {
-      "Software & Tools": "software",
-      "Büro & Coworking": "miete",
-      "Reisekosten": "reisen",
-      "Bewirtung": "bewirtung",
-      "Marketing": "marketing",
 
-      "Arbeitsmittel": "buerobedarf",
-      "Fahrtkosten / Pendeln": "reisen",
-      "Homeoffice": "miete",
-      "Fachbücher / Kurse": "weiterbildung",
-      "Miete / Wohnen": "miete",
-      "Freizeit & Abo": "abo",
-    }
+  const map: Record<string, string> = {
 
-    return map[label] || "sonstiges"
+    'Software & KI': 'software',
+
+    'Werkzeug & Material': 'werkzeug',
+
+    'Arbeitskleidung': 'arbeitskleidung',
+
+    'Gesundheit & Arbeitsschutz': 'gesundheit',
+
+    'Fahrtkosten & Fahrzeuge': 'fahrzeug',
+
+    'Reisen & Unterkünfte': 'reisen',
+
+    'Bewirtung': 'bewirtung',
+
+    'Weiterbildung & Fachliteratur': 'weiterbildung',
+
+    'Telefon & Internet': 'telefon',
+
+    'Marketing & Werbung': 'marketing',
+
+    'Miete & Räume': 'miete',
+
+    'Leistungen Dritter': 'dienstleister',
+
+    'Rechtsberatung': 'recht',
+
+    'Versicherungen': 'versicherung',
+
+    'Bankgebühren & Finanzen': 'finanzen',
+
+    'Mitgliedschaften & Beiträge': 'beitraege',
+
+    'Geschenke & Aufmerksamkeiten': 'geschenke',
+
+    'Versand & Porto': 'versand',
+
+    'Homeoffice': 'homeoffice',
+
+    'Prüfung nötig': 'pruefung',
+
+    'Sonstiges': 'sonstiges',
+
+    Gehalt: 'gehalt',
+
+    Nebenjob: 'nebenjob',
+
+    Rückerstattung: 'rueckerstattung',
+
+    'Kunden-Projekt': 'kundenprojekt',
+
+    Dienstleistung: 'dienstleistung',
+
+    Produktverkauf: 'produktverkauf',
+
   }
+
+  return map[label] || 'sonstiges'
+
+}
 
   // Hilfsfunktion: Sucht das passende Label für ein von der KI geliefertes Kürzel (z.B. "software" -> "Software & Tools")
   const findLabelByNormalized = (normalizedValue: string) => {
