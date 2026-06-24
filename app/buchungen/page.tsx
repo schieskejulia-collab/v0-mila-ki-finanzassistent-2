@@ -344,3 +344,18 @@ export default function BuchungenPage() {
   </div>
 
 </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
