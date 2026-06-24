@@ -35,14 +35,10 @@ const [isSaving, setIsSaving] = useState(false)
     setTitle(value)
 
     if (type === 'expense') {
-      const detected = detectCategory(`${value} ${partner} ${note}`)
-setCategory(getCategoryLabel(detected))
-    }
-  }
-
+     
   function updatePartner(value: string) {
-    setPartner(value)
-
+  setPartner(value)
+}
 
   const handleScanSuccess = (scannedData: any) => {
     if (!scannedData) return
