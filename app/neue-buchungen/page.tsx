@@ -43,11 +43,6 @@ setCategory(getCategoryLabel(detected))
   function updatePartner(value: string) {
     setPartner(value)
 
-    if (type === 'expense') {
-      const detected = detectCategory(`${title} ${value} ${note}`)
-      setCategory(detected)
-    }
-  }
 
   const handleScanSuccess = (scannedData: any) => {
     if (!scannedData) return
