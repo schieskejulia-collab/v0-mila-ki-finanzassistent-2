@@ -510,6 +510,16 @@ export const CATEGORY_KEYWORDS = {
   sonstiges: [],
 }
 
-export function detectCategory(text: string) {
+export function detectCategory(text: string): CategoryId {
+  const lower = text.toLowerCase()
+
+  for (const categoryId of Object.keys(CATEGORY_KEYWORDS) as CategoryId[]) {
+    const keywords = CATEGORY_KEYWORDS[categoryId]
+
+    if (keywords.some((keyword) => lower.includes(keyword.toLowerCase()))) {
+      return categoryId
+    }
+  }
+
   return 'sonstiges'
 }
