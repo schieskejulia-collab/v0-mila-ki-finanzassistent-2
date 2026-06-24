@@ -213,14 +213,14 @@ const detectCategoryFromText = (text: string) => {
   const handleScanSuccess = (data: { amount: number; vendor: string; category: string; title: string }) => {
 useEffect(() => {
   if (type !== 'expense') return
-  if (category) return
 
-  const detected = detectCategoryFromText(title)
+  const detected = detectCategoryFromText(`${title}`)
 
-  if (detected) {
+  if (detected && (!category || category === 'Sonstiges')) {
     setCategory(detected)
   }
 }, [title, type, category])
+
     setType('expense') // Belege sind immer Ausgaben
     setAmount(data.amount.toString())
     setTitle(data.vendor || data.title)
