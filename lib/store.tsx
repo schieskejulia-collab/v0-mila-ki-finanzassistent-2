@@ -238,17 +238,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   }, [])
 
-  const deleteExpense = useCallback(async (item: any) => {
-  const title = item?.title || ''
-  const amount = Number(item?.amount || 0)
-  const date = item?.date || ''
-
+  const deleteExpense = useCallback(async (id: any) => {
   const { error } = await supabase
     .from('expenses')
     .delete()
-    .eq('title', title)
-    .eq('amount', amount)
-    .eq('date', date)
+    .eq('id', id)
 
   if (error) {
     console.error('Ausgabe löschen fehlgeschlagen:', error)
@@ -256,16 +250,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     throw error
   }
 
-  setExpenses((p) =>
-    p.filter(
-      (e) =>
-        !(
-          e.title === title &&
-          Number(e.amount || 0) === amount &&
-          e.date === date
-        )
-    )
-  )
+  setExpenses((p) => p.filter((e) => e.id !== id))
 }, [])
 
   const addIncome = useCallback(async (inc: any) => {
