@@ -234,6 +234,7 @@ const anchorMessage =
     Such dir nur eine Einnahme aus und prüfe sie zuerst.
   </p>
 </div>
+</section>
          
 {/* --- MILA HAT ETWAS GEFUNDEN --- */}
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
