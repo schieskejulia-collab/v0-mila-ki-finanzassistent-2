@@ -120,9 +120,9 @@ status: e.status || 'bezahlt',
   const handleDelete = async (t: any) => {
     if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) return
     if (t.typ === 'ausgabe') {
-      await deleteExpense(t)
+      await deleteExpense(t.rawId)
     } else {
-      await deleteExpense(t)
+      await deleteExpense(t.rawId)
     }
   }
 
