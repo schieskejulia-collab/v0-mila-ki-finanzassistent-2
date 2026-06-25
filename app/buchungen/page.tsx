@@ -32,8 +32,12 @@ export default function BuchungenPage() {
   // 1. Daten matchen & vereinheitlichen
   const alleTransaktionen = useMemo(() => {
     const exps = (expenses || []).map((e) => ({
-      id: `exp-${e.id}`,
-      rawId: e.id,
+      id: `exp-${e.title}-${e.amount}-${e.date}`,
+rawId: {
+  title: e.title,
+  amount: e.amount,
+  date: e.date,
+},
       title: e.title || '',
       party: e.vendor || '',
       amount: Number(e.amount || 0),
