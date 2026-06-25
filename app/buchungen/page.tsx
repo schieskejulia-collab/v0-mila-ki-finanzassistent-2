@@ -118,7 +118,7 @@ status: e.status || 'bezahlt',
     if (t.typ === 'ausgabe') {
       await deleteExpense(t)
     } else {
-      await deleteIncome(t.rawId)
+      await deleteExpense(t)
     }
   }
 
