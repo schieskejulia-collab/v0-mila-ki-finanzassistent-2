@@ -37,6 +37,7 @@ rawId: {
   title: e.title,
   amount: e.amount,
   date: e.date,
+created_at: e.created_at,
 },
       title: e.title || '',
       party: e.vendor || '',
