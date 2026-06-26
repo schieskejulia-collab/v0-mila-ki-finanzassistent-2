@@ -118,14 +118,15 @@ status: e.status || 'bezahlt',
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
-  const handleDelete = async (t: any) => {
-    if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) 
-if (t.typ === 'ausgabe') {
-  await deleteExpense(t)
-} else {
-  await deleteIncome(t.rawId)
-}
+const handleDelete = async (t: any) => {
+  if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) return
+
+  if (t.typ === 'ausgabe') {
+    await deleteExpense(t.rawId)
+  } else {
+    await deleteIncome(t.rawId)
   }
+}
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
