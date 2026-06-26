@@ -38,6 +38,10 @@ function inferCategory(text: string) {
     return 'bewirtung'
   }
 
+if (/fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/.test(value)) {
+  return 'reisen'
+}
+
   if (/hotel|bahn|db|flug|reise|airbnb|booking/.test(value)) {
     return 'reisen'
   }
