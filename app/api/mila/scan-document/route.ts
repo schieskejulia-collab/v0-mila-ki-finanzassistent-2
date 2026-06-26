@@ -12,13 +12,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json(
 
-        {
-
-          success: false,
-
-          error: 'Keine Datei erhalten.',
-
-        },
+        { success: false, error: 'Keine Datei erhalten.' },
 
         { status: 400 }
 
@@ -30,13 +24,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json(
 
-        {
-
-          success: false,
-
-          error: 'Bitte eine PDF hochladen.',
-
-        },
+        { success: false, error: 'Bitte eine PDF hochladen.' },
 
         { status: 400 }
 
@@ -50,13 +38,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json(
 
-        {
-
-          success: false,
-
-          error: 'Die PDF ist leer.',
-
-        },
+        { success: false, error: 'Die PDF ist leer.' },
 
         { status: 400 }
 
@@ -90,13 +72,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
 
-      {
-
-        success: false,
-
-        error: 'PDF konnte nicht verarbeitet werden.',
-
-      },
+      { success: false, error: 'PDF konnte nicht verarbeitet werden.' },
 
       { status: 500 }
 
@@ -104,26 +80,4 @@ export async function POST(req: Request) {
 
   }
 
-}
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        title: 'PDF-Rechnung',
-        amount: '',
-        vendor: '',
-        category: 'sonstiges',
-      },
-    })
-  } catch (error) {
-    console.error(error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'PDF konnte nicht verarbeitet werden.',
-      },
-      { status: 500 }
-    )
-  }
 }
