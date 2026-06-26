@@ -450,13 +450,15 @@ export const CATEGORY_KEYWORDS = {
   ],
 
   bank: [
-    'kontoführung',
-    'bank',
-    'paypal',
-    'stripe',
-    'sumup',
-    'gebühr',
-    'transaktion',
+   'paypal',
+'stripe',
+'sumup',
+'visa',
+'mastercard',
+'kontoführung',
+'gebühr',
+'transaktion',
+'zinsen',
   ],
 
   mitgliedschaften: [
@@ -483,6 +485,19 @@ export const CATEGORY_KEYWORDS = {
     'porto',
     'briefmarke',
     'paket',
+'ups',
+
+'gls',
+
+'post',
+
+'porto',
+
+'brief',
+
+'paket',
+
+'sendung',
   ],
   gesundheit: [
     'erste hilfe',
@@ -539,6 +554,19 @@ export const CATEGORY_KEYWORDS = {
 'kindertagesstaette',
 'kinderbetreuung',
 'nordspatzen',
+'netto',
+
+'rewe',
+
+'edeka',
+
+'penny',
+
+'norma',
+
+'kaufland',
+
+'rossmann',
   ],
 
   sonstiges: [],
