@@ -52,8 +52,12 @@ function updatePartner(value: string) {
     setAmount(scannedData.amount ? String(scannedData.amount) : '')
     setPartner(scannedData.vendor || '')
 
-    const detected = scannedData.category || detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
-    setCategory(detected)
+    const detectedId = detectCategory(
+  `${scannedData.title || ''} ${scannedData.vendor || ''} ${scannedData.category || ''}`
+)
+
+setCategory(getCategoryLabel(detectedId))
+
 
     setNote('Automatisch von Mila ausgelesen 📸')
   }
