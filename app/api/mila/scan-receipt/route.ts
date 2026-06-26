@@ -38,7 +38,29 @@ function inferCategory(text: string) {
     return 'bewirtung'
   }
 
-if (/ice|ic|ec|fahrtticket|fahrticket|fahrkarte|ticket|dticket|d-ticket|deutschlandticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/fahrtticket|fahrticket|fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/.test(value)) {
+if (
+  value.includes('fahrtticket') ||
+  value.includes('fahrticket') ||
+  value.includes('fahrkarte') ||
+  value.includes('ticket') ||
+  value.includes('dticket') ||
+  value.includes('d-ticket') ||
+  value.includes('deutschlandticket') ||
+  value.includes('d tarif') ||
+  value.includes('d-tarif') ||
+  value.includes('nahverkehr') ||
+  value.includes('bus') ||
+  value.includes('tram') ||
+  value.includes('bahn') ||
+  value.includes('db') ||
+  value.includes('zug') ||
+  value.includes('verkehr') ||
+  value.includes('öpnv') ||
+  value.includes('oepnv') ||
+  value.includes('ice') ||
+  value.includes('ic') ||
+  value.includes('ec')
+) {
   return 'reisen'
 }
 
