@@ -281,7 +281,7 @@ setDueDate('')
           </p>
           <p>
             Steuerlich absetzbar:{' '}
-         <strong>{getTaxHint(category)}</strong>
+      <strong>{taxStatus}</strong>
           </p>
           {deductible && (
             <p>
