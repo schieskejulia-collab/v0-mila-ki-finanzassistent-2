@@ -238,58 +238,40 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   }, [])
 
-  const deleteExpense = useCallback(async (item: any) => {
-
+    const deleteExpense = useCallback(async (item: any) => {
   const title = item?.title || ''
-
   const amount = Number(item?.amount || 0)
-
   const date = item?.date || ''
+  const createdAt = item?.created_at || ''
 
-  const { error } = await supabase
+  let query = supabase.from('expenses').delete()
 
-    .from('expenses')
+  if (createdAt) {
+    query = query.eq('created_at', createdAt)
+  } else {
+    query = query.eq('title', title).eq('amount', amount).eq('date', date)
+  }
 
-    .delete()
-
-    .eq('title', title)
-
-    .eq('amount', amount)
-
-    .eq('date', date)
+  const { error } = await query
 
   if (error) {
-
     console.error('Ausgabe löschen fehlgeschlagen:', error)
-
     alert(`Ausgabe konnte nicht gelöscht werden: ${error.message}`)
-
     throw error
-
   }
 
   setExpenses((p) =>
-
-    p.filter(
-
-      (e) =>
-
-        !(
-
-          e.title === title &&
-
-          Number(e.amount || 0) === amount &&
-
-          e.date === date
-
-        )
-
+    p.filter((e) =>
+      createdAt
+        ? e.created_at !== createdAt
+        : !(
+            e.title === title &&
+            Number(e.amount || 0) === amount &&
+            e.date === date
+          )
     )
-
   )
-
 }, [])
-
   const addIncome = useCallback(async (inc: any) => {
 
     const { data, error } = await supabase
