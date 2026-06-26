@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-
+import { detectCategory } from '@/lib/categories'
 function cleanJson(content: string) {
   return content
     .replace(/```json/gi, '')
@@ -171,8 +171,7 @@ export async function POST(req: Request) {
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
     const combinedText = `${title} ${vendor} ${parsed.category || ''}`
-const category = inferCategory(combinedText)
-
+const category = detectCategory(combinedText)
     return NextResponse.json({
       success: true,
       data: {
