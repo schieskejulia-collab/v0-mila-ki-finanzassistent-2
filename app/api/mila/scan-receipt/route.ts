@@ -38,7 +38,7 @@ function inferCategory(text: string) {
     return 'bewirtung'
   }
 
-if (/fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/.test(value)) {
+if (/ice|ic|ec|fahrtticket|fahrticket|fahrkarte|ticket|dticket|d-ticket|deutschlandticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/fahrtticket|fahrticket|fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/fahrkarte|ticket|dticket|d-ticket|d tarif|d-tarif|nahverkehr|bus|tram|bahn|db|zug|verkehr|öpnv|oepnv/.test(value)) {
   return 'reisen'
 }
 
