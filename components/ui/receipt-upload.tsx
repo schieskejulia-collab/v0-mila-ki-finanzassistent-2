@@ -12,60 +12,77 @@ export function ReceiptUpload({
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   async function handleFile(file?: File) {
-    if (!file || isScanning) return
+  if (!file || isScanning) return
 
-    setIsScanning(true)
-    setStatusText('Bild wird vorbereitet...')
+  setIsScanning(true)
 
-    try {
+  try {
+    const isPdf = file.type === 'application/pdf'
+
+    setStatusText(isPdf ? 'PDF wird vorbereitet...' : 'Bild wird vorbereitet...')
+
+    let res: Response
+
+    if (isPdf) {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      setStatusText('Mila liest deine PDF-Rechnung...')
+
+      res = await fetch('/api/mila/scan-document', {
+        method: 'POST',
+        body: formData,
+      })
+    } else {
       const optimizedBase64 = await resizeAndConvertToBase64(file, 1024)
 
       setStatusText('Mila liest deinen Beleg...')
 
-      const res = await fetch('/api/mila/scan-receipt', {
+      res = await fetch('/api/mila/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: optimizedBase64 }),
       })
-
-      const contentType = res.headers.get('content-type') || ''
-
-      if (!contentType.includes('application/json')) {
-        throw new Error(
-          'Der Scanner hat keine gültige Antwort erhalten. Bitte nochmal versuchen.'
-        )
-      }
-
-      const json = await res.json()
-
-      if (!res.ok || !json.success) {
-        throw new Error(
-          json.error || 'Mila konnte den Beleg nicht sicher auslesen.'
-        )
-      }
-
-      setStatusText('Beleg erkannt. Bitte kurz prüfen und speichern. 🎉')
-
-      if (json.data && onScanSuccess) {
-        onScanSuccess(json.data)
-      }
-    } catch (err: any) {
-      console.error('Scanner Error:', err)
-      setStatusText(
-        err?.message ||
-          'Der Beleg konnte gerade nicht gelesen werden. Bitte erneut versuchen.'
-      )
-    } finally {
-      if (inputRef.current) {
-        inputRef.current.value = ''
-      }
-
-      setTimeout(() => {
-        setIsScanning(false)
-        setStatusText('')
-      }, 3500)
     }
+
+    const contentType = res.headers.get('content-type') || ''
+
+    if (!contentType.includes('application/json')) {
+      throw new Error(
+        'Der Scanner hat keine gültige Antwort erhalten. Bitte nochmal versuchen.'
+      )
+    }
+
+    const json = await res.json()
+
+    if (!res.ok || !json.success) {
+      throw new Error(
+        json.error || 'Mila konnte die Datei nicht sicher auslesen.'
+      )
+    }
+
+    setStatusText('Datei erkannt. Bitte kurz prüfen und speichern. 🎉')
+
+    if (json.data && onScanSuccess) {
+      onScanSuccess(json.data)
+    }
+  } catch (err: any) {
+    console.error('Scanner Error:', err)
+    setStatusText(
+      err?.message ||
+        'Die Datei konnte gerade nicht gelesen werden. Bitte erneut versuchen.'
+    )
+  } finally {
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+
+    setTimeout(() => {
+      setIsScanning(false)
+      setStatusText('')
+    }, 3500)
   }
+}
 
   return (
     <div className="w-full">
@@ -83,7 +100,7 @@ export function ReceiptUpload({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           capture="environment"
           disabled={isScanning}
           onChange={(e) => handleFile(e.target.files?.[0])}
