@@ -10,8 +10,32 @@ function cleanJson(content: string) {
 function inferCategory(text: string) {
   const value = text.toLowerCase()
 
+  if (/kita|kindergarten|hort|schule|nordspatzen|kindertagesstätte|kindertagesstaette/.test(value)) {
+    return 'privat'
+  }
+
+  if (/mahnung|bescheid|hansestadt|stadt|landkreis|amt|behörde|behoerde|verwaltungsgebühr|verwaltungsgebuehr/.test(value)) {
+    return 'steuern'
+  }
+
+  if (/dhl|dpd|hermes|gls|ups|porto|versand|post/.test(value)) {
+    return 'versand'
+  }
+
+  if (/aral|shell|esso|total|avia|tankstelle|benzin|diesel|tanken/.test(value)) {
+    return 'fahrzeug'
+  }
+
   if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app|tool|saas/.test(value)) {
     return 'software'
+  }
+
+  if (/vodafone|telekom|o2|telefon|internet|mobilfunk/.test(value)) {
+    return 'telefon'
+  }
+
+  if (/restaurant|cafe|café|essen|bewirtung|lunch|dinner/.test(value)) {
+    return 'bewirtung'
   }
 
   if (/hotel|bahn|db|flug|reise|airbnb|booking/.test(value)) {
@@ -30,24 +54,8 @@ function inferCategory(text: string) {
     return 'buerobedarf'
   }
 
-  if (/restaurant|cafe|café|essen|bewirtung|lunch|dinner/.test(value)) {
-    return 'bewirtung'
-  }
-
-  if (/maus|tastatur|monitor|bildschirm|headset|webcam|usb|adapter|kabel|drucker|scanner|mikrofon|laptop|pc|computer|hardware|kamera/.test(value)) {
-    return 'hardware'
-  }
-
-  if (/telefon|internet|mobilfunk|vodafone|telekom|o2/.test(value)) {
-    return 'telefon & internet'
-  }
-
-  if (/taxi|uber|bolt|tank|parken|fahrt/.test(value)) {
-    return 'fahrtkosten'
-  }
-
   if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(value)) {
-    return 'bankgebühren'
+    return 'bank'
   }
 
   return 'sonstiges'
@@ -158,10 +166,8 @@ export async function POST(req: Request) {
     const vendor = String(parsed.vendor || '').trim()
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
-    const category =
-      parsed.category && String(parsed.category).trim()
-        ? String(parsed.category).trim()
-        : inferCategory(`${title} ${vendor}`)
+    const combinedText = `${title} ${vendor} ${parsed.category || ''}`
+const category = inferCategory(combinedText)
 
     return NextResponse.json({
       success: true,
