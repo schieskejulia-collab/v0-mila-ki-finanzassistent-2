@@ -43,7 +43,8 @@ const [status, setStatus] = useState('offen')
 const [dueDate, setDueDate] = useState('')
 const [isSaving, setIsSaving] = useState(false)
   const numericAmount = Number(amount || 0)
-  const deductible = type === 'expense' && isDeductible(category)
+  const taxStatus = getTaxHint(category)
+const deductible = type === 'expense' && taxStatus === 'wahrscheinlich ja'
   const taxReserve = type === 'income' ? numericAmount * 0.3 : 0
   const taxHint = deductible ? numericAmount * 0.3 : 0
 
