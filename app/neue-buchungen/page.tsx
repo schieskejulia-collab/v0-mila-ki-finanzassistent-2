@@ -5,8 +5,24 @@ import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
 const categories = CATEGORY_LIST.map((category) => category.label)
 
-function isDeductible(category: string) {
-  return category !== 'Sonstiges'
+function getTaxHint(category: string) {
+  const pruefen = [
+    'Reisen & Unterkünfte',
+    'Bewirtung',
+    'Fahrtkosten & Fahrzeuge',
+    'Privat / Nicht absetzbar',
+    'Sonstiges',
+  ]
+
+  if (category === 'Privat / Nicht absetzbar') {
+    return 'wahrscheinlich nein'
+  }
+
+  if (pruefen.includes(category)) {
+    return 'prüfbar / abhängig vom Zweck'
+  }
+
+  return 'wahrscheinlich ja'
 }
 
 function formatEuro(value: number) {
@@ -265,7 +281,7 @@ setDueDate('')
           </p>
           <p>
             Steuerlich absetzbar:{' '}
-            <strong>{deductible ? 'wahrscheinlich ja' : 'unklar'}</strong>
+         <strong>{getTaxHint(category)}</strong>
           </p>
           {deductible && (
             <p>
