@@ -3,15 +3,23 @@ import type { CategoryId } from './categories'
 export type TaxHint = 'likely' | 'depends' | 'private' | 'unknown'
 
 export type MerchantInfo = {
+  name: string
   category: CategoryId
   taxHint: TaxHint
+  aliases: string[]
 }
 
 export const MERCHANTS: Record<string, MerchantInfo> = {
   medimax: {
-    category: 'hardware',
-    taxHint: 'depends',
-  },
+  name: 'Medimax',
+  category: 'hardware',
+  taxHint: 'depends',
+  aliases: [
+    'medimax',
+    'medimax stendal',
+    'medimax gmbh',
+  ],
+},
 
   "mcdonald's": {
     category: 'bewirtung',
@@ -19,9 +27,15 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
   },
 
   'deutsche post': {
-    category: 'versand',
-    taxHint: 'likely',
-  },
+  name: 'Deutsche Post',
+  category: 'versand',
+  taxHint: 'likely',
+  aliases: [
+    'deutsche post',
+    'deutsche post ag',
+    'briefzentrum',
+  ],
+},
 
   dhl: {
     category: 'versand',
