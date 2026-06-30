@@ -66,7 +66,7 @@ export function ReceiptUpload({
     alert('SCAN DATA: ' + JSON.stringify(json.data))
 
 if (json.data && onScanSuccess) {
-  onScanSuccess(json.data)
+  onScanSuccess(json.data?.data || json.data)
 }
   } catch (err: any) {
     console.error('Scanner Error:', err)
