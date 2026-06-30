@@ -61,9 +61,13 @@ export function ReceiptUpload({
       )
     }
 
-    setStatusText('Datei erkannt. Bitte kurz prüfen und speichern. 🎉')
+    const scanPayload = json.data?.data || json.data
 
-    alert('SCAN DATA: ' + JSON.stringify(json.data))
+alert('SCAN PAYLOAD: ' + JSON.stringify(scanPayload))
+
+if (scanPayload && onScanSuccess) {
+  onScanSuccess(scanPayload)
+}
 
 if (json.data && onScanSuccess) {
   onScanSuccess(json.data?.data || json.data)
