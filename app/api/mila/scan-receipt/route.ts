@@ -193,8 +193,15 @@ export async function POST(req: Request) {
     const vendor = String(parsed.vendor || '').trim()
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
-    const combinedText = `${title} ${vendor} ${parsed.category || ''}`
-const category = detectCategory(combinedText)
+    const combinedText = `${title} ${vendor}`
+const normalizedVendor = vendor.toLowerCase()
+
+const merchantEntry = Object.entries(MERCHANTS).find(([merchantName]) =>
+  normalizedVendor.includes(merchantName)
+)
+
+const category = merchantEntry?.[1]?.category || detectCategory(combinedText)
+const taxHint = merchantEntry?.[1]?.deductible || 'unknown'
     return NextResponse.json({
       success: true,
       data: {
@@ -202,6 +209,7 @@ const category = detectCategory(combinedText)
         vendor,
         title,
         category,
+taxHint,
       },
     })
   } catch (error) {
