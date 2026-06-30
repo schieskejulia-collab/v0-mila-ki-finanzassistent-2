@@ -140,11 +140,11 @@ export async function POST(req: Request) {
               content: [
                 {
                   type: 'text',
-                  text:
+                  text: `
                   Analysiere diesen deutschen Kassenbeleg.
 
 Extrahiere ausschließlich gültiges JSON.
-
+`,
 WICHTIG:
 
 - amount = immer der tatsächlich zu zahlende Endbetrag.
