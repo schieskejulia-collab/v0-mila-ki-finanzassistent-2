@@ -196,7 +196,9 @@ export async function POST(req: Request) {
     const amount = normalizeAmount(parsed.amount)
     const combinedText = `${title} ${vendor}`
 const normalizedVendor = vendor.toLowerCase()
-
+const rememberedMerchant = merchantMemory.find((entry) =>
+  normalizedVendor.includes(entry.merchant.toLowerCase())
+)
 const merchantEntry = Object.entries(MERCHANTS).find(
   ([merchantName, merchant]) => {
     const aliases = merchant.aliases || [merchantName]
@@ -207,8 +209,15 @@ const merchantEntry = Object.entries(MERCHANTS).find(
   }
 )
 
-const category = merchantEntry?.[1]?.category || detectCategory(combinedText)
-const taxHint = merchantEntry?.[1]?.taxHint || 'unknown'
+const category =
+  rememberedMerchant?.category ||
+  merchantEntry?.[1]?.category ||
+  detectCategory(combinedText)
+
+const taxHint =
+  rememberedMerchant?.taxHint ||
+  merchantEntry?.[1]?.taxHint ||
+  'unknown'
 const confidence =
   merchantEntry
     ? 'high'
