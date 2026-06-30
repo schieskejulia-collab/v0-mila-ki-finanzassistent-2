@@ -585,7 +585,7 @@ dekoration: [
   'butlers',
   'depot',
   'idee',
-]
+],
 
   sonstiges: [],
 }
