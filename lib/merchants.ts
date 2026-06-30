@@ -129,7 +129,6 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
 'office discount': { category: 'office', taxHint: 'depends' },
 'paperworld': { category: 'office', taxHint: 'depends' },
 
-// Sonstige
 'nanu nana': {
   category: 'geschenke',
   taxHint: 'depends',
