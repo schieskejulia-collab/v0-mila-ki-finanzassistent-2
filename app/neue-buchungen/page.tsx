@@ -61,23 +61,20 @@ function updatePartner(value: string) {
   setPartner(value)
 }
 
-  const handleScanSuccess = (scannedData: any) => {
-  console.log('SCAN DATA IN PAGE:', scannedData)
+  const handleScanSuccess = (rawData: any) => {
+  const scannedData = rawData?.data || rawData
 
   if (!scannedData) return
 
-  const scannedTitle = String(scannedData.title || '').trim()
-  const scannedAmount =
-    setAmount(String(scannedData.amount ?? ''))
+  setType('expense')
+  setTitle(String(scannedData.title || '').trim())
+  setAmount(String(scannedData.amount ?? ''))
+  setPartner(String(scannedData.vendor || '').trim())
 
   const categoryId =
     scannedData.category ||
-    detectCategory(`${scannedTitle} ${scannedVendor}`)
+    detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
 
-  setType('expense')
-  setTitle(scannedTitle)
-  setAmount(scannedAmount)
-  setPartner(scannedVendor)
   setCategory(getCategoryLabel(categoryId))
   setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
 }
