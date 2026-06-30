@@ -73,8 +73,10 @@ function updatePartner(value: string) {
   scannedData.category ||
   detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
 
-setCategory(getCategoryLabel(detectedId))
+console.log('SCAN DATA:', scannedData)
+console.log('DETECTED CATEGORY:', detectedId)
 
+setCategory(getCategoryLabel(detectedId))
 
     setNote('Automatisch von Mila ausgelesen 📸')
   }
