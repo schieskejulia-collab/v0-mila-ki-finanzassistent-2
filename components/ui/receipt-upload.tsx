@@ -63,7 +63,6 @@ export function ReceiptUpload({
 
     const scanPayload = json.data?.data || json.data
 
-alert('SCAN PAYLOAD: ' + JSON.stringify(scanPayload))
 
 if (scanPayload && onScanSuccess) {
   onScanSuccess(scanPayload)
