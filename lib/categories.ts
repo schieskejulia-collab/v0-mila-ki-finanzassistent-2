@@ -314,6 +314,17 @@ export const CATEGORY_KEYWORDS = {
     'schutzkleidung',
   ],
 
+bekleidung: [
+  'kik',
+  'deichmann',
+  'c&a',
+  'h&m',
+  'zara',
+  'new yorker',
+  'takko',
+  'ernstings family'
+],
+
   telefon: [
     'vodafone',
     'telekom',
@@ -568,6 +579,13 @@ export const CATEGORY_KEYWORDS = {
 
 'rossmann',
   ],
+
+dekoration: [
+  'nanu-nana',
+  'butlers',
+  'depot',
+  'idee',
+]
 
   sonstiges: [],
 }
