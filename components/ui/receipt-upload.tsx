@@ -63,9 +63,11 @@ export function ReceiptUpload({
 
     setStatusText('Datei erkannt. Bitte kurz prüfen und speichern. 🎉')
 
-    if (json.data && onScanSuccess) {
-      onScanSuccess(json.data)
-    }
+    alert('SCAN DATA: ' + JSON.stringify(json.data))
+
+if (json.data && onScanSuccess) {
+  onScanSuccess(json.data)
+}
   } catch (err: any) {
     console.error('Scanner Error:', err)
     setStatusText(
