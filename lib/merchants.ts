@@ -130,7 +130,13 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
 'paperworld': { category: 'office', taxHint: 'depends' },
 
 // Sonstige
-'nanu nana': { category: 'shopping', taxHint: 'depends' },
+'nanu nana': {
+  category: 'shopping',
+  taxHint: 'private',
+  aliases: ['nanu nana', 'nanu-nana', 'nanunana', 'nanu']
+},
+'nanu nana': { category: 'shopping', taxHint: 'private' },
+'nanu-nana': { category: 'shopping', taxHint: 'private' },
 'tedi': { category: 'shopping', taxHint: 'depends' },
 'action': { category: 'shopping', taxHint: 'depends' },
 'thalia': { category: 'education', taxHint: 'depends' },
