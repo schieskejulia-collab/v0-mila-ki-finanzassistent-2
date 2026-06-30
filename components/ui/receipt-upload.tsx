@@ -101,7 +101,14 @@ export function ReceiptUpload({
           ref={inputRef}
           type="file"
           accept="image/*,application/pdf"
-          capture="environment"
+          <input
+  ref={inputRef}
+  type="file"
+  accept="image/*,application/pdf"
+  disabled={isScanning}
+  onChange={(e) => handleFile(e.target.files?.[0])}
+  className="hidden"
+/>
           disabled={isScanning}
           onChange={(e) => handleFile(e.target.files?.[0])}
           className="hidden"
