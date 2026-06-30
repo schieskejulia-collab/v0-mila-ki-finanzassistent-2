@@ -139,34 +139,25 @@ export async function POST(req: Request) {
               role: 'user',
               content: [
                 {
-                  type: 'text',
-                  text: `
-                  Analysiere diesen deutschen Kassenbeleg.
+  type: 'text',
+  text: `
+Analysiere diesen deutschen Kassenbeleg.
 
 Extrahiere ausschließlich gültiges JSON.
-`,
+
 WICHTIG:
-
-- amount = immer der tatsächlich zu zahlende Endbetrag.
+- amount ist immer der tatsächlich zu zahlende Endbetrag.
 - Niemals MwSt., Steuer, VAT, Tax, Netto, Rabatt oder Wechselgeld als amount verwenden.
-- Bevorzuge Felder:
-  Gesamtbetrag
-  Endbetrag
-  Zu zahlen
-  Kartenzahlung
-  EC
-  Total
-  Summe
-
-- vendor = Geschäftsname
-- title = möglichst kurze Beschreibung des Einkaufs
-- category = passende Kategorie
-- taxHint = likely oder unlikely
-- confidence = high, medium oder low
+- Bevorzuge Felder wie Gesamtbetrag, Endbetrag, Zu zahlen, Kartenzahlung, EC, Total oder Summe.
+- vendor ist der Geschäftsname.
+- title ist eine kurze Beschreibung des Einkaufs.
+- category ist die passende Kategorie.
+- taxHint ist likely oder unlikely.
+- confidence ist high, medium oder low.
 
 Antwort ausschließlich als JSON.
-                },
-                {
+`,
+},
                   type: 'image_url',
                   image_url: {
                     url: imageBase64,
