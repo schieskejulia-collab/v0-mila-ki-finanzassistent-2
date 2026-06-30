@@ -4,4 +4,10 @@ export type MerchantMemory = {
   taxHint: string
 }
 
-export const merchantMemory: MerchantMemory[] = []
+export const merchantMemory: MerchantMemory[] = [
+  {
+    merchant: 'nanu-nana',
+    category: 'dekoration',
+    taxHint: 'depends',
+  },
+]
