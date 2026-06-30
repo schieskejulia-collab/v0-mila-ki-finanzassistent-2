@@ -587,10 +587,9 @@ geschenke: [
   'souvenir',
   'accessoire',
   'accessoires',
- 'geschenk',
-    'gutschein',
-    'aufmerksamkeit',
-    'präsent',
+  'gutschein',
+  'aufmerksamkeit',
+  'präsent',
 ],
 
   sonstiges: [],
