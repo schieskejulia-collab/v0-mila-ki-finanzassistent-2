@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { detectCategory } from '@/lib/categories'
 import { MERCHANTS } from '@/lib/merchants'
+import { merchantMemory } from '@/lib/merchant-memory'
 function cleanJson(content: string) {
   return content
     .replace(/```json/gi, '')
