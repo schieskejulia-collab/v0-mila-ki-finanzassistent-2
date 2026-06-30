@@ -143,19 +143,27 @@ export async function POST(req: Request) {
   text: `
 Analysiere diesen deutschen Kassenbeleg.
 
-Extrahiere ausschließlich gültiges JSON.
+Antworte ausschließlich mit gültigem JSON:
+{
+  "amount": number,
+  "vendor": string,
+  "title": string,
+  "category": string,
+  "taxHint": string,
+  "confidence": string
+}
 
-WICHTIG:
-- amount ist immer der tatsächlich zu zahlende Endbetrag.
-- Niemals MwSt., Steuer, VAT, Tax, Netto, Rabatt oder Wechselgeld als amount verwenden.
-- Bevorzuge Felder wie Gesamtbetrag, Endbetrag, Zu zahlen, Kartenzahlung, EC, Total oder Summe.
-- vendor ist der Geschäftsname.
-- title ist eine kurze Beschreibung des Einkaufs.
-- category ist die passende Kategorie.
-- taxHint ist likely oder unlikely.
-- confidence ist high, medium oder low.
+WICHTIG FÜR amount:
+- amount ist IMMER der Brutto-Endbetrag, also der tatsächlich bezahlte Gesamtbetrag.
+- Suche nach Begriffen wie: Gesamt, Summe, Zu zahlen, Endbetrag, Brutto, Kartenzahlung, EC, Total.
+- Verwende NIEMALS Netto, MwSt, Steuer, VAT, Tax, Rabatt, Rückgeld oder Wechselgeld.
+- Wenn ein Netto-Betrag und ein Brutto-Betrag vorhanden sind, nimm IMMER den höheren Brutto-Endbetrag.
+- Beispiel: Wenn 4,87 und 5,80 vorkommen, ist amount 5.80.
+- Wenn mehrere Beträge vorhanden sind, wähle den höchsten plausiblen tatsächlich bezahlten Endbetrag.
 
-Antwort ausschließlich als JSON.
+vendor ist der Händlername.
+title ist eine kurze Beschreibung des Einkaufs.
+Antwort nur als JSON, ohne Erklärung.
 `,
 },
 {
