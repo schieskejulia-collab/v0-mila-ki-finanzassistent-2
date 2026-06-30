@@ -7,11 +7,7 @@ function cleanJson(content: string) {
     .replace(/```/g, '')
     .trim()
 }
-const merchant = scannedVendor.toLowerCase()
 
-if (MERCHANTS[merchant]) {
-   // Kategorie direkt übernehmen
-}
 function inferCategory(text: string) {
   const value = text.toLowerCase()
 
