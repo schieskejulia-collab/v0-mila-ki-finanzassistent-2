@@ -68,10 +68,7 @@ function updatePartner(value: string) {
 
   const scannedTitle = String(scannedData.title || '').trim()
   const scannedAmount =
-    scannedData.amount !== undefined && scannedData.amount !== null
-      ? String(scannedData.amount).replace('.', ',')
-      : ''
-  const scannedVendor = String(scannedData.vendor || '').trim()
+    setAmount(String(scannedData.amount ?? ''))
 
   const categoryId =
     scannedData.category ||
