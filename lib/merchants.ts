@@ -143,6 +143,7 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
 'louis': { category: 'vehicle', taxHint: 'depends' },
 'atu': { category: 'vehicle', taxHint: 'depends' },
 'euromaster': { category: 'vehicle', taxHint: 'depends' },
+}
 export function findMerchantInfo(vendor: string) {
   const normalizedVendor = vendor.toLowerCase().trim()
 
