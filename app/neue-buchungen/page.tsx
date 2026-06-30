@@ -62,25 +62,28 @@ function updatePartner(value: string) {
 }
 
   const handleScanSuccess = (scannedData: any) => {
-    if (!scannedData) return
+  console.log('SCAN DATA IN PAGE:', scannedData)
 
-    setType('expense')
-    setTitle(scannedData.title || '')
-    setAmount(scannedData.amount ? String(scannedData.amount) : '')
-    setPartner(scannedData.vendor || '')
+  if (!scannedData) return
 
-  const detectedId =
-  scannedData.category ||
-  detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
+  const scannedTitle = String(scannedData.title || '').trim()
+  const scannedAmount =
+    scannedData.amount !== undefined && scannedData.amount !== null
+      ? String(scannedData.amount).replace('.', ',')
+      : ''
+  const scannedVendor = String(scannedData.vendor || '').trim()
 
-console.log('SCAN DATA:', scannedData)
-console.log('DETECTED CATEGORY:', detectedId)
+  const categoryId =
+    scannedData.category ||
+    detectCategory(`${scannedTitle} ${scannedVendor}`)
 
-setCategory(getCategoryLabel(detectedId))
-
-    setNote('Automatisch von Mila ausgelesen 📸')
-  }
-
+  setType('expense')
+  setTitle(scannedTitle)
+  setAmount(scannedAmount)
+  setPartner(scannedVendor)
+  setCategory(getCategoryLabel(categoryId))
+  setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
+}
   async function speichern() {
   if (isSaving) return
 
