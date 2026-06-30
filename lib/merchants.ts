@@ -9,9 +9,9 @@ export type MerchantInfo = {
   aliases: string[]
 }
 
-export const MERCHANTS: Record<string, 
-// Supermärkte
-'aldi': { category: 'groceries', taxHint: 'private' },
+export const MERCHANTS: Record<string, MerchantInfo> = {
+  // Supermärkte
+  'aldi': { category: 'groceries', taxHint: 'private' },
 'aldi nord': { category: 'groceries', taxHint: 'private' },
 'aldi süd': { category: 'groceries', taxHint: 'private' },
 'lidl': { category: 'groceries', taxHint: 'private' },
