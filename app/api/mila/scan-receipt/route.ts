@@ -197,10 +197,13 @@ export async function POST(req: Request) {
 const normalizedVendor = vendor.toLowerCase()
 
 const merchantEntry = Object.entries(MERCHANTS).find(
-  ([, merchant]) =>
-    merchant.aliases.some(alias =>
+  ([merchantName, merchant]) => {
+    const aliases = merchant.aliases || [merchantName]
+
+    return aliases.some((alias) =>
       normalizedVendor.includes(alias.toLowerCase())
     )
+  }
 )
 
 const category = merchantEntry?.[1]?.category || detectCategory(combinedText)
