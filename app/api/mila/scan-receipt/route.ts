@@ -141,7 +141,30 @@ export async function POST(req: Request) {
                 {
                   type: 'text',
                   text:
-                    'Analysiere diesen deutschen Beleg oder Kassenzettel. Gib ausschließlich valides JSON zurück. Kein Markdown. Kein Erklärungstext. Format: {"amount":0,"vendor":"","category":"","title":""}. amount ist der zu zahlende Gesamtbetrag als Zahl. vendor ist der Händler. title ist eine kurze Beschreibung. category ist eine von: software, reisen, weiterbildung, marketing, buerobedarf, bewirtung, versicherung, hardware, telefon & internet, miete, fahrtkosten, bankgebühren, sonstiges.',
+                  Analysiere diesen deutschen Kassenbeleg.
+
+Extrahiere ausschließlich gültiges JSON.
+
+WICHTIG:
+
+- amount = immer der tatsächlich zu zahlende Endbetrag.
+- Niemals MwSt., Steuer, VAT, Tax, Netto, Rabatt oder Wechselgeld als amount verwenden.
+- Bevorzuge Felder:
+  Gesamtbetrag
+  Endbetrag
+  Zu zahlen
+  Kartenzahlung
+  EC
+  Total
+  Summe
+
+- vendor = Geschäftsname
+- title = möglichst kurze Beschreibung des Einkaufs
+- category = passende Kategorie
+- taxHint = likely oder unlikely
+- confidence = high, medium oder low
+
+Antwort ausschließlich als JSON.
                 },
                 {
                   type: 'image_url',
