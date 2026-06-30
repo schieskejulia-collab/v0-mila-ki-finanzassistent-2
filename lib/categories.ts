@@ -481,12 +481,6 @@ bekleidung: [
     'verein',
   ],
 
-  geschenke: [
-    'geschenk',
-    'gutschein',
-    'aufmerksamkeit',
-    'präsent',
-  ],
 
   versand: [
     'dhl',
@@ -581,10 +575,22 @@ bekleidung: [
   ],
 
 dekoration: [
-  'nanu-nana',
   'butlers',
   'depot',
   'idee',
+],
+
+geschenke: [
+  'nanu-nana',
+  'geschenk',
+  'geschenkartikel',
+  'souvenir',
+  'accessoire',
+  'accessoires',
+ 'geschenk',
+    'gutschein',
+    'aufmerksamkeit',
+    'präsent',
 ],
 
   sonstiges: [],
