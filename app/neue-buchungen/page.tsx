@@ -69,9 +69,9 @@ function updatePartner(value: string) {
     setAmount(scannedData.amount ? String(scannedData.amount) : '')
     setPartner(scannedData.vendor || '')
 
-    const detectedId = detectCategory(
-  `${scannedData.title || ''} ${scannedData.vendor || ''} ${scannedData.category || ''}`
-)
+  const detectedId =
+  scannedData.category ||
+  detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
 
 setCategory(getCategoryLabel(detectedId))
 
