@@ -208,14 +208,23 @@ const merchantEntry = Object.entries(MERCHANTS).find(
 
 const category = merchantEntry?.[1]?.category || detectCategory(combinedText)
 const taxHint = merchantEntry?.[1]?.taxHint || 'unknown'
+const confidence =
+  merchantEntry
+    ? 'high'
+    : category !== 'sonstiges'
+      ? 'medium'
+      : 'low'
     return NextResponse.json({
       success: true,
       data: {
-        amount,
-        vendor,
-        title,
-        category,
-taxHint,
+        data: {
+  amount,
+  vendor,
+  title,
+  category,
+  taxHint,
+  confidence,
+}
       },
     })
   } catch (error) {
