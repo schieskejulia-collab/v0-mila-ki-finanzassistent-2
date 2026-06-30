@@ -196,12 +196,15 @@ export async function POST(req: Request) {
     const combinedText = `${title} ${vendor}`
 const normalizedVendor = vendor.toLowerCase()
 
-const merchantEntry = Object.entries(MERCHANTS).find(([merchantName]) =>
-  normalizedVendor.includes(merchantName)
+const merchantEntry = Object.entries(MERCHANTS).find(
+  ([, merchant]) =>
+    merchant.aliases.some(alias =>
+      normalizedVendor.includes(alias.toLowerCase())
+    )
 )
 
 const category = merchantEntry?.[1]?.category || detectCategory(combinedText)
-const taxHint = merchantEntry?.[1]?.deductible || 'unknown'
+const taxHint = merchantEntry?.[1]?.taxHint || 'unknown'
     return NextResponse.json({
       success: true,
       data: {
