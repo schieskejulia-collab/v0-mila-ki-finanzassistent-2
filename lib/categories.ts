@@ -590,6 +590,8 @@ geschenke: [
   'gutschein',
   'aufmerksamkeit',
   'präsent',
+'spielwaren',
+'spielzeug',
 ],
 
   sonstiges: [],
