@@ -158,7 +158,8 @@ WICHTIG:
 Antwort ausschließlich als JSON.
 `,
 },
-                  type: 'image_url',
+{
+  type: 'image_url',
                   image_url: {
                     url: imageBase64,
                   },
