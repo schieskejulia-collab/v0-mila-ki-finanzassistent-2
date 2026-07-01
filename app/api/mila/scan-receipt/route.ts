@@ -231,8 +231,20 @@ const merchantEntry = Object.entries(MERCHANTS).find(
     )
   }
 )
+let smartCategory: string | null = null
 
+// Nanu-Nana
+if (normalizedVendor.includes('nanu')) {
+  if (/(spiel|spielzeug|spielwaren|lego|puzzle|kuscheltier)/i.test(title)) {
+    smartCategory = 'geschenke'
+  } else if (/(kerze|vase|deko|dekoration|bilderrahmen)/i.test(title)) {
+    smartCategory = 'dekoration'
+  } else if (/(geschenk|gutschein|präsent|aufmerksamkeit|accessoire|accessoires)/i.test(title)) {
+    smartCategory = 'geschenke'
+  }
+}
 const category =
+  smartCategory ||
   rememberedMerchant?.category ||
   merchantEntry?.[1]?.category ||
   detectCategory(combinedText)
