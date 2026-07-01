@@ -243,7 +243,6 @@ if (normalizedVendor.includes('nanu')) {
     smartCategory = 'geschenke'
   }
 }
-const detectedCategory = detectCategory(combinedText)
 
 const detectedCategory = inferCategory(combinedText)
 
