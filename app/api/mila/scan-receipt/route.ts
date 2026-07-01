@@ -232,7 +232,7 @@ const matchedRule = RECEIPT_RULES.find((rule) => {
 
   return merchantMatch && titleMatch
 })
-const normalizedVendor = vendor.toLowerCase()
+
 const rememberedMerchant = merchantMemory.find((entry) =>
   normalizedVendor.includes(entry.merchant.toLowerCase())
 )
