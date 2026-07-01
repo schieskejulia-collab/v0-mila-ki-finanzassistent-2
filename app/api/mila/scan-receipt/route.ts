@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { detectCategory } from '@/lib/categories'
 import { MERCHANTS } from '@/lib/merchants'
+import { RECEIPT_RULES } from '@/lib/receipt-rules'
 import { merchantMemory } from '@/lib/merchant-memory'
 function cleanJson(content: string) {
   return content
@@ -218,6 +219,17 @@ Antwort nur als JSON, ohne Erklärung.
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
     const combinedText = `${title} ${vendor}`
+const matchedRule = RECEIPT_RULES.find((rule) => {
+  const merchantMatch = rule.merchantIncludes.some((merchant) =>
+    normalizedVendor.includes(merchant.toLowerCase())
+  )
+
+  const titleMatch = rule.titleIncludes.some((keyword) =>
+    title.toLowerCase().includes(keyword.toLowerCase())
+  )
+
+  return merchantMatch && titleMatch
+})
 const normalizedVendor = vendor.toLowerCase()
 const rememberedMerchant = merchantMemory.find((entry) =>
   normalizedVendor.includes(entry.merchant.toLowerCase())
@@ -231,7 +243,7 @@ const merchantEntry = Object.entries(MERCHANTS).find(
     )
   }
 )
-let smartCategory: string | null = null
+const smartCategory = matchedRule?.category ?? null
 
 // Nanu-Nana
 if (normalizedVendor.includes('nanu')) {
@@ -252,6 +264,7 @@ const category =
   merchantEntry?.[1]?.category ||
   detectedCategory
 const taxHint =
+  matchedRule?.taxHint ||
   rememberedMerchant?.taxHint ||
   merchantEntry?.[1]?.taxHint ||
   'unknown'
