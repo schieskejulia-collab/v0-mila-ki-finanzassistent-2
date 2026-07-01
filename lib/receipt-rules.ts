@@ -111,4 +111,114 @@ export const RECEIPT_RULES: ReceiptRule[] = [
   category: 'material',
   taxHint: 'likely',
 },
+{
+  merchantIncludes: ['amazon'],
+  titleIncludes: [],
+  category: 'sonstiges',
+  taxHint: 'depends',
+},
+
+{
+  merchantIncludes: ['otto'],
+  titleIncludes: [],
+  category: 'sonstiges',
+  taxHint: 'depends',
+},
+
+{
+  merchantIncludes: ['media markt', 'mediamarkt'],
+  titleIncludes: [],
+  category: 'hardware',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['saturn'],
+  titleIncludes: [],
+  category: 'hardware',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['apple'],
+  titleIncludes: [],
+  category: 'hardware',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['notebooksbilliger'],
+  titleIncludes: [],
+  category: 'hardware',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['conrad'],
+  titleIncludes: [],
+  category: 'hardware',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['aral','shell','esso','total','star','hem'],
+  titleIncludes: [],
+  category: 'fahrzeug',
+  taxHint: 'depends',
+},
+
+{
+  merchantIncludes: ['dhl','hermes','dpd','ups','gls'],
+  titleIncludes: [],
+  category: 'versand',
+  taxHint: 'likely',
+},
+{
+  merchantIncludes: ['adobe'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['openai','chatgpt'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['google'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'depends',
+},
+
+{
+  merchantIncludes: ['microsoft'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['canva'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['figma'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
+
+{
+  merchantIncludes: ['github'],
+  titleIncludes: [],
+  category: 'software',
+  taxHint: 'likely',
+},
 ]
