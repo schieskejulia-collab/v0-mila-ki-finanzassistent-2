@@ -219,6 +219,8 @@ Antwort nur als JSON, ohne Erklärung.
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
     const combinedText = `${title} ${vendor}`
+const normalizedVendor = vendor.toLowerCase()
+
 const matchedRule = RECEIPT_RULES.find((rule) => {
   const merchantMatch = rule.merchantIncludes.some((merchant) =>
     normalizedVendor.includes(merchant.toLowerCase())
