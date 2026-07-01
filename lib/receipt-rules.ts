@@ -7,17 +7,26 @@ export type ReceiptRule = {
 
 export const RECEIPT_RULES: ReceiptRule[] = [
   {
-    merchantIncludes: ['nanu', 'nanu-nana', 'nanu nana'],
-    titleIncludes: ['spielzeug', 'spielwaren', 'geschenk', 'accessoire', 'accessoires'],
-    category: 'geschenke',
-    taxHint: 'depends',
-  },
-  {
-    merchantIncludes: ['nanu', 'nanu-nana', 'nanu nana'],
-    titleIncludes: ['kerze', 'vase', 'deko', 'dekoration', 'bilderrahmen'],
-    category: 'geschenke',
-    taxHint: 'depends',
-  },
+  merchantIncludes: ['nanu', 'nanu-nana', 'nanu nana'],
+  titleIncludes: [
+    'einkauf',
+    'artikel',
+    'spielzeug',
+    'spielwaren',
+    'geschenk',
+    'accessoire',
+    'accessoires',
+  ],
+  category: 'geschenke',
+  taxHint: 'depends',
+},
+{
+  merchantIncludes: ['deichmann'],
+  titleIncludes: ['einkauf', 'schuh', 'schuhe', 'deichmann'],
+  category: 'privat',
+  taxHint: 'private',
+},
+
   {
     merchantIncludes: ['deutsche bahn', 'db', 'd-tarif', 'bahn'],
     titleIncludes: ['fahrticket', 'fahrradkarte', 'fahrkarte', 'ticket', 'd-ticket', 'nahverkehr'],
