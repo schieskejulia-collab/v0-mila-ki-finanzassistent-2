@@ -22,7 +22,16 @@ export const RECEIPT_RULES: ReceiptRule[] = [
 },
 {
   merchantIncludes: ['deichmann'],
-  titleIncludes: ['einkauf', 'schuh', 'schuhe', 'deichmann'],
+  titleIncludes: [
+    'einkauf',
+    'schuh',
+    'schuhe',
+    'schuhkauf',
+    'shoe',
+    'shoes',
+    'shoe purchase',
+    'purchase',
+  ],
   category: 'privat',
   taxHint: 'private',
 },
