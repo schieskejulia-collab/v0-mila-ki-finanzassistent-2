@@ -42,4 +42,73 @@ export const RECEIPT_RULES: ReceiptRule[] = [
     category: 'reisen',
     taxHint: 'depends',
   },
+{
+  merchantIncludes: ['rossmann'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['dm'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['aldi'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['lidl'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['rewe'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['edeka'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['netto'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['kaufland'],
+  titleIncludes: [],
+  category: 'privat',
+  taxHint: 'private',
+},
+
+{
+  merchantIncludes: ['ikea'],
+  titleIncludes: [],
+  category: 'homeoffice',
+  taxHint: 'depends',
+},
+
+{
+  merchantIncludes: ['obi', 'hornbach', 'toom', 'bauhaus'],
+  titleIncludes: [],
+  category: 'material',
+  taxHint: 'likely',
+},
 ]
