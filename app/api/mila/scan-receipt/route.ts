@@ -243,20 +243,21 @@ if (normalizedVendor.includes('nanu')) {
     smartCategory = 'geschenke'
   }
 }
+const detectedCategory = detectCategory(combinedText)
+
 const category =
   smartCategory ||
   rememberedMerchant?.category ||
   merchantEntry?.[1]?.category ||
-  detectCategory(combinedText)
-
+  detectedCategory
 const taxHint =
   rememberedMerchant?.taxHint ||
   merchantEntry?.[1]?.taxHint ||
   'unknown'
 const confidence =
-  merchantEntry
+  smartCategory || rememberedMerchant || merchantEntry
     ? 'high'
-    : category !== 'sonstiges'
+    : detectedCategory !== 'sonstiges'
       ? 'medium'
       : 'low'
     return NextResponse.json({
