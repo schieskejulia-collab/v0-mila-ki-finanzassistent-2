@@ -245,6 +245,8 @@ if (normalizedVendor.includes('nanu')) {
 }
 const detectedCategory = detectCategory(combinedText)
 
+const detectedCategory = inferCategory(combinedText)
+
 const category =
   smartCategory ||
   rememberedMerchant?.category ||
