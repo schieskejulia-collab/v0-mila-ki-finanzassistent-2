@@ -198,7 +198,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     setUserName(name || 'Julia')
 
-    setUserStatus(status || 'freelancer')
+    setUserStatus(status || 'freiberufler')
 
     setIsLoggedIn(true)
 
