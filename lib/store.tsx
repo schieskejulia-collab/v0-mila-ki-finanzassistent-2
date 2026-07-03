@@ -157,13 +157,15 @@ useEffect(() => {
   setUserName(profile.userName ?? 'Julia')
   setUserStatus(profile.userStatus ?? 'freiberufler')
   const savedIndustry =
-  profile.industry === 'berater' ? 'beratung' :
-  profile.industry === 'handwerker' ? 'handwerk' :
-  profile.industry === 'restaurant' ? 'gastro' :
-  profile.industry === 'ecommerce' ? 'handel' :
-  profile.industry === 'webdesigner' ? 'digital' :
-  profile.industry === 'fotograf' ? 'kreativ' :
-  profile.industry === 'coach' ? 'bildung' :
+  profile.industry === 'digital' ? 'digital' :
+  profile.industry === 'kreativ' ? 'kreativ' :
+  profile.industry === 'beratung' ? 'beratung' :
+  profile.industry === 'handwerk' ? 'handwerk' :
+  profile.industry === 'gesundheit' ? 'gesundheit' :
+  profile.industry === 'gastro' ? 'gastro' :
+  profile.industry === 'handel' ? 'handel' :
+  profile.industry === 'dienstleistung' ? 'dienstleistung' :
+  profile.industry === 'bildung' ? 'bildung' :
   profile.industry ?? 'sonstiges'
 
 setIndustry(savedIndustry)
