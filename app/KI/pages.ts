@@ -168,6 +168,42 @@ export function getMilaFindings(
       category: "opportunity",
     })
   }
+  // -----------------------------------------
+  // 6) OFFENE & ÜBERFÄLLIGE ZAHLUNGEN
+  // -----------------------------------------
+  const openIncomes = incomes.filter((i) =>
+    ["offen", "open", "unbezahlt"].includes(String(i.status || "").toLowerCase())
+  )
 
+  const overdueIncomes = incomes.filter((i) =>
+    ["überfällig", "overdue", "mahnung"].includes(String(i.status || "").toLowerCase())
+  )
+
+  const openIncomeTotal = openIncomes.reduce((s, i) => s + number(i.amount), 0)
+  const overdueIncomeTotal = overdueIncomes.reduce((s, i) => s + number(i.amount), 0)
+
+  if (openIncomes.length >= 1) {
+    findings.push({
+      id: "income-open",
+      title: "🟡 Offene Einnahmen",
+      message: `Du hast ${openIncomes.length} offene Zahlung(en) über ${money(
+        openIncomeTotal
+      )}. Prüfe heute, was davon schon bezahlt wurde.`,
+      severity: "medium",
+      category: "cashflow",
+    })
+  }
+
+  if (overdueIncomes.length >= 1) {
+    findings.push({
+      id: "income-overdue",
+      title: "🚨 Überfällige Zahlung",
+      message: `${overdueIncomes.length} Zahlung(en) über ${money(
+        overdueIncomeTotal
+      )} sind überfällig. Das sollte heute deine höchste Finanz-Priorität sein.`,
+      severity: "high",
+      category: "risk",
+    })
+  }
   return findings.slice(0, 10)
 }
