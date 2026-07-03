@@ -50,7 +50,7 @@ export function MorningBriefing() {
 
       : openIncomes.length > 0
 
-      ? `Prüfe heute ${openIncomes.length} offene Einnahme(n) über ${formatEuro(openIncomeTotal)}.`
+      ? `Du wartest noch auf Zahlungseingänge. Prüfe heute, ob du nachfassen solltest. ${openIncomes.length} offene Einnahme(n) über ${formatEuro(openIncomeTotal)}.`
 
       : expenses.length === 0 && incomes.length === 0
 
