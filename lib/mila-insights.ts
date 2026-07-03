@@ -1,6 +1,4 @@
-import { detectCategory } from './categories'
-import { findMerchantInfo } from './merchants'
-
+import { getEntryCategory } from './mila-classifier'
 export type MilaInsight = {
   id: string
   title: string
@@ -61,11 +59,6 @@ function industryLabel(industry?: string) {
   }
 
   return labels[industry || 'sonstiges'] || 'deiner Branche'
-}
-
-function getEntryCategory(entry: any) {
-  const merchant = findMerchantInfo(String(entry.vendor || entry.title || ''))
-  return merchant?.category || detectCategory(getText(entry))
 }
 
 export function getMilaInsights(
