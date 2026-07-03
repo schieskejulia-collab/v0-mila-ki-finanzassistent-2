@@ -177,7 +177,7 @@ annualProfit,
         </p>
 
         <div className="mt-4 space-y-3">
-          {STATUS_DETAILS.map((item) => {
+          {USER_TYPES.map((item) => {
             const isSelected = userStatus === item.key
 
             return (
