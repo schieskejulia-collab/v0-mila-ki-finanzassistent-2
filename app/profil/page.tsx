@@ -329,7 +329,27 @@ annualProfit,
           Steuerberatung und werden aktuell nur für Orientierung genutzt.
         </p>
       </section>
+<button
+  onClick={() => {
+    localStorage.setItem(
+      'mila-profile-saved',
+      new Date().toISOString()
+    )
 
+    alert('✅ Dein Mila-Profil wurde gespeichert')
+  }}
+  className="
+    w-full rounded-[2rem]
+    bg-gradient-to-r from-purple-600 to-violet-500
+    p-5
+    text-xl
+    font-black
+    text-white
+    shadow-lg
+  "
+>
+  💾 Profil speichern
+</button>
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <button
           type="button"
