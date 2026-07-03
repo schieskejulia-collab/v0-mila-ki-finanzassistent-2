@@ -1,19 +1,35 @@
+import { detectCategory } from './categories'
+import { findMerchantInfo } from './merchants'
+
 export type MilaAlert = {
   id: string
-  type: "danger" | "warning" | "info"
+  type: 'danger' | 'warning' | 'info'
   title: string
   message: string
 }
 
 function money(value: number) {
-  return value.toLocaleString("de-DE", {
-    style: "currency",
-    currency: "EUR",
+  return value.toLocaleString('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
   })
 }
 
+function number(value: any) {
+  const raw = String(value ?? '').replace(',', '.')
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 function getText(entry: any) {
-  return `${entry.title || ""} ${entry.vendor || ""} ${entry.client || ""} ${entry.category || ""} ${entry.note || ""}`.toLowerCase()
+  return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${
+    entry.category || ''
+  } ${entry.note || ''}`.toLowerCase()
+}
+
+function getEntryCategory(entry: any) {
+  const merchant = findMerchantInfo(String(entry.vendor || entry.title || ''))
+  return merchant?.category || detectCategory(getText(entry))
 }
 
 export function getMilaAlerts(
@@ -23,16 +39,56 @@ export function getMilaAlerts(
 ): MilaAlert[] {
   const alerts: MilaAlert[] = []
 
-  const totalIncomes = summary?.totalIncomes || 0
-  const totalExpenses = summary?.totalExpenses || 0
-  const balance = totalIncomes - totalExpenses
+  const totalIncomes = number(summary?.totalIncomes)
+  const totalExpenses = number(summary?.totalExpenses)
+  const balance = number(summary?.balance ?? totalIncomes - totalExpenses)
 
   if (totalExpenses > totalIncomes) {
     alerts.push({
-      id: "liquidity",
-      type: "danger",
-      title: "🚨 Liquiditätswarnung",
-      message: "Deine Ausgaben liegen aktuell über deinen Einnahmen.",
+      id: 'liquidity',
+      type: 'danger',
+      title: '🚨 Liquiditätswarnung',
+      message:
+        'Deine Ausgaben liegen aktuell über deinen Einnahmen. Prüfe zuerst Fixkosten, offene Einnahmen und unnötige Abbuchungen.',
+    })
+  }
+
+  const openIncomes = incomes.filter((income) => {
+    const status = String(income.status || '').toLowerCase()
+    return status === 'offen' || status === 'pending' || status === 'unbezahlt' || !status
+  })
+
+  if (openIncomes.length > 0) {
+    const openTotal = openIncomes.reduce((sum, income) => sum + number(income.amount), 0)
+
+    alerts.push({
+      id: 'open-incomes',
+      type: openTotal > 1000 || openIncomes.length >= 3 ? 'warning' : 'info',
+      title: '📄 Offene Einnahmen',
+      message: `${openIncomes.length} offene Einnahme${
+        openIncomes.length === 1 ? '' : 'n'
+      } über ${money(openTotal)}. Prüfe, was bezahlt, offen oder überfällig ist.`,
+    })
+  }
+
+  const overdueIncomes = incomes.filter((income) => {
+    const status = String(income.status || '').toLowerCase()
+    return status === 'ueberfaellig' || status === 'überfällig' || status === 'overdue'
+  })
+
+  if (overdueIncomes.length > 0) {
+    const overdueTotal = overdueIncomes.reduce(
+      (sum, income) => sum + number(income.amount),
+      0
+    )
+
+    alerts.push({
+      id: 'overdue-incomes',
+      type: 'danger',
+      title: '🚨 Überfällige Einnahmen',
+      message: `${overdueIncomes.length} Einnahme${
+        overdueIncomes.length === 1 ? ' ist' : 'n sind'
+      } überfällig (${money(overdueTotal)}). Das ist heute wichtiger als neue Ausgaben zu sortieren.`,
     })
   }
 
@@ -40,103 +96,84 @@ export function getMilaAlerts(
     const taxReserve = balance * 0.3
 
     alerts.push({
-      id: "tax",
-      type: "info",
-      title: "💰 Steuerrücklage",
-      message: `Empfohlene Rücklage: ${money(taxReserve)}`,
+      id: 'tax',
+      type: 'info',
+      title: '💰 Rücklage einplanen',
+      message: `Empfohlene Orientierung: ${money(
+        taxReserve
+      )}. Mila markiert das nur als Planungshilfe, nicht als Steuerberatung.`,
     })
   }
 
-  const openIncomes = incomes.filter((income) =>
-    ["offen", "pending", "unbezahlt"].includes(
-      String(income.status || "").toLowerCase()
-    )
-  )
+  const missingReceipts = expenses.filter((expense) => expense.hasReceipt === false)
 
-  openIncomes.forEach((income, index) => {
+  if (missingReceipts.length > 0) {
     alerts.push({
-      id: `open-income-${index}`,
-      type: "warning",
-      title: "📄 Offene Rechnung",
-      message: `${income.title || "Rechnung"} über ${money(
-        Number(income.amount || 0)
-      )} ist noch offen.`,
+      id: 'missing-receipts',
+      type: 'warning',
+      title: '📸 Belege fehlen',
+      message: `${missingReceipts.length} Ausgabe${
+        missingReceipts.length === 1 ? '' : 'n'
+      } haben aktuell keinen Beleg. Das sollte Mila später sauber nachfordern.`,
     })
-  })
-
-  expenses.slice(0, 5).forEach((expense, index) => {
-    if (expense.hasReceipt === false) {
-      alerts.push({
-        id: `receipt-${index}`,
-        type: "warning",
-        title: "📸 Beleg fehlt",
-        message: `${expense.title || "Diese Ausgabe"} hat aktuell keinen Beleg hinterlegt.`,
-      })
-    }
-  })
+  }
 
   const vendorMap: Record<string, { count: number; total: number }> = {}
 
   expenses.forEach((expense) => {
     const vendor = String(
-      expense.vendor || expense.client || expense.title || expense.category || ""
+      expense.vendor || expense.client || expense.title || expense.category || ''
     ).trim()
 
     if (!vendor) return
 
-    if (!vendorMap[vendor]) {
-      vendorMap[vendor] = { count: 0, total: 0 }
-    }
+    if (!vendorMap[vendor]) vendorMap[vendor] = { count: 0, total: 0 }
 
     vendorMap[vendor].count += 1
-    vendorMap[vendor].total += Number(expense.amount || 0)
+    vendorMap[vendor].total += number(expense.amount)
   })
 
   Object.entries(vendorMap).forEach(([vendor, data]) => {
-    const v = vendor.toLowerCase()
-
     if (data.count >= 3) {
       alerts.push({
-        id: `recurring-${vendor}`,
-        type: "info",
-        title: "💡 Wiederkehrende Ausgabe",
+        id: `recurring-${vendor.toLowerCase().replace(/\s+/g, '-')}`,
+        type: 'info',
+        title: '💡 Wiederkehrende Ausgabe',
         message: `${vendor} wurde ${data.count}x gebucht (${money(
           data.total
-        )} gesamt). Möchtest du das als Abo markieren?`,
-      })
-    }
-
-    if (
-      data.count >= 3 &&
-      (v.includes("pizza") ||
-        v.includes("lieferando") ||
-        v.includes("dominos"))
-    ) {
-      alerts.push({
-        id: `pattern-${vendor}`,
-        type: "info",
-        title: "🧠 Verhaltensmuster erkannt",
-        message:
-          "Du bestellst häufiger Essen. Soll Mila dieses Muster beobachten?",
+        )} gesamt). Mila sollte prüfen, ob das ein Abo, Fixkostenblock oder Muster ist.`,
       })
     }
   })
 
-  const fuelExpenses = expenses.filter((expense) =>
-    /aral|shell|esso|jet|star|tankstelle|tanken|kraftstoff|benzin|diesel/.test(
-      getText(expense)
-    )
+  const vehicleExpenses = expenses.filter(
+    (expense) => getEntryCategory(expense) === 'fahrzeug'
   )
 
-  if (fuelExpenses.length >= 2) {
+  if (vehicleExpenses.length >= 2) {
     alerts.push({
-      id: "fuel-pattern",
-      type: "info",
-      title: "⛽ Fahrtkosten erkannt",
+      id: 'vehicle-pattern',
+      type: 'info',
+      title: '⛽ Fahrtkosten erkannt',
       message:
-        "Mila sieht mehrere Tank-/Fahrtkosten. Prüfe, ob du Fahrten oder Kilometer sauber dokumentieren solltest.",
+        'Mila sieht mehrere Fahrzeug-/Fahrtkosten. Prüfe später, ob Fahrten oder Kilometer dokumentiert werden müssen.',
     })
   }
 
-  return alerts
+  const privateExpenses = expenses.filter(
+    (expense) => getEntryCategory(expense) === 'privat'
+  )
+
+  if (privateExpenses.length > 0) {
+    alerts.push({
+      id: 'private-expenses',
+      type: 'info',
+      title: '🔒 Private Ausgaben erkannt',
+      message: `${privateExpenses.length} Ausgabe${
+        privateExpenses.length === 1 ? '' : 'n'
+      } wirken privat. Mila sollte sie getrennt halten, damit die Auswertung sauber bleibt.`,
+    })
+  }
+
+  return alerts.slice(0, 10)
 }
