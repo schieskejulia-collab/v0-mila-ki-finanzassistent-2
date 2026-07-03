@@ -147,6 +147,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [assemblyWork, setAssemblyWork] = useState(false)
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+const [profileLoaded, setProfileLoaded] = useState(false)
 useEffect(() => {
   const saved = localStorage.getItem('mila-profile')
 
@@ -178,8 +179,10 @@ setIndustry(savedIndustry)
   setMarried(profile.married ?? false)
   setChildren(profile.children ?? 0)
   setAssemblyWork(profile.assemblyWork ?? false)
+setProfileLoaded(true)
 }, [])
 useEffect(() => {
+if (!profileLoaded) return
   localStorage.setItem(
     'mila-profile',
     JSON.stringify({
@@ -210,6 +213,7 @@ useEffect(() => {
   married,
   childrenCount,
   assemblyWork,
+profileLoaded,
 ])
 useEffect(() => {
   const saved = localStorage.getItem('mila-profile')
