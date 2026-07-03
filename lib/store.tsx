@@ -156,7 +156,17 @@ useEffect(() => {
 
   setUserName(profile.userName ?? 'Julia')
   setUserStatus(profile.userStatus ?? 'freiberufler')
-  setIndustry(profile.industry ?? 'sonstiges')
+  const savedIndustry =
+  profile.industry === 'berater' ? 'beratung' :
+  profile.industry === 'handwerker' ? 'handwerk' :
+  profile.industry === 'restaurant' ? 'gastro' :
+  profile.industry === 'ecommerce' ? 'handel' :
+  profile.industry === 'webdesigner' ? 'digital' :
+  profile.industry === 'fotograf' ? 'kreativ' :
+  profile.industry === 'coach' ? 'bildung' :
+  profile.industry ?? 'sonstiges'
+
+setIndustry(savedIndustry)
   setTaxClass(profile.taxClass ?? '1')
   setAnnualGross(profile.annualGross ?? 0)
   setAnnualProfit(profile.annualProfit ?? 0)
