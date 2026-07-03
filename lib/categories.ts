@@ -29,6 +29,8 @@ export type CategoryId =
   | 'steuern'
   | 'privat'
   | 'sonstiges'
+  | 'bekleidung'
+  | 'dekoration'
 export interface Category {
   id: CategoryId
   label: string
@@ -251,6 +253,19 @@ privat: {
   icon: 'User',
   color: 'var(--chart-4)',
 
+},
+bekleidung: {
+  id: 'bekleidung',
+  label: 'Bekleidung / Privat',
+  icon: 'Shirt',
+  color: 'var(--chart-4)',
+},
+
+dekoration: {
+  id: 'dekoration',
+  label: 'Dekoration',
+  icon: 'Sparkles',
+  color: 'var(--chart-5)',
 },
 
 sonstiges: {
