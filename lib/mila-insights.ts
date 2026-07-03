@@ -55,6 +55,7 @@ function industryLabel(industry?: string) {
 
   return labels[industry || 'sonstiges'] || 'deiner Branche'
 }
+
 export function getMilaInsights(
   incomes: any[],
   expenses: any[],
