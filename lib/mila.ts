@@ -1,6 +1,5 @@
 import { Expense, Income } from './store'
-import { detectCategory } from './categories'
-import { findMerchantInfo } from './merchants'
+import { getEntryCategory } from './mila-classifier'
 
 /* 3) Danach kommt dein bisheriger Code */
 type ChatMessage = {
@@ -77,19 +76,9 @@ function buildFinancialContext(contextData?: MilaContextData) {
 
   const categoryTotals: Record<string, number> = {}
 // Kategorien aus Titel/Vendor automatisch erkennen
-const detectedCategories = expenses.map((expense: any) => {
-  const merchant = findMerchantInfo(
-    String(expense.vendor || expense.title || '')
-  )
-
-  if (merchant?.category) {
-    return merchant.category
-  }
-
-  return detectCategory(
-    `${expense.title || ''} ${expense.vendor || ''} ${expense.note || ''}`
-  )
-})
+const detectedCategories = expenses.map((expense: any) =>
+  getEntryCategory(expense)
+)
 
 // Häufigste automatisch erkannten Kategorien
 const autoCategoryTotals: Record<string, number> = {}
