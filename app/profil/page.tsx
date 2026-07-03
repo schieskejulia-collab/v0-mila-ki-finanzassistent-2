@@ -26,13 +26,15 @@ const STATUS_DETAILS = [
 ] as const
 
 const INDUSTRIES = [
-  ['webdesigner', '🎨 Webdesigner'],
-  ['fotograf', '📸 Fotograf'],
-  ['coach', '🎓 Coach'],
-  ['handwerker', '🧰 Handwerker'],
-  ['restaurant', '🍽️ Gastronomie'],
-  ['ecommerce', '🛒 E-Commerce'],
-  ['berater', '💼 Berater'],
+  ['digital', '🤖 Digital / KI / Automatisierung'],
+  ['kreativ', '🎨 Kreativ / Medien'],
+  ['beratung', '💼 Beratung'],
+  ['handwerk', '🧰 Handwerk'],
+  ['gesundheit', '🌱 Gesundheit & Pflege'],
+  ['gastro', '🍽️ Gastronomie'],
+  ['handel', '🛒 Handel / E-Commerce'],
+  ['dienstleistung', '🧹 Dienstleistung'],
+  ['bildung', '🎓 Bildung / Coaching'],
   ['sonstiges', '✨ Sonstiges'],
 ] as const
 
