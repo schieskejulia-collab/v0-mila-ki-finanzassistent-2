@@ -124,7 +124,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [userName, setUserName] = useState('Julia')
 
-  const [userStatus, setUserStatus] = useState<any>('freelancer')
+  const [userStatus, setUserStatus] = useState<any>('freiberufler')
 
   const [industry, setIndustry] = useState<any>('sonstiges')
 
@@ -134,7 +134,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [annualProfit, setAnnualProfit] = useState(0)
 
-  const [vatStatus, setVatStatus] = useState('regelbesteuert')
+  const [vatStatus, setVatStatus] = useState('regelbesteuerung_19')
 
   const [federalState, setFederalState] = useState('berlin')
 
