@@ -1,4 +1,5 @@
-import { CategoryId } from './types'
+import { detectCategory } from './categories'
+import { findMerchantInfo } from './merchants'
 
 export type MilaInsight = {
   id: string
@@ -62,6 +63,11 @@ function industryLabel(industry?: string) {
   return labels[industry || 'sonstiges'] || 'deiner Branche'
 }
 
+function getEntryCategory(entry: any) {
+  const merchant = findMerchantInfo(String(entry.vendor || entry.title || ''))
+  return merchant?.category || detectCategory(getText(entry))
+}
+
 export function getMilaInsights(
   incomes: any[],
   expenses: any[],
@@ -78,24 +84,18 @@ export function getMilaInsights(
   const availableAfterReserve = profit - taxReserve
   const costRatio = incomeTotal > 0 ? expenseTotal / incomeTotal : 0
 
-  // -----------------------------
-  // 1) Startzustand
-  // -----------------------------
   if (incomeTotal === 0 && expenseTotal === 0) {
-    insights.push({
-      id: 'start-empty',
-      title: '🌱 Mila ist bereit',
-      message:
-        'Erfasse deine erste Einnahme oder Ausgabe. Danach kann Mila dir Rücklagen, Muster und Warnungen anzeigen.',
-      type: 'goal',
-    })
-
-    return insights
+    return [
+      {
+        id: 'start-empty',
+        title: '🌱 Mila ist bereit',
+        message:
+          'Erfasse deine erste Einnahme oder Ausgabe. Danach kann Mila dir Rücklagen, Muster und Warnungen anzeigen.',
+        type: 'goal',
+      },
+    ]
   }
 
-  // -----------------------------
-  // 2) Steuern & Liquidität
-  // -----------------------------
   if (profit > 0) {
     insights.push({
       id: 'tax-reserve',
@@ -120,9 +120,6 @@ export function getMilaInsights(
     })
   }
 
-  // -----------------------------
-  // 3) Kostenquote
-  // -----------------------------
   if (incomeTotal > 0 && costRatio >= 0.8) {
     insights.push({
       id: 'high-cost-ratio',
@@ -144,12 +141,9 @@ export function getMilaInsights(
     })
   }
 
-  // -----------------------------
-  // 4) Offene Rechnungen
-  // -----------------------------
   const openIncomes = incomes.filter((income) => {
     const status = String(income.status || '').toLowerCase()
-    return status === 'offen' || status === 'pending'
+    return status === 'offen' || status === 'pending' || !status
   })
 
   if (openIncomes.length > 0) {
@@ -167,21 +161,15 @@ export function getMilaInsights(
     })
   }
 
-  // -----------------------------
-  // 5) Wiederkehrende Ausgaben
-  // -----------------------------
   const vendors: Record<string, { label: string; count: number; total: number }> =
     {}
 
   expenses.forEach((expense) => {
     const label = String(expense.vendor || expense.title || '').trim()
     const key = normalizeName(label)
-
     if (!key) return
 
-    if (!vendors[key]) {
-      vendors[key] = { label, count: 0, total: 0 }
-    }
+    if (!vendors[key]) vendors[key] = { label, count: 0, total: 0 }
 
     vendors[key].count += 1
     vendors[key].total += number(expense.amount)
@@ -204,17 +192,14 @@ export function getMilaInsights(
     }
   })
 
-  // -----------------------------
-  // 6) Software & Tools
-  // -----------------------------
-  const softwareExpenses = expenses.filter((expense) =>
-    /hetzner|adobe|figma|canva|openai|chatgpt|notion|slack|software|hosting|domain|tool|saas/.test(
-      getText(expense)
-    )
+  const softwareExpenses = expenses.filter(
+    (expense) => getEntryCategory(expense) === 'software'
   )
 
   if (
-    ['freelancer', 'selbstständig', 'kleinunternehmer'].includes(userStatus) &&
+    ['freelancer', 'selbstständig', 'selbststaendig', 'kleinunternehmer'].includes(
+      userStatus
+    ) &&
     softwareExpenses.length >= 1
   ) {
     const total = softwareExpenses.reduce((sum, e) => sum + number(e.amount), 0)
@@ -229,9 +214,25 @@ export function getMilaInsights(
     })
   }
 
-  // -----------------------------
-  // 7) Status-spezifische Hinweise
-  // -----------------------------
+  const privateExpenses = expenses.filter(
+    (expense) => getEntryCategory(expense) === 'privat'
+  )
+
+  if (privateExpenses.length > 0) {
+    const total = privateExpenses.reduce((sum, e) => sum + number(e.amount), 0)
+
+    insights.push({
+      id: 'private-expenses',
+      title: '🔒 Private Ausgaben erkannt',
+      message: `${privateExpenses.length} Ausgabe${
+        privateExpenses.length === 1 ? '' : 'n'
+      } wirken privat (${money(
+        total
+      )}). Mila kann sie markieren, damit deine geschäftliche Auswertung sauberer bleibt.`,
+      type: 'budget',
+    })
+  }
+
   if (userStatus === 'angestellt' && expenseTotal > 0) {
     insights.push({
       id: 'employee-expenses',
@@ -270,9 +271,6 @@ export function getMilaInsights(
     })
   }
 
-  // -----------------------------
-  // 8) Branchenfokus
-  // -----------------------------
   const industryMessages: Record<string, string> = {
     webdesigner:
       'Achte besonders auf Domains, Hosting, Design-Tools, KI-Tools, Projektmargen und wiederkehrende Softwarekosten.',
