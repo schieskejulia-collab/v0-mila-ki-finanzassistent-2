@@ -199,6 +199,29 @@ useEffect(() => {
   childrenCount,
   assemblyWork,
 ])
+useEffect(() => {
+  const saved = localStorage.getItem('mila-profile')
+
+  if (!saved) return
+
+  const profile = JSON.parse(saved)
+
+  setUserName(profile.userName ?? 'Julia')
+  setUserStatus(profile.userStatus ?? 'freelancer')
+  setIndustry(profile.industry ?? 'sonstiges')
+
+  setTaxClass(profile.taxClass ?? '1')
+  setAnnualGross(profile.annualGross ?? 0)
+  setAnnualProfit(profile.annualProfit ?? 0)
+
+  setVatStatus(profile.vatStatus ?? 'regelbesteuert')
+  setFederalState(profile.federalState ?? 'berlin')
+
+  setChurchTax(profile.churchTax ?? false)
+  setMarried(profile.married ?? false)
+  setChildren(profile.children ?? 0)
+  setAssemblyWork(profile.assemblyWork ?? false)
+}, [])
   const fetchFinanceData = useCallback(async () => {
 
     const { data: expensesData, error: expensesError } = await supabase
