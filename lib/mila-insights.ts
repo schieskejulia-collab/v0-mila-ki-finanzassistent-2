@@ -38,26 +38,23 @@ function taxRateForStatus(userStatus: string) {
   return 0.3
 }
 
+
 function industryLabel(industry?: string) {
   const labels: Record<string, string> = {
-    dienstleistung: 'Dienstleistung',
-    handwerker: 'Handwerk',
-    handel: 'Handel',
-    gastronomie: 'Gastronomie',
+    digital: 'Digital / KI / Automatisierung',
+    kreativ: 'Kreativ / Medien',
+    beratung: 'Beratung',
+    handwerk: 'Handwerk',
     gesundheit: 'Gesundheit & Pflege',
-    beauty: 'Beauty & Kosmetik',
-    kreativ: 'Kreativbranche',
-    beratung: 'Beratung & Coaching',
-    ecommerce: 'Onlinehandel',
-    vermietung: 'Vermietung',
-    verein: 'Verein / Organisation',
-    sonstiges: 'deine Branche',
+    gastro: 'Gastronomie',
+    handel: 'Handel / E-Commerce',
+    dienstleistung: 'Dienstleistung',
+    bildung: 'Bildung / Coaching',
+    sonstiges: 'deiner Branche',
   }
 
-  return labels[industry || 'sonstiges'] || 'deine Branche'
+  return labels[industry || 'sonstiges'] || 'deiner Branche'
 }
-
-
 export function getMilaInsights(
   incomes: any[],
   expenses: any[],
