@@ -1,5 +1,4 @@
-import { detectCategory } from './categories'
-import { findMerchantInfo } from './merchants'
+import { getEntryCategory } from './mila-classifier'
 
 export type MilaAlert = {
   id: string
@@ -25,11 +24,6 @@ function getText(entry: any) {
   return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${
     entry.category || ''
   } ${entry.note || ''}`.toLowerCase()
-}
-
-function getEntryCategory(entry: any) {
-  const merchant = findMerchantInfo(String(entry.vendor || entry.title || ''))
-  return merchant?.category || detectCategory(getText(entry))
 }
 
 export function getMilaAlerts(
