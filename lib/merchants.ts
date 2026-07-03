@@ -3,160 +3,162 @@ import type { CategoryId } from './categories'
 export type TaxHint = 'likely' | 'depends' | 'private' | 'unknown'
 
 export type MerchantInfo = {
-  name: string
+  name?: string
   category: CategoryId
   taxHint: TaxHint
-  aliases: string[]
+  aliases?: string[]
 }
 
 export const MERCHANTS: Record<string, MerchantInfo> = {
-  // Supermärkte
-  'aldi': { category: 'groceries', taxHint: 'private' },
-'aldi nord': { category: 'groceries', taxHint: 'private' },
-'aldi süd': { category: 'groceries', taxHint: 'private' },
-'lidl': { category: 'groceries', taxHint: 'private' },
-'rewe': { category: 'groceries', taxHint: 'private' },
-'edeka': { category: 'groceries', taxHint: 'private' },
-'kaufland': { category: 'groceries', taxHint: 'private' },
-'netto': { category: 'groceries', taxHint: 'private' },
-'netto marken-discount': { category: 'groceries', taxHint: 'private' },
-'penny': { category: 'groceries', taxHint: 'private' },
+  // Supermärkte / privat
+  aldi: { category: 'privat', taxHint: 'private' },
+  'aldi nord': { category: 'privat', taxHint: 'private' },
+  'aldi süd': { category: 'privat', taxHint: 'private' },
+  lidl: { category: 'privat', taxHint: 'private' },
+  rewe: { category: 'privat', taxHint: 'private' },
+  edeka: { category: 'privat', taxHint: 'private' },
+  kaufland: { category: 'privat', taxHint: 'private' },
+  netto: { category: 'privat', taxHint: 'private' },
+  penny: { category: 'privat', taxHint: 'private' },
 
-// Drogerie
-'dm': { category: 'drugstore', taxHint: 'private' },
-'rossmann': { category: 'drugstore', taxHint: 'private' },
-'müller': { category: 'drugstore', taxHint: 'private' },
-'budni': { category: 'drugstore', taxHint: 'private' },
-'douglas': { category: 'drugstore', taxHint: 'private' },
+  // Drogerie
+  dm: { category: 'privat', taxHint: 'private' },
+  rossmann: { category: 'privat', taxHint: 'private' },
+  müller: { category: 'privat', taxHint: 'private' },
+  douglas: { category: 'privat', taxHint: 'private' },
 
-// Kleidung
-'deichmann': { category: 'private', taxHint: 'private' },
-'kik': { category: 'private', taxHint: 'private' },
-'c&a': { category: 'private', taxHint: 'private' },
-'h&m': { category: 'private', taxHint: 'private' },
-'zara': { category: 'private', taxHint: 'private' },
-'new yorker': { category: 'private', taxHint: 'private' },
-'peek & cloppenburg': { category: 'private', taxHint: 'private' },
-'takko': { category: 'private', taxHint: 'private' },
-'ernstings family': { category: 'private', taxHint: 'private' },
-'primark': { category: 'private', taxHint: 'private' },
+  // Kleidung
+  deichmann: { category: 'privat', taxHint: 'private' },
+  kik: { category: 'privat', taxHint: 'private' },
+  'c&a': { category: 'privat', taxHint: 'private' },
+  'h&m': { category: 'privat', taxHint: 'private' },
+  zara: { category: 'privat', taxHint: 'private' },
+  takko: { category: 'privat', taxHint: 'private' },
 
-// Baumarkt
-'obi': { category: 'hardware', taxHint: 'depends' },
-'bauhaus': { category: 'hardware', taxHint: 'depends' },
-'hornbach': { category: 'hardware', taxHint: 'depends' },
-'toom': { category: 'hardware', taxHint: 'depends' },
-'hagebau': { category: 'hardware', taxHint: 'depends' },
+  // Baumarkt / Material
+  obi: { category: 'werkzeug', taxHint: 'depends' },
+  bauhaus: { category: 'werkzeug', taxHint: 'depends' },
+  hornbach: { category: 'werkzeug', taxHint: 'depends' },
+  toom: { category: 'werkzeug', taxHint: 'depends' },
+  hagebau: { category: 'werkzeug', taxHint: 'depends' },
+  würth: { category: 'werkzeug', taxHint: 'likely' },
 
-// Möbel
-'ikea': { category: 'office', taxHint: 'depends' },
-'roller': { category: 'office', taxHint: 'depends' },
-'porta': { category: 'office', taxHint: 'depends' },
-'xxxlutz': { category: 'office', taxHint: 'depends' },
-'poco': { category: 'office', taxHint: 'depends' },
+  // Möbel / Homeoffice
+  ikea: { category: 'homeoffice', taxHint: 'depends' },
+  roller: { category: 'homeoffice', taxHint: 'depends' },
+  porta: { category: 'homeoffice', taxHint: 'depends' },
+  xxxlutz: { category: 'homeoffice', taxHint: 'depends' },
+  poco: { category: 'homeoffice', taxHint: 'depends' },
 
-// Elektronik
-'mediamarkt': { category: 'electronics', taxHint: 'depends' },
-'media markt': { category: 'electronics', taxHint: 'depends' },
-'saturn': { category: 'electronics', taxHint: 'depends' },
-'cyberport': { category: 'electronics', taxHint: 'depends' },
-'gravis': { category: 'electronics', taxHint: 'depends' },
+  // Elektronik / Hardware
+  mediamarkt: { category: 'hardware', taxHint: 'depends' },
+  'media markt': { category: 'hardware', taxHint: 'depends' },
+  saturn: { category: 'hardware', taxHint: 'depends' },
+  cyberport: { category: 'hardware', taxHint: 'depends' },
+  gravis: { category: 'hardware', taxHint: 'depends' },
+  apple: { category: 'hardware', taxHint: 'depends' },
+  samsung: { category: 'hardware', taxHint: 'depends' },
 
-// Versand
-'deutsche post': { category: 'shipping', taxHint: 'likely' },
-'dhl': { category: 'shipping', taxHint: 'likely' },
-'hermes': { category: 'shipping', taxHint: 'likely' },
-'ups': { category: 'shipping', taxHint: 'likely' },
-'gls': { category: 'shipping', taxHint: 'likely' },
-'dpd': { category: 'shipping', taxHint: 'likely' },
+  // Versand
+  'deutsche post': { category: 'versand', taxHint: 'likely' },
+  dhl: { category: 'versand', taxHint: 'likely' },
+  hermes: { category: 'versand', taxHint: 'likely' },
+  ups: { category: 'versand', taxHint: 'likely' },
+  gls: { category: 'versand', taxHint: 'likely' },
+  dpd: { category: 'versand', taxHint: 'likely' },
 
-// Reisen
-'deutsche bahn': { category: 'travel', taxHint: 'depends' },
-'db': { category: 'travel', taxHint: 'depends' },
-'flixbus': { category: 'travel', taxHint: 'depends' },
-'flixtrain': { category: 'travel', taxHint: 'depends' },
-'booking.com': { category: 'travel', taxHint: 'depends' },
+  // Reisen / Fahrt
+  'deutsche bahn': { category: 'reisen', taxHint: 'depends' },
+  db: { category: 'reisen', taxHint: 'depends' },
+  flixbus: { category: 'reisen', taxHint: 'depends' },
+  flixtrain: { category: 'reisen', taxHint: 'depends' },
+  'booking.com': { category: 'reisen', taxHint: 'depends' },
+  airbnb: { category: 'reisen', taxHint: 'depends' },
 
-// Tankstellen
-'aral': { category: 'fuel', taxHint: 'depends' },
-'shell': { category: 'fuel', taxHint: 'depends' },
-'esso': { category: 'fuel', taxHint: 'depends' },
-'jet': { category: 'fuel', taxHint: 'depends' },
-'hem': { category: 'fuel', taxHint: 'depends' },
-'total': { category: 'fuel', taxHint: 'depends' },
-'avia': { category: 'fuel', taxHint: 'depends' },
+  // Tankstelle / Fahrzeug
+  aral: { category: 'fahrzeug', taxHint: 'depends' },
+  shell: { category: 'fahrzeug', taxHint: 'depends' },
+  esso: { category: 'fahrzeug', taxHint: 'depends' },
+  jet: { category: 'fahrzeug', taxHint: 'depends' },
+  hem: { category: 'fahrzeug', taxHint: 'depends' },
+  total: { category: 'fahrzeug', taxHint: 'depends' },
+  avia: { category: 'fahrzeug', taxHint: 'depends' },
+  atu: { category: 'fahrzeug', taxHint: 'depends' },
+  euromaster: { category: 'fahrzeug', taxHint: 'depends' },
 
-// Restaurants
-'mcdonalds': { category: 'food', taxHint: 'depends' },
-"mcdonald's": { category: 'food', taxHint: 'depends' },
-'burger king': { category: 'food', taxHint: 'depends' },
-'subway': { category: 'food', taxHint: 'depends' },
-'starbucks': { category: 'food', taxHint: 'depends' },
-'nordsee': { category: 'food', taxHint: 'depends' },
-'vapiano': { category: 'food', taxHint: 'depends' },
-'kfc': { category: 'food', taxHint: 'depends' },
+  // Bewirtung
+  mcdonalds: { category: 'bewirtung', taxHint: 'depends' },
+  "mcdonald's": { category: 'bewirtung', taxHint: 'depends' },
+  'burger king': { category: 'bewirtung', taxHint: 'depends' },
+  subway: { category: 'bewirtung', taxHint: 'depends' },
+  starbucks: { category: 'bewirtung', taxHint: 'depends' },
+  nordsee: { category: 'bewirtung', taxHint: 'depends' },
+  vapiano: { category: 'bewirtung', taxHint: 'depends' },
+  kfc: { category: 'bewirtung', taxHint: 'depends' },
+  lieferando: { category: 'bewirtung', taxHint: 'depends' },
 
-// Online
-'amazon': { category: 'shopping', taxHint: 'depends' },
-'amazon marketplace': { category: 'shopping', taxHint: 'depends' },
-'ebay': { category: 'shopping', taxHint: 'depends' },
-'etsy': { category: 'shopping', taxHint: 'depends' },
-'otto': { category: 'shopping', taxHint: 'depends' },
-'zalando': { category: 'shopping', taxHint: 'depends' },
+  // Online / Material
+  amazon: { category: 'material', taxHint: 'depends' },
+  'amazon marketplace': { category: 'material', taxHint: 'depends' },
+  ebay: { category: 'material', taxHint: 'depends' },
+  etsy: { category: 'material', taxHint: 'depends' },
+  otto: { category: 'material', taxHint: 'depends' },
 
-// Telekommunikation
-'telekom': { category: 'communication', taxHint: 'depends' },
-'vodafone': { category: 'communication', taxHint: 'depends' },
-'o2': { category: 'communication', taxHint: 'depends' },
-'1&1': { category: 'communication', taxHint: 'depends' },
-'congstar': { category: 'communication', taxHint: 'depends' },
+  // Telekommunikation
+  telekom: { category: 'telefon', taxHint: 'depends' },
+  vodafone: { category: 'telefon', taxHint: 'depends' },
+  o2: { category: 'telefon', taxHint: 'depends' },
+  '1&1': { category: 'telefon', taxHint: 'depends' },
+  congstar: { category: 'telefon', taxHint: 'depends' },
 
-// Banken
-'sparkasse': { category: 'finance', taxHint: 'none' },
-'volksbank': { category: 'finance', taxHint: 'none' },
-'commerzbank': { category: 'finance', taxHint: 'none' },
-'deutsche bank': { category: 'finance', taxHint: 'none' },
-'ing': { category: 'finance', taxHint: 'none' },
+  // Banken / Zahlungsanbieter
+  sparkasse: { category: 'bank', taxHint: 'unknown' },
+  volksbank: { category: 'bank', taxHint: 'unknown' },
+  commerzbank: { category: 'bank', taxHint: 'unknown' },
+  'deutsche bank': { category: 'bank', taxHint: 'unknown' },
+  ing: { category: 'bank', taxHint: 'unknown' },
+  paypal: { category: 'bank', taxHint: 'depends' },
+  stripe: { category: 'bank', taxHint: 'depends' },
+  sumup: { category: 'bank', taxHint: 'depends' },
 
-// Gesundheit
-'apotheke': { category: 'health', taxHint: 'depends' },
-'fielmann': { category: 'health', taxHint: 'depends' },
-'apollo': { category: 'health', taxHint: 'depends' },
-'sanitätshaus': { category: 'health', taxHint: 'depends' },
+  // Gesundheit
+  apotheke: { category: 'gesundheit', taxHint: 'depends' },
+  fielmann: { category: 'gesundheit', taxHint: 'depends' },
+  apollo: { category: 'gesundheit', taxHint: 'depends' },
+  sanitätshaus: { category: 'gesundheit', taxHint: 'depends' },
 
-// Büro
-'staples': { category: 'office', taxHint: 'depends' },
-'office discount': { category: 'office', taxHint: 'depends' },
-'paperworld': { category: 'office', taxHint: 'depends' },
+  // Büro / Weiterbildung / Bücher
+  staples: { category: 'material', taxHint: 'depends' },
+  'office discount': { category: 'material', taxHint: 'depends' },
+  thalia: { category: 'fachliteratur', taxHint: 'depends' },
+  hugendubel: { category: 'fachliteratur', taxHint: 'depends' },
 
-'nanu nana': {
-  category: 'geschenke',
-  taxHint: 'depends',
-  aliases: ['nanu nana', 'nanu-nana', 'nanunana', 'nanu'],
-},
+  // Geschenke / Sonstiges
+  'nanu nana': {
+    category: 'geschenke',
+    taxHint: 'depends',
+    aliases: ['nanu nana', 'nanu-nana', 'nanunana', 'nanu'],
+  },
+  'nanu-nana': { category: 'geschenke', taxHint: 'depends' },
+  tedi: { category: 'sonstiges', taxHint: 'depends' },
+  action: { category: 'sonstiges', taxHint: 'depends' },
+  depot: { category: 'geschenke', taxHint: 'depends' },
 
-'nanu-nana': {
-  category: 'geschenke',
-  taxHint: 'depends',
-},
-
-'tedi': { category: 'sonstiges', taxHint: 'depends' },
-'action': { category: 'sonstiges', taxHint: 'depends' },
-'thalia': { category: 'education', taxHint: 'depends' },
-'hugendubel': { category: 'education', taxHint: 'depends' },
-'fressnapf': { category: 'pets', taxHint: 'depends' },
-'zooplus': { category: 'pets', taxHint: 'depends' },
-'decathlon': { category: 'sports', taxHint: 'depends' },
-'intersport': { category: 'sports', taxHint: 'depends' },
-'sportcheck': { category: 'sports', taxHint: 'depends' },
-'louis': { category: 'vehicle', taxHint: 'depends' },
-'atu': { category: 'vehicle', taxHint: 'depends' },
-'euromaster': { category: 'vehicle', taxHint: 'depends' },
+  // Haustier / Sport eher privat
+  fressnapf: { category: 'privat', taxHint: 'private' },
+  zooplus: { category: 'privat', taxHint: 'private' },
+  decathlon: { category: 'privat', taxHint: 'depends' },
+  intersport: { category: 'privat', taxHint: 'depends' },
+  sportcheck: { category: 'privat', taxHint: 'depends' },
 }
+
 export function findMerchantInfo(vendor: string) {
   const normalizedVendor = vendor.toLowerCase().trim()
 
-  return Object.entries(MERCHANTS).find(([merchantName]) =>
-    normalizedVendor.includes(merchantName)
-  )?.[1]
+  return Object.entries(MERCHANTS).find(([merchantName, info]) => {
+    if (normalizedVendor.includes(merchantName)) return true
+    return info.aliases?.some((alias) =>
+      normalizedVendor.includes(alias.toLowerCase())
+    )
+  })?.[1]
 }
