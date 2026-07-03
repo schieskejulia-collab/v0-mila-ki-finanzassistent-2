@@ -185,7 +185,7 @@ export function getMilaFindings(
   if (openIncomes.length >= 1) {
     findings.push({
       id: "income-open",
-      title: "🟡 Offene Einnahmen",
+      title: "🟡 Ausstehende Zahlungen"
       message: `Du hast ${openIncomes.length} offene Zahlung(en) über ${money(
         openIncomeTotal
       )}. Prüfe heute, was davon schon bezahlt wurde.`,
