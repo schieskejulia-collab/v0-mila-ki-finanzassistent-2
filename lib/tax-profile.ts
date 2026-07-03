@@ -77,10 +77,40 @@ function getReserveRangeByProfit(profit: number) {
 
 function getMissingBase(profile: TaxProfile) {
   const missing: string[] = []
+
   if (!profile.userType) missing.push('Nutzertyp')
   if (!profile.federalState) missing.push('Bundesland')
   if (typeof profile.churchTax !== 'boolean') missing.push('Kirchensteuer')
-  return missing
+  if (!profile.vatStatus) missing.push('Umsatzsteuer-Status')
+  if (!profile.estimatedAnnualProfit && !profile.annualRevenueGross && !profile.annualGrossSalary) {
+    missing.push('Jahreswert / Gewinnschätzung')
+  }
+
+  if (
+    profile.userType === 'angestellt' ||
+    profile.userType === 'montagearbeiter' ||
+    profile.userType === 'minijob'
+  ) {
+    if (!profile.taxClass) missing.push('Steuerklasse')
+    if (!profile.annualGrossSalary) missing.push('Jahresbrutto')
+  }
+
+  if (
+    profile.userType === 'selbststaendig_gewerbe' ||
+    profile.userType === 'freiberufler' ||
+    profile.userType === 'kleinunternehmer' ||
+    profile.userType === 'handwerker'
+  ) {
+    if (!profile.annualRevenueGross) missing.push('Jahresumsatz')
+    if (!profile.estimatedAnnualProfit) missing.push('geschätzter Jahresgewinn')
+  }
+
+  if (profile.userType === 'montagearbeiter') {
+    if (!profile.travelDaysPerMonth) missing.push('Reisetage pro Monat')
+    if (!profile.commuteKm) missing.push('Entfernung / Kilometer')
+  }
+
+  return Array.from(new Set(missing))
 }
 
 // --- Shared Helfer für Angestellte (inkl. Montagearbeiter-Spezial) ---
