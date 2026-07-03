@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
-const STATUS_DETAILS = [
+const USER_TYPES = [
   {
     key: 'angestellt',
     label: 'Angestellt',
     info: 'Fester Job. Mila achtet besonders auf Steuerklasse, Arbeitsmittel, Fahrtkosten und Weiterbildung.',
   },
   {
-    key: 'freelancer',
+    key: 'freiberufler',
     label: 'Freelancer / Freiberufler',
     info: 'Projektbasiert oder freiberuflich. Mila achtet besonders auf Rücklagen, Software, Fortbildung und Reisekosten.',
   },
@@ -19,7 +19,7 @@ const STATUS_DETAILS = [
     info: 'Keine Umsatzsteuer auf Rechnungen, aber Einkommensteuer auf Gewinn kann trotzdem relevant sein.',
   },
   {
-    key: 'selbstständig',
+    key: 'selbststaendig_gewerbe',
     label: 'Selbstständig / Gewerbe',
     info: 'Gewerblich tätig. Mila achtet auf Rücklagen, Umsatzsteuer, Gewerbesteuer und Betriebsausgaben.',
   },
