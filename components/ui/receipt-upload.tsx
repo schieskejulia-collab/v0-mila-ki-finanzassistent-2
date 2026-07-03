@@ -61,15 +61,11 @@ export function ReceiptUpload({
       )
     }
 
-    const scanPayload = json.data?.data || json.data
 
+const scanPayload = json.data?.data || json.data
 
 if (scanPayload && onScanSuccess) {
   onScanSuccess(scanPayload)
-}
-
-if (json.data && onScanSuccess) {
-  onScanSuccess(json.data?.data || json.data)
 }
   } catch (err: any) {
     console.error('Scanner Error:', err)
