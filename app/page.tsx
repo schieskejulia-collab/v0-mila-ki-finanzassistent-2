@@ -132,7 +132,7 @@ const overdueIncomes = (incomes || []).filter(
 const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
 const totalOverdueAmount = overdueIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
 const openCount = openIncomes.length
-const overdueCount = overdueIncomes.lengt
+const overdueCount = overdueIncomes.length
 
   const availableInTwoWeeks = (summary.balance || 0) + totalOpenAmount
   const nextPayments = (summary.totalExpenses || 0) * 0.8
