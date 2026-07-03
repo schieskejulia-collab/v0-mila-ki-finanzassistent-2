@@ -19,7 +19,7 @@ import {
 } from 'react'
 
 import { supabase } from '@/lib/supabase'
-
+import { calculateSummary } from '@/lib/calculations'
 export interface FinanceContextValue {
 
   expenses: any[]
@@ -345,22 +345,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const summary = useMemo(() => {
-
-    const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)
-
-    const totalIncomes = incomes.reduce((s, i) => s + (Number(i.amount) || 0), 0)
-
-    return {
-
-      totalExpenses,
-
-      totalIncomes,
-
-      balance: totalIncomes - totalExpenses,
-
-    }
-
-  }, [expenses, incomes])
+  return calculateSummary(incomes, expenses)
+}, [incomes, expenses])
 
   const budgetStatus = useMemo(() => [], [categories, expenses])
 
