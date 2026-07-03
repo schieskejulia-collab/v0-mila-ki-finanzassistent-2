@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useFinance } from '@/lib/store'
-
+import {
+  calculatePayments,
+  calculateReserve,
+  calculateFinanceScore,
+  calculateTrafficLight,
+} from '@/lib/calculations'
+import { getEntryCategory } from '@/lib/mila-classifier'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -39,27 +45,7 @@ function findRecurringExpenses(expenses: any[]) {
 
 function getSoftwareExpenses(expenses: any[]) {
   if (!expenses || !Array.isArray(expenses)) return []
-  return expenses.filter((expense) =>
-    /adobe|canva|figma|chatgpt|openai|claude|notion|hetzner|ionos|domain|hosting|vercel|github|software|tool|saas/.test(
-      getText(expense)
-    )
-  )
-}
-
-function getFinanceScore(summary: any, expenses: any[], incomes: any[]) {
-  if (!summary) return 60
-  const income = Number(summary.totalIncomes || 0)
-  const expense = Number(summary.totalExpenses || 0)
-  const balance = Number(summary.balance || 0)
-  if (income === 0 && expense === 0) return 60
-
-  let score = 75
-  if (balance < 0) score -= 35
-  if (income > 0 && expense / income > 0.8) score -= 15
-  if (income > 0 && expense / income < 0.4) score += 10
-  if (balance > 1000) score += 10
-  if (expenses && incomes && expenses.length > incomes.length * 4 && incomes.length > 0) score -= 5
-  return Math.max(0, Math.min(100, score))
+  return expenses.filter((expense) => getEntryCategory(expense) === 'software')
 }
 
 function getMainTip({ summary, expenses, incomes, userStatus, industry }: any) {
@@ -116,34 +102,48 @@ export default function DashboardPage() {
 
   // --- BERECHNUNGEN (VOLLSTÄNDIG WIEDERHERGESTELLT) ---
   const recurringExpenses = findRecurringExpenses(expenses || [])
-  const softwareExpenses = getSoftwareExpenses(expenses || [])
-  const financeScore = getFinanceScore(summary, expenses || [], incomes || [])
-  const taxReserve = summary.balance > 0 ? summary.balance * 0.3 : 0
-  const tip = getMainTip({ summary, expenses: expenses || [], incomes: incomes || [], userStatus, industry })
+const softwareExpenses = getSoftwareExpenses(expenses || [])
 
-  const openIncomes = (incomes || []).filter(
-  (i) => String(i.status || '').toLowerCase() === 'offen' || !i.status
-)
+const payments = calculatePayments(incomes || [])
 
-const overdueIncomes = (incomes || []).filter(
-  (i) => String(i.status || '').toLowerCase() === 'ueberfaellig'
-)
+const openCount = payments.openCount
+const overdueCount = payments.overdueCount
+const totalOpenAmount = payments.openAmount
+const totalOverdueAmount = payments.overdueAmount
 
-const totalOpenAmount = openIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
-const totalOverdueAmount = overdueIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
-const openCount = openIncomes.length
-const overdueCount = overdueIncomes.length
+const taxReserve = calculateReserve(summary.balance)
 
-  const availableInTwoWeeks = (summary.balance || 0) + totalOpenAmount
-  const nextPayments = (summary.totalExpenses || 0) * 0.8
+const financeScore = calculateFinanceScore({
+  balance: summary.balance,
+  totalIncomes: summary.totalIncomes,
+  totalExpenses: summary.totalExpenses,
+  openCount,
+  overdueCount,
+})
 
-  // Detaillierte Ampel-Logik
-  let trafficLight = { status: '🟢 Alles gut', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' }
-  if (financeScore < 50 || summary.balance < 0) {
-    trafficLight = { status: '🔴 Liquiditätsrisiko in 10 Tagen', color: 'bg-rose-50 border-rose-200 text-rose-900', dot: 'bg-rose-500' }
-  } else if (financeScore < 75 || (summary.totalExpenses > summary.totalIncomes * 0.7)) {
-    trafficLight = { status: '🟡 Achtung: Hohe Ausgaben', color: 'bg-amber-50 border-amber-200 text-amber-900', dot: 'bg-amber-500' }
+const baseTrafficLight = calculateTrafficLight(financeScore, summary.balance)
+
+let trafficLight = {
+  status: baseTrafficLight.status,
+  color: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+  dot: 'bg-emerald-500',
+}
+
+if (baseTrafficLight.level === 'danger') {
+  trafficLight = {
+    status: baseTrafficLight.status,
+    color: 'bg-rose-50 border-rose-200 text-rose-900',
+    dot: 'bg-rose-500',
   }
+}
+
+if (baseTrafficLight.level === 'warning') {
+  trafficLight = {
+    status: baseTrafficLight.status,
+    color: 'bg-amber-50 border-amber-200 text-amber-900',
+    dot: 'bg-amber-500',
+  }
+}
 const anchorMessage =
   overdueCount > 0
     ? `Es gibt ${overdueCount} überfällige Forderung(en). Kein Drama — aber das ist heute deine wichtigste Baustelle.`
