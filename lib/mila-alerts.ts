@@ -58,7 +58,7 @@ export function getMilaAlerts(
     alerts.push({
       id: 'open-incomes',
       type: openTotal > 1000 || openIncomes.length >= 3 ? 'warning' : 'info',
-      title: '📄 Offene Einnahmen',
+      title: '📄 Ausstehende Kundenzahlungen',
       message: `${openIncomes.length} offene Einnahme${
         openIncomes.length === 1 ? '' : 'n'
       } über ${money(openTotal)}. Prüfe, was bezahlt, offen oder überfällig ist.`,
@@ -79,7 +79,7 @@ export function getMilaAlerts(
     alerts.push({
       id: 'overdue-incomes',
       type: 'danger',
-      title: '🚨 Überfällige Einnahmen',
+      title: '🚨 Überfällige Zahlungseingänge',
       message: `${overdueIncomes.length} Einnahme${
         overdueIncomes.length === 1 ? ' ist' : 'n sind'
       } überfällig (${money(overdueTotal)}). Das ist heute wichtiger als neue Ausgaben zu sortieren.`,
