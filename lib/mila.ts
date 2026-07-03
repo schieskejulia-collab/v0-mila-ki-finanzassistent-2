@@ -1,5 +1,6 @@
 import { Expense, Income } from './store'
-
+import { detectCategory } from './categories'
+import { findMerchantInfo } from './merchants'
 /* 1) Kategorie‑Keywords */
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
 
@@ -164,8 +165,17 @@ function buildFinancialContext(contextData?: MilaContextData) {
   const categoryTotals: Record<string, number> = {}
 // Kategorien aus Titel/Vendor automatisch erkennen
 const detectedCategories = expenses.map((expense: any) => {
-  const text = `${expense.title || ''} ${expense.vendor || ''} ${expense.note || ''}`
-  return detectCategory(text)
+  const merchant = findMerchantInfo(
+    String(expense.vendor || expense.title || '')
+  )
+
+  if (merchant?.category) {
+    return merchant.category
+  }
+
+  return detectCategory(
+    `${expense.title || ''} ${expense.vendor || ''} ${expense.note || ''}`
+  )
 })
 
 // Häufigste automatisch erkannten Kategorien
@@ -325,8 +335,7 @@ export async function getMilaChatResponse(
 Du bist Mila 🌸, Julias persönliche Finanzbegleiterin.
 ${contextData?.systemInstruction || ''}
 Julia ist selbstständig tätig.
-Status: ${userStatus}
-Steuerprofil: ${vatStatus}
+Status: ${context.user.status}
 
 Deine Antwort-Regeln:
 1. Antworte kurz. Maximal 6–8 Sätze.
