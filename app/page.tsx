@@ -178,7 +178,7 @@ const anchorMessage =
     {overdueCount > 0
       ? `Du hast ${overdueCount} überfällige Einnahme(n) über ${formatEuro(totalOverdueAmount)}. Das sollte heute zuerst geprüft werden.`
       : openCount > 0
-      ? `Du hast ${openCount} offene Einnahme(n) über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon bezahlt wurde.`
+      ? `Du hast ${openCount}`Du wartest aktuell auf ${openCount} Zahlungseingang${openCount === 1 ? '' : 'e'} über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon erledigt ist.`
       : 'Heute sind keine offenen Einnahmen sichtbar. Dein Fokus darf auf Rücklagen und neuen Buchungen liegen.'}
   </p>
 
