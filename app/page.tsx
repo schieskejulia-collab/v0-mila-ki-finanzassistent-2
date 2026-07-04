@@ -114,7 +114,7 @@ export default function DashboardPage() {
   // --- BERECHNUNGEN (VOLLSTÄNDIG WIEDERHERGESTELLT) ---
   const recurringExpenses = findRecurringExpenses(expenses || [])
 const softwareExpenses = getSoftwareExpenses(expenses || [])
-
+const obligationInsights = getObligationInsights(obligations || [])
 const payments = calculatePayments(incomes || [])
 
 const openCount = payments.openCount
@@ -237,7 +237,23 @@ const anchorMessage =
   </h2>
 
   <div className="space-y-3 text-xs text-slate-700 leading-relaxed">
-
+{obligationInsights.map((item) => (
+  <div
+    key={item.id}
+    className={`rounded-2xl border p-3 ${
+      item.level === 'important'
+        ? 'bg-rose-50 border-rose-100'
+        : item.level === 'reminder'
+        ? 'bg-amber-50 border-amber-100'
+        : 'bg-violet-50 border-violet-100'
+    }`}
+  >
+    <p className="font-black text-slate-800">{item.title}</p>
+    <p className="mt-1 font-semibold text-slate-700">
+      {item.message}
+    </p>
+  </div>
+))}
     {overdueCount > 0 && (
 
       <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3">
