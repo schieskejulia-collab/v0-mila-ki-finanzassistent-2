@@ -42,7 +42,7 @@ export function saveMerchantMemory(data: {
     source: 'auto',
   }
 
-  merchantMemory.push(entry)
+    merchantMemory.push(entry)
 
   return entry
 }
