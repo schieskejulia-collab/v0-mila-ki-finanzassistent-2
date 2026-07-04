@@ -118,7 +118,6 @@ const router = useRouter()
   // --- BERECHNUNGEN (VOLLSTÄNDIG WIEDERHERGESTELLT) ---
   const recurringExpenses = findRecurringExpenses(expenses || [])
 const softwareExpenses = getSoftwareExpenses(expenses || [])
-const obligationInsights = getObligationInsights(obligations || [])
 const payments = calculatePayments(incomes || [])
 
 const openCount = payments.openCount
