@@ -94,7 +94,6 @@ export default function DashboardPage() {
   vatStatus,
   isLoggedIn,
 documents,
-obligations,
 } = useFinance()
   const [isClient, setIsClient] = useState(false)
 
