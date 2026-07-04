@@ -52,7 +52,7 @@ setMessage('Login erfolgreich.')
 setLoading(false)
 router.push('/')
 router.refresh()
-
+}
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-4 text-slate-950">
       <section className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-sm">
