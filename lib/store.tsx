@@ -1,659 +1,533 @@
 'use client'
 
 import {
-
   createContext,
-
   useCallback,
-
   useContext,
-
   useEffect,
-
   useMemo,
-
   useState,
-
   ReactNode,
-
 } from 'react'
 
 import { supabase } from '@/lib/supabase'
 import { calculateSummary } from '@/lib/calculations'
 import type { Obligation } from './mila-obligations'
 import type { MilaDocument } from './mila-documents'
+
 export interface FinanceContextValue {
-
   expenses: any[]
-
   incomes: any[]
-
   setIncomes: (i: any[]) => void
 
   categories: string[]
-
   milaFeedback: string
-
   morningBriefing: string
-
   refreshMorningBriefing: () => Promise<void>
-
   triggerMilaFeedback: (cat: string) => void
 
   addExpense: (e: any) => Promise<void>
-
-  deleteExpense: (id: any) => Promise<void>
-
+  deleteExpense: (item: any) => Promise<void>
   addIncome: (i: any) => Promise<void>
-
   deleteIncome: (id: any) => Promise<void>
-
   updateIncomeStatus: (id: any, status: string) => Promise<void>
 
-obligations: Obligation[]
-setObligations: (items: Obligation[]) => void
-addObligation: (item: Obligation) => void
-deleteObligation: (id: string) => void
+  obligations: Obligation[]
+  setObligations: (items: Obligation[]) => void
+  addObligation: (item: Obligation) => void
+  deleteObligation: (id: string) => void
+
+  documents: MilaDocument[]
+  setDocuments: (items: MilaDocument[]) => void
 
   userName: string
-
   setUserName: (v: string) => void
-
   userStatus: any
-
   setUserStatus: (v: any) => void
-
   industry: any
-
   setIndustry: (v: any) => void
 
   taxClass: string
-
   setTaxClass: (v: string) => void
-
   annualGross: number
-
   setAnnualGross: (v: number) => void
-
   annualProfit: number
-
   setAnnualProfit: (v: number) => void
-
   vatStatus: string
-
   setVatStatus: (v: string) => void
-
   federalState: string
-
   setFederalState: (v: string) => void
-
   churchTax: boolean
-
   setChurchTax: (v: boolean) => void
-
   married: boolean
-
   setMarried: (v: boolean) => void
-
   children: number
-
   setChildren: (v: number) => void
-
   assemblyWork: boolean
-
   setAssemblyWork: (v: boolean) => void
 
   isLoggedIn: boolean
-
   login: (n: string, s: any) => void
-
   logout: () => void
 
   summary: any
-
   budgetStatus: any[]
-
 }
 
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
+function profileKey(userId?: string) {
+  return userId ? `mila-profile-${userId}` : 'mila-profile-guest'
+}
+
+function obligationsKey(userId?: string) {
+  return userId ? `mila-obligations-${userId}` : 'mila-obligations-guest'
+}
+
+function documentsKey(userId?: string) {
+  return userId ? `mila-documents-${userId}` : 'mila-documents-guest'
+}
+
+function normalizeIndustry(value?: string) {
+  if (!value) return 'sonstiges'
+
+  const oldToNew: Record<string, string> = {
+    berater: 'beratung',
+    handwerker: 'handwerk',
+    restaurant: 'gastro',
+    ecommerce: 'handel',
+    webdesigner: 'digital',
+    fotograf: 'kreativ',
+    coach: 'bildung',
+  }
+
+  return oldToNew[value] || value
+}
+
 export function FinanceProvider({ children }: { children: ReactNode }) {
+  const [userId, setUserId] = useState<string>('')
 
   const [expenses, setExpenses] = useState<any[]>([])
-
   const [incomes, setIncomes] = useState<any[]>([])
+  const [categories] = useState<string[]>([])
 
-  const [categories, setCategories] = useState<string[]>([])
+  const [milaFeedback] = useState('')
+  const [morningBriefing] = useState('')
 
-  const [milaFeedback, setMilaFeedback] = useState('')
-
-  const [morningBriefing, setMorningBriefing] = useState('')
-
-  const [userName, setUserName] = useState('Julia')
-
-  const [userStatus, setUserStatus] = useState<any>('freiberufler')
-
+  const [userName, setUserName] = useState('')
+  const [userStatus, setUserStatus] = useState<any>('')
   const [industry, setIndustry] = useState<any>('sonstiges')
 
   const [taxClass, setTaxClass] = useState('1')
-
   const [annualGross, setAnnualGross] = useState(0)
-
   const [annualProfit, setAnnualProfit] = useState(0)
-
-  const [vatStatus, setVatStatus] = useState('regelbesteuerung_19')
-
-  const [federalState, setFederalState] = useState('berlin')
-
+  const [vatStatus, setVatStatus] = useState('')
+  const [federalState, setFederalState] = useState('')
   const [churchTax, setChurchTax] = useState(false)
-
   const [married, setMarried] = useState(false)
-
   const [childrenCount, setChildren] = useState(0)
-
   const [assemblyWork, setAssemblyWork] = useState(false)
-const [obligations, setObligations] = useState<Obligation[]>([])
-const [documents, setDocuments] = useState<MilaDocument[]>([])
+
+  const [obligations, setObligations] = useState<Obligation[]>([])
+  const [documents, setDocuments] = useState<MilaDocument[]>([])
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-const [profileLoaded, setProfileLoaded] = useState(false)
-useEffect(() => {
-  const saved = localStorage.getItem('mila-profile')
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
-  if (!saved) return
+  const loadLocalProfile = useCallback((uid?: string) => {
+    const savedProfile = localStorage.getItem(profileKey(uid))
+    const savedObligations = localStorage.getItem(obligationsKey(uid))
+    const savedDocuments = localStorage.getItem(documentsKey(uid))
 
-  const profile = JSON.parse(saved)
+    if (savedProfile) {
+      const profile = JSON.parse(savedProfile)
 
-  setUserName(profile.userName ?? 'Julia')
-  setUserStatus(profile.userStatus ?? 'freiberufler')
-  const savedIndustry =
-  profile.industry === 'digital' ? 'digital' :
-  profile.industry === 'kreativ' ? 'kreativ' :
-  profile.industry === 'beratung' ? 'beratung' :
-  profile.industry === 'handwerk' ? 'handwerk' :
-  profile.industry === 'gesundheit' ? 'gesundheit' :
-  profile.industry === 'gastro' ? 'gastro' :
-  profile.industry === 'handel' ? 'handel' :
-  profile.industry === 'dienstleistung' ? 'dienstleistung' :
-  profile.industry === 'bildung' ? 'bildung' :
-  profile.industry ?? 'sonstiges'
+      setUserName(profile.userName ?? '')
+      setUserStatus(profile.userStatus ?? '')
+      setIndustry(normalizeIndustry(profile.industry))
+      setTaxClass(profile.taxClass ?? '1')
+      setAnnualGross(Number(profile.annualGross ?? 0))
+      setAnnualProfit(Number(profile.annualProfit ?? 0))
+      setVatStatus(profile.vatStatus ?? '')
+      setFederalState(profile.federalState ?? '')
+      setChurchTax(Boolean(profile.churchTax ?? false))
+      setMarried(Boolean(profile.married ?? false))
+      setChildren(Number(profile.children ?? 0))
+      setAssemblyWork(Boolean(profile.assemblyWork ?? false))
+    } else {
+      setUserName('')
+      setUserStatus('')
+      setIndustry('sonstiges')
+      setTaxClass('1')
+      setAnnualGross(0)
+      setAnnualProfit(0)
+      setVatStatus('')
+      setFederalState('')
+      setChurchTax(false)
+      setMarried(false)
+      setChildren(0)
+      setAssemblyWork(false)
+    }
 
-setIndustry(savedIndustry)
-  setTaxClass(profile.taxClass ?? '1')
-  setAnnualGross(profile.annualGross ?? 0)
-  setAnnualProfit(profile.annualProfit ?? 0)
-  setVatStatus(profile.vatStatus ?? 'regelbesteuerung_19')
-  setFederalState(profile.federalState ?? 'berlin')
-  setChurchTax(profile.churchTax ?? false)
-  setMarried(profile.married ?? false)
-  setChildren(profile.children ?? 0)
-  setAssemblyWork(profile.assemblyWork ?? false)
-setDocuments(profile.documents ?? [])
-const savedObligations = localStorage.getItem('mila-obligations')
+    setObligations(savedObligations ? JSON.parse(savedObligations) : [])
+    setDocuments(savedDocuments ? JSON.parse(savedDocuments) : [])
+    setProfileLoaded(true)
+  }, [])
 
-if (savedObligations) {
-  setObligations(JSON.parse(savedObligations))
-}
-setProfileLoaded(true)
-}, [])
-useEffect(() => {
-if (!profileLoaded) return
-  localStorage.setItem(
-    'mila-profile',
-    JSON.stringify({
-      userName,
-      userStatus,
-      industry,
-      taxClass,
-      annualGross,
-      annualProfit,
-      vatStatus,
-      federalState,
-      churchTax,
-      married,
-      children: childrenCount,
-      assemblyWork,
-obligations,
-documents,
-setDocuments,
-    })
-  )
-}, [
-  userName,
-  userStatus,
-  industry,
-  taxClass,
-  annualGross,
-  annualProfit,
-  vatStatus,
-  federalState,
-  churchTax,
-  married,
-  childrenCount,
-  assemblyWork,
-profileLoaded,
-])
-useEffect(() => {
-  const saved = localStorage.getItem('mila-profile')
+  const fetchFinanceData = useCallback(async (uid?: string) => {
+    if (!uid) {
+      setExpenses([])
+      setIncomes([])
+      return
+    }
 
-  if (!saved) return
-
-  const profile = JSON.parse(saved)
-
-  setUserName(profile.userName ?? 'Julia')
-  setUserStatus(profile.userStatus ?? 'freelancer')
-  setIndustry(profile.industry ?? 'sonstiges')
-
-  setTaxClass(profile.taxClass ?? '1')
-  setAnnualGross(profile.annualGross ?? 0)
-  setAnnualProfit(profile.annualProfit ?? 0)
-
-  setVatStatus(profile.vatStatus ?? 'regelbesteuert')
-  setFederalState(profile.federalState ?? 'berlin')
-
-  setChurchTax(profile.churchTax ?? false)
-  setMarried(profile.married ?? false)
-  setChildren(profile.children ?? 0)
-  setAssemblyWork(profile.assemblyWork ?? false)
-}, [])
-useEffect(() => {
-  if (!profileLoaded) return
-
-  localStorage.setItem(
-    'mila-obligations',
-    JSON.stringify(obligations)
-  )
-}, [obligations, profileLoaded])
-  const fetchFinanceData = useCallback(async () => {
-const addObligation = useCallback((item: Obligation) => {
-  setObligations((prev) => [item, ...prev])
-}, [])
-
-const deleteObligation = useCallback((id: string) => {
-  setObligations((prev) => prev.filter((item) => item.id !== id))
-}, [])
     const { data: expensesData, error: expensesError } = await supabase
-
       .from('expenses')
-
       .select('*')
-
+      .eq('user_id', uid)
       .order('date', { ascending: false })
 
     const { data: incomesData, error: incomesError } = await supabase
-
       .from('incomes')
-
       .select('*')
-
+      .eq('user_id', uid)
       .order('date', { ascending: false })
 
     if (expensesError) {
-
       console.error('Expenses laden fehlgeschlagen:', expensesError)
-
+      setExpenses([])
     } else {
-
       setExpenses(expensesData || [])
-
     }
 
     if (incomesError) {
-
       console.error('Incomes laden fehlgeschlagen:', incomesError)
-
+      setIncomes([])
     } else {
-
       setIncomes(incomesData || [])
-
     }
-
   }, [])
 
   useEffect(() => {
+    async function init() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    fetchFinanceData()
+      const uid = session?.user?.id || ''
 
-  }, [fetchFinanceData])
+      setUserId(uid)
+      setIsLoggedIn(Boolean(uid))
+      loadLocalProfile(uid || undefined)
+      await fetchFinanceData(uid || undefined)
+    }
+
+    init()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const uid = session?.user?.id || ''
+
+      setUserId(uid)
+      setIsLoggedIn(Boolean(uid))
+      setProfileLoaded(false)
+
+      loadLocalProfile(uid || undefined)
+      await fetchFinanceData(uid || undefined)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [fetchFinanceData, loadLocalProfile])
+
+  useEffect(() => {
+    if (!profileLoaded) return
+
+    localStorage.setItem(
+      profileKey(userId || undefined),
+      JSON.stringify({
+        userName,
+        userStatus,
+        industry,
+        taxClass,
+        annualGross,
+        annualProfit,
+        vatStatus,
+        federalState,
+        churchTax,
+        married,
+        children: childrenCount,
+        assemblyWork,
+      })
+    )
+  }, [
+    profileLoaded,
+    userId,
+    userName,
+    userStatus,
+    industry,
+    taxClass,
+    annualGross,
+    annualProfit,
+    vatStatus,
+    federalState,
+    churchTax,
+    married,
+    childrenCount,
+    assemblyWork,
+  ])
+
+  useEffect(() => {
+    if (!profileLoaded) return
+
+    localStorage.setItem(
+      obligationsKey(userId || undefined),
+      JSON.stringify(obligations)
+    )
+  }, [obligations, profileLoaded, userId])
+
+  useEffect(() => {
+    if (!profileLoaded) return
+
+    localStorage.setItem(
+      documentsKey(userId || undefined),
+      JSON.stringify(documents)
+    )
+  }, [documents, profileLoaded, userId])
 
   const login = useCallback((name: string, status: any) => {
-
-    setUserName(name || 'Julia')
-
-    setUserStatus(status || 'freiberufler')
-
+    setUserName(name || '')
+    setUserStatus(status || '')
     setIsLoggedIn(true)
-
   }, [])
 
   const logout = useCallback(() => {
-
     setIsLoggedIn(false)
-
+    setUserId('')
     setExpenses([])
-
     setIncomes([])
-
+    setObligations([])
+    setDocuments([])
   }, [])
 
-  const addExpense = useCallback(async (exp: any) => {
+  const addExpense = useCallback(
+    async (exp: any) => {
+      if (!userId) throw new Error('Nicht angemeldet.')
 
-    const { data, error } = await supabase
+      const payload = {
+        ...exp,
+        user_id: userId,
+      }
 
-      .from('expenses')
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert([payload])
+        .select()
+        .single()
 
-      .insert([exp])
+      if (error) {
+        console.error('Ausgabe speichern fehlgeschlagen:', error)
+        throw error
+      }
 
-      .select()
-
-      .single()
-
-    if (error) {
-
-      console.error('Ausgabe speichern fehlgeschlagen:', error)
-
-      throw error
-
-    }
-
-    setExpenses((p) => [data, ...p])
-
-  }, [])
-
-    const deleteExpense = useCallback(async (item: any) => {
-  const title = item?.title || ''
-  const amount = Number(item?.amount || 0)
-  const date = item?.date || ''
-  const createdAt = item?.created_at || ''
-
-  let query = supabase.from('expenses').delete()
-
-  if (createdAt) {
-    query = query.eq('created_at', createdAt)
-  } else {
-    query = query.eq('title', title).eq('amount', amount).eq('date', date)
-  }
-
-  const { error } = await query
-
-  if (error) {
-    console.error('Ausgabe löschen fehlgeschlagen:', error)
-    alert(`Ausgabe konnte nicht gelöscht werden: ${error.message}`)
-    throw error
-  }
-
-  setExpenses((p) =>
-    p.filter((e) =>
-      createdAt
-        ? e.created_at !== createdAt
-        : !(
-            e.title === title &&
-            Number(e.amount || 0) === amount &&
-            e.date === date
-          )
-    )
+      setExpenses((prev) => [data, ...prev])
+    },
+    [userId]
   )
-}, [])
-  const addIncome = useCallback(async (inc: any) => {
 
-    const { data, error } = await supabase
+  const addIncome = useCallback(
+    async (inc: any) => {
+      if (!userId) throw new Error('Nicht angemeldet.')
 
-      .from('incomes')
+      const payload = {
+        ...inc,
+        user_id: userId,
+      }
 
-      .insert([inc])
+      const { data, error } = await supabase
+        .from('incomes')
+        .insert([payload])
+        .select()
+        .single()
 
-      .select()
+      if (error) {
+        console.error('Einnahme speichern fehlgeschlagen:', error)
+        throw error
+      }
 
-      .single()
+      setIncomes((prev) => [data, ...prev])
+    },
+    [userId]
+  )
 
-    if (error) {
+  const deleteExpense = useCallback(async (item: any) => {
+    const id = item?.id
 
-      console.error('Einnahme speichern fehlgeschlagen:', error)
-
-      throw error
-
+    if (!id) {
+      alert('Diese Ausgabe hat keine ID und konnte nicht gelöscht werden.')
+      return
     }
 
-    setIncomes((p) => [data, ...p])
-
-  }, [])
-
-  const updateIncomeStatus = useCallback(async (id: any, status: string) => {
-
-    const normalizedStatus = status.toLowerCase()
-
-    const { data, error } = await supabase
-
-      .from('incomes')
-
-      .update({ status: normalizedStatus })
-
-      .eq('id', id)
-
-      .select()
-
-      .single()
+    const { error } = await supabase.from('expenses').delete().eq('id', id)
 
     if (error) {
-
-      console.error('Status ändern fehlgeschlagen:', error)
-
+      console.error('Ausgabe löschen fehlgeschlagen:', error)
+      alert(`Ausgabe konnte nicht gelöscht werden: ${error.message}`)
       throw error
-
     }
 
-    setIncomes((prev) =>
-
-      prev.map((income) => (income.id === id ? data : income))
-
-    )
-
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
   }, [])
 
   const deleteIncome = useCallback(async (id: any) => {
-
     const { error } = await supabase.from('incomes').delete().eq('id', id)
 
     if (error) {
-
       console.error('Einnahme löschen fehlgeschlagen:', error)
-
       throw error
-
     }
 
-    setIncomes((p) => p.filter((i) => i.id !== id))
-
+    setIncomes((prev) => prev.filter((income) => income.id !== id))
   }, [])
-const addObligation = useCallback((item: Obligation) => {
-  setObligations((prev) => [item, ...prev])
-}, [])
 
-const deleteObligation = useCallback((id: string) => {
-  setObligations((prev) => prev.filter((item) => item.id !== id))
-}, [])
+  const updateIncomeStatus = useCallback(async (id: any, status: string) => {
+    const normalizedStatus = status.toLowerCase()
+
+    const { data, error } = await supabase
+      .from('incomes')
+      .update({ status: normalizedStatus })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Status ändern fehlgeschlagen:', error)
+      throw error
+    }
+
+    setIncomes((prev) =>
+      prev.map((income) => (income.id === id ? data : income))
+    )
+  }, [])
+
+  const addObligation = useCallback((item: Obligation) => {
+    setObligations((prev) => [item, ...prev])
+  }, [])
+
+  const deleteObligation = useCallback((id: string) => {
+    setObligations((prev) => prev.filter((item) => item.id !== id))
+  }, [])
+
   const summary = useMemo(() => {
-  return calculateSummary(incomes, expenses)
-}, [incomes, expenses])
+    return calculateSummary(incomes, expenses)
+  }, [incomes, expenses])
 
   const budgetStatus = useMemo(() => [], [categories, expenses])
 
   const value = useMemo(
-
     () => ({
-
       expenses,
-
       incomes,
-
       setIncomes,
 
-      updateIncomeStatus,
-
       categories,
-
       milaFeedback,
-
       morningBriefing,
-
       refreshMorningBriefing: async () => {},
-
       triggerMilaFeedback: (_cat: string) => {},
 
       addExpense,
-
       deleteExpense,
-
       addIncome,
-
       deleteIncome,
+      updateIncomeStatus,
+
+      obligations,
+      setObligations,
+      addObligation,
+      deleteObligation,
+
+      documents,
+      setDocuments,
 
       userName,
-
       setUserName,
-
       userStatus,
-
       setUserStatus,
-
       industry,
-
       setIndustry,
-
       taxClass,
-
       setTaxClass,
-
       annualGross,
-
       setAnnualGross,
-
       annualProfit,
-
       setAnnualProfit,
-
       vatStatus,
-
       setVatStatus,
-
       federalState,
-
       setFederalState,
-
       churchTax,
-
       setChurchTax,
-
       married,
-
       setMarried,
-
       children: childrenCount,
-
       setChildren,
-
       assemblyWork,
-
       setAssemblyWork,
 
       isLoggedIn,
-
       login,
-
       logout,
 
       summary,
-
       budgetStatus,
-obligations,
-setObligations,
-addObligation,
-deleteObligation,
-documents,
-
     }),
-
     [
-
       expenses,
-
       incomes,
-
       categories,
-
       milaFeedback,
-
       morningBriefing,
-
-      userName,
-
-      userStatus,
-
-      industry,
-
-      taxClass,
-
-      annualGross,
-
-      annualProfit,
-
-      vatStatus,
-
-      federalState,
-
-      churchTax,
-
-      married,
-
-      childrenCount,
-
-      assemblyWork,
-
-      isLoggedIn,
-
-      login,
-
-      logout,
-
-      summary,
-
-      budgetStatus,
-
       addExpense,
-
       deleteExpense,
-
       addIncome,
-
       deleteIncome,
-
       updateIncomeStatus,
-obligations,
-addObligation,
-deleteObligation,
-
+      obligations,
+      addObligation,
+      deleteObligation,
+      documents,
+      userName,
+      userStatus,
+      industry,
+      taxClass,
+      annualGross,
+      annualProfit,
+      vatStatus,
+      federalState,
+      churchTax,
+      married,
+      childrenCount,
+      assemblyWork,
+      isLoggedIn,
+      login,
+      logout,
+      summary,
+      budgetStatus,
     ]
-
   )
 
   return (
-
     <FinanceContext.Provider value={value}>
-
       {children}
-
     </FinanceContext.Provider>
-
   )
-
 }
 
 export function useFinance() {
-
   const ctx = useContext(FinanceContext)
 
   if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
 
   return ctx
-
 }
