@@ -12,6 +12,8 @@ import {
 import { getEntryCategory } from '@/lib/mila-classifier'
 import { getObligationInsights } from '@/lib/mila-obligation-insights'
 import { getMilaAssistantFindings } from '@/lib/mila-assistant'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -100,7 +102,7 @@ documents,
   useEffect(() => {
     setIsClient(true)
   }, [])
-
+const router = useRouter()
   // 🛡️ SICHERER LADEZUSTAND (Verhindert fehlerhafte Redirects beim Hydrieren)
   if (!isClient || !summary) {
     return (
