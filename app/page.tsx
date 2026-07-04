@@ -174,20 +174,19 @@ const anchorMessage =
     🪬 Heute wichtig
   </p>
 
-  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-
+  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-800">
+    {overdueCount > 0
+      ? `Du hast ${overdueCount} überfällige Einnahme(n) über ${formatEuro(totalOverdueAmount)}. Das sollte heute zuerst geprüft werden.`
+      : openCount > 0
+      ? `Du wartest aktuell auf ${openCount} Zahlungseingang${openCount === 1 ? '' : 'e'} über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon erledigt ist.`
+      : 'Heute sind keine Zahlungseingänge offen. Dein Fokus darf auf Rücklagen und neuen Buchungen liegen.'}
   </p>
 
   <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-600">
     Du musst nicht alles auf einmal lösen. Mila zeigt dir den nächsten sinnvollen Schritt.
-{overdueCount > 0
-  ? `Du hast ${overdueCount} überfällige Einnahme(n) über ${formatEuro(totalOverdueAmount)}. Das sollte heute zuerst geprüft werden.`
-  : openCount > 0
-  ? `Du wartest aktuell auf ${openCount} Zahlungseingang${openCount === 1 ? '' : 'e'} über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon erledigt ist.`
-  : 'Heute sind keine offenen Einnahmen sichtbar. Dein Fokus darf auf Rücklagen und neuen Buchungen liegen.'}
   </p>
 </div>
-          </div>
-
+          
           {/* Lila Hauptkarte */}
           <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
