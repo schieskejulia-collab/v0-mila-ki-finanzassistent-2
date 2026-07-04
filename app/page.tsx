@@ -11,6 +11,7 @@ import {
 } from '@/lib/calculations'
 import { getEntryCategory } from '@/lib/mila-classifier'
 import { getObligationInsights } from '@/lib/mila-obligation-insights'
+import { getMilaAssistantFindings } from '@/lib/mila-assistant'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -92,6 +93,8 @@ export default function DashboardPage() {
   industry,
   vatStatus,
   isLoggedIn,
+documents,
+obligations,
 } = useFinance()
   const [isClient, setIsClient] = useState(false)
 
@@ -121,7 +124,10 @@ const openCount = payments.openCount
 const overdueCount = payments.overdueCount
 const totalOpenAmount = payments.openAmount
 const totalOverdueAmount = payments.overdueAmount
-
+const assistantFindings = getMilaAssistantFindings({
+  documents: documents || [],
+  obligations: obligations || [],
+})
 const taxReserve = calculateReserve(summary.balance)
 
 const financeScore = calculateFinanceScore({
@@ -237,6 +243,23 @@ const anchorMessage =
   </h2>
 
   <div className="space-y-3 text-xs text-slate-700 leading-relaxed">
+{assistantFindings.map((item) => (
+  <div
+    key={item.id}
+    className={`rounded-2xl border p-3 ${
+      item.priority === 'high'
+        ? 'bg-rose-50 border-rose-100'
+        : item.priority === 'medium'
+        ? 'bg-amber-50 border-amber-100'
+        : 'bg-violet-50 border-violet-100'
+    }`}
+  >
+    <p className="font-black text-slate-800">{item.title}</p>
+    <p className="mt-1 font-semibold text-slate-700">
+      {item.message}
+    </p>
+  </div>
+))}
 {obligationInsights.map((item) => (
   <div
     key={item.id}
