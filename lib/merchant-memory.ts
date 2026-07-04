@@ -1,6 +1,6 @@
 import type { CategoryId } from './categories'
 import type { TaxHint } from './merchants'
-
+import { saveMerchantMemory } from '@/lib/merchant-memory'
 export type MerchantMemory = {
   merchant: string
   category: CategoryId
