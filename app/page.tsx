@@ -10,6 +10,7 @@ import {
   calculateTrafficLight,
 } from '@/lib/calculations'
 import { getEntryCategory } from '@/lib/mila-classifier'
+import { getObligationInsights } from '@/lib/mila-obligation-insights'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
