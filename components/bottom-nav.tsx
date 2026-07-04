@@ -10,10 +10,10 @@ const navItems = [
     icon: '🏠',
   },
   {
-    href: '/buchungen',
-    label: 'Buchungen',
-    icon: '📒',
-  },
+  href: '/buchungen',
+  label: 'Finanzen',
+  icon: '💰',
+},
   {
     href: '/neue-buchungen',
     label: 'Neu',
