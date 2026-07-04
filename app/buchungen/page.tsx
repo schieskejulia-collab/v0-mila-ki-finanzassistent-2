@@ -219,6 +219,16 @@ const handleDelete = async (t: any) => {
     </p>
   </Link>
 </div>
+<Link
+  href="/dokumente"
+  className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+>
+  <p className="text-2xl">📂</p>
+  <p className="mt-2 font-black text-slate-900">Dokumente</p>
+  <p className="mt-1 text-xs text-slate-500">
+    Belege, Rechnungen und Nachweise
+  </p>
+</Link>
         {/* --- BUCHUNGSLISTE --- */}
         <div className="space-y-6">
           {Object.entries(gruppierteTransaktionen).map(([monat, liste]) => {
