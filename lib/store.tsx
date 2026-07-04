@@ -20,6 +20,7 @@ import {
 
 import { supabase } from '@/lib/supabase'
 import { calculateSummary } from '@/lib/calculations'
+import type { Obligation } from './mila-obligations'
 export interface FinanceContextValue {
 
   expenses: any[]
@@ -47,6 +48,11 @@ export interface FinanceContextValue {
   deleteIncome: (id: any) => Promise<void>
 
   updateIncomeStatus: (id: any, status: string) => Promise<void>
+
+obligations: Obligation[]
+setObligations: (items: Obligation[]) => void
+addObligation: (item: Obligation) => void
+deleteObligation: (id: string) => void
 
   userName: string
 
@@ -145,6 +151,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [childrenCount, setChildren] = useState(0)
 
   const [assemblyWork, setAssemblyWork] = useState(false)
+const [obligations, setObligations] = useState<Obligation[]>([])
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 const [profileLoaded, setProfileLoaded] = useState(false)
@@ -239,7 +246,13 @@ useEffect(() => {
   setAssemblyWork(profile.assemblyWork ?? false)
 }, [])
   const fetchFinanceData = useCallback(async () => {
+const addObligation = useCallback((item: Obligation) => {
+  setObligations((prev) => [item, ...prev])
+}, [])
 
+const deleteObligation = useCallback((id: string) => {
+  setObligations((prev) => prev.filter((item) => item.id !== id))
+}, [])
     const { data: expensesData, error: expensesError } = await supabase
 
       .from('expenses')
@@ -527,6 +540,10 @@ useEffect(() => {
       summary,
 
       budgetStatus,
+obligations,
+setObligations,
+addObligation,
+deleteObligation,
 
     }),
 
@@ -585,6 +602,9 @@ useEffect(() => {
       deleteIncome,
 
       updateIncomeStatus,
+obligations,
+addObligation,
+deleteObligation,
 
     ]
 
