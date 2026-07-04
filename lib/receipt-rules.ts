@@ -1,28 +1,51 @@
 import type { CategoryId } from './categories'
 import type { TaxHint } from './merchants'
 import { classifyEntry } from './mila-classifier'
-export const MILA_RECEIPT_RULES = [
+
+export type MilaReceiptRule = {
+  category: CategoryId
+  keywords: string[]
+  taxHint: TaxHint
+  question: string
+}
+
+export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
   {
-    category: 'Mobilität & Fahrten',
+    category: 'reisen',
     keywords: [
       'parken',
       'parkhaus',
       'maut',
-      'tankstelle',
-      'werkstatt',
-      'reparatur',
-      'waschanlage',
       'bahn',
       'bus',
       'ticket',
-      'hotel parkplatz'
+      'fahrkarte',
+      'hotel',
+      'airbnb',
+      'koffer',
+      'reisebedarf',
+      'parkgebühr',
+      'parkgebuehr',
     ],
-    taxHint: 'prüfen',
-    question: 'War diese Fahrt beruflich oder privat?'
+    taxHint: 'depends',
+    question: 'War diese Fahrt oder Reise beruflich, Montage oder privat?',
   },
-
   {
-    category: 'Werkzeug & Arbeitsmittel',
+    category: 'fahrzeug',
+    keywords: [
+      'tankstelle',
+      'tanken',
+      'benzin',
+      'diesel',
+      'werkstatt',
+      'reparatur',
+      'waschanlage',
+    ],
+    taxHint: 'depends',
+    question: 'War das beruflich, Fahrt zur Arbeit oder privat?',
+  },
+  {
+    category: 'arbeitsmittel',
     keywords: [
       'baumarkt',
       'werkzeug',
@@ -30,105 +53,97 @@ export const MILA_RECEIPT_RULES = [
       'schrauben',
       'kabel',
       'messgerät',
+      'messgeraet',
       'arbeitsschuhe',
       'schutzkleidung',
-      'software',
-      'cloud',
-      'handyhalterung'
+      'handyhalterung',
     ],
-    taxHint: 'häufig relevant',
-    question: 'Nutzt du diesen Gegenstand beruflich?'
+    taxHint: 'depends',
+    question: 'Nutzt du diesen Gegenstand beruflich?',
   },
-
   {
-    category: 'Verpflegung',
-    keywords: [
-      'restaurant',
-      'bäcker',
-      'kaffee',
-      'getränke',
-      'snacks'
-    ],
-    taxHint: 'abhängig',
-    question: 'War das beruflich, Montage oder privat?'
+    category: 'bewirtung',
+    keywords: ['restaurant', 'bäcker', 'baecker', 'kaffee', 'getränke', 'getraenke', 'snacks'],
+    taxHint: 'depends',
+    question: 'War das beruflich, Montage oder privat?',
   },
-
   {
-    category: 'Reisen & Montage',
-    keywords: [
-      'hotel',
-      'airbnb',
-      'koffer',
-      'reisebedarf',
-      'parkgebühr'
-    ],
-    taxHint: 'prüfen',
-    question: 'War diese Reise beruflich veranlasst?'
-  },
-
-  {
-    category: 'Gesundheit',
+    category: 'gesundheit',
     keywords: [
       'apotheke',
       'medikament',
       'zahnarzt',
       'physio',
       'orthopädie',
+      'orthopaedie',
       'bandage',
-      'einlagen'
+      'einlagen',
+      'schmerzmittel',
     ],
-    taxHint: 'außergewöhnliche Belastung möglich',
-    question: 'Wurde es ärztlich verordnet und selbst bezahlt?'
+    taxHint: 'depends',
+    question: 'Wurde es ärztlich verordnet und selbst bezahlt?',
   },
-
   {
-    category: 'Homeoffice & Büro',
-    keywords: [
-      'internet',
-      'telefon',
-      'drucker',
-      'papier',
-      'toner',
-      'ordner'
-    ],
-    taxHint: 'prüfen',
-    question: 'Nutzt du es beruflich?'
+    category: 'buerobedarf',
+    keywords: ['drucker', 'papier', 'toner', 'ordner', 'bürobedarf', 'buerobedarf'],
+    taxHint: 'depends',
+    question: 'Nutzt du es beruflich?',
   },
-
   {
-    category: 'Versicherung & Beiträge',
-    keywords: [
-      'haftpflicht',
-      'unfallversicherung',
-      'gewerkschaft',
-      'berufsverband'
-    ],
-    taxHint: 'prüfen',
-    question: 'Welche Art Versicherung ist es?'
+    category: 'telefon',
+    keywords: ['internet', 'telefon', 'mobilfunk', 'handyvertrag'],
+    taxHint: 'depends',
+    question: 'Gibt es eine berufliche Nutzung?',
   },
-
   {
-    category: 'Weiterbildung',
-    keywords: [
-      'seminar',
-      'schulung',
-      'prüfung',
-      'zertifikat',
-      'fachbuch'
-    ],
-    taxHint: 'häufig relevant',
-    question: 'Hat die Weiterbildung beruflichen Bezug?'
-  }
+    category: 'versicherungen',
+    keywords: ['haftpflicht', 'unfallversicherung', 'gewerkschaft', 'berufsverband'],
+    taxHint: 'depends',
+    question: 'Welche Art Versicherung oder Beitrag ist es?',
+  },
+  {
+    category: 'weiterbildung',
+    keywords: ['seminar', 'schulung', 'prüfung', 'pruefung', 'zertifikat', 'fachbuch'],
+    taxHint: 'depends',
+    question: 'Hat die Weiterbildung beruflichen Bezug?',
+  },
+  {
+    category: 'software',
+    keywords: ['software', 'cloud', 'scanner-app', 'scanner app', 'chatgpt', 'openai'],
+    taxHint: 'yes',
+    question: 'Wird das Tool beruflich genutzt?',
+  },
 ]
+
 export type ReceiptRuleResult = {
   category: CategoryId
   taxHint: TaxHint
   confidence: 'high' | 'medium' | 'low'
   needsReview: boolean
-  source: 'memory' | 'merchant' | 'category' | 'fallback'
+  source: 'memory' | 'merchant' | 'category' | 'rule' | 'fallback'
+  question?: string
 }
 
 export function classifyReceipt(receipt: any): ReceiptRuleResult {
+  const text = `${receipt.title || ''} ${receipt.description || ''} ${
+    receipt.vendor || receipt.merchant || ''
+  } ${receipt.category || ''} ${receipt.note || ''}`.toLowerCase()
+
+  const rule = MILA_RECEIPT_RULES.find((item) =>
+    item.keywords.some((keyword) => text.includes(keyword.toLowerCase()))
+  )
+
+  if (rule) {
+    return {
+      category: rule.category,
+      taxHint: rule.taxHint,
+      confidence: 'medium',
+      needsReview: rule.taxHint !== 'yes',
+      source: 'rule',
+      question: rule.question,
+    }
+  }
+
   const result = classifyEntry({
     title: receipt.title || receipt.description || '',
     vendor: receipt.vendor || receipt.merchant || '',
