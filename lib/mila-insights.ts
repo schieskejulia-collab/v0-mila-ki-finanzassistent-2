@@ -1,322 +1,487 @@
 import { getEntryCategory } from './mila-classifier'
 
 export type MilaInsight = {
+
   id: string
+
   title: string
+
   message: string
+
   type:
+
     | 'tax'
+
     | 'warning'
+
     | 'subscription'
+
     | 'budget'
+
     | 'invoice'
+
     | 'goal'
+
     | 'family'
+
     | 'business'
+
 }
 
 function money(value: number) {
+
   return value.toLocaleString('de-DE', {
+
     style: 'currency',
+
     currency: 'EUR',
+
   })
+
 }
 
 function number(value: any) {
+
   const raw = String(value ?? '').replace(',', '.')
+
   const parsed = Number(raw)
+
   return Number.isFinite(parsed) ? parsed : 0
+
 }
 
 function normalizeName(value: any) {
+
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+
 }
 
 function taxRateForStatus(userStatus: string) {
+
   if (userStatus === 'angestellt') return 0.1
+
   if (userStatus === 'kleinunternehmer') return 0.25
+
   return 0.3
+
 }
 
-
 function industryLabel(industry?: string) {
+
   const labels: Record<string, string> = {
+
     digital: 'Digital / KI / Automatisierung',
+
     kreativ: 'Kreativ / Medien',
+
     beratung: 'Beratung',
+
     handwerk: 'Handwerk',
+
     gesundheit: 'Gesundheit & Pflege',
+
     gastro: 'Gastronomie',
+
     handel: 'Handel / E-Commerce',
+
     dienstleistung: 'Dienstleistung',
+
     bildung: 'Bildung / Coaching',
-    sonstiges: 'deiner Branche',
+
+    sonstiges: 'deine Branche',
+
   }
 
-  return labels[industry || 'sonstiges'] || 'deiner Branche'
+  return labels[industry || 'sonstiges'] || 'deine Branche'
+
+}
+
+function incomeStatus(value: any) {
+
+  return String(value || '').toLowerCase().trim()
+
 }
 
 export function getMilaInsights(
-  incomes: any[],
-  expenses: any[],
+
+  incomes: any[] = [],
+
+  expenses: any[] = [],
+
   userStatus: string,
+
   industry?: string
+
 ): MilaInsight[] {
-  const insights: MilaInsight[] = []
+
+  const urgent: MilaInsight[] = []
+
+  const important: MilaInsight[] = []
+
+  const helpful: MilaInsight[] = []
 
   const incomeTotal = incomes.reduce((sum, i) => sum + number(i.amount), 0)
+
   const expenseTotal = expenses.reduce((sum, e) => sum + number(e.amount), 0)
+
   const profit = incomeTotal - expenseTotal
+
   const costRatio = incomeTotal > 0 ? expenseTotal / incomeTotal : 0
 
   const taxRate = taxRateForStatus(userStatus)
+
   const taxReserve = profit > 0 ? profit * taxRate : 0
+
   const availableAfterReserve = profit - taxReserve
 
   if (incomeTotal === 0 && expenseTotal === 0) {
+
     return [
+
       {
+
         id: 'start-empty',
+
         title: '🌱 Mila ist bereit',
+
         message:
-          'Erfasse deine erste Einnahme oder Ausgabe. Danach erkennt Mila Muster, Rücklagen und nächste sinnvolle Schritte.',
+
+          'Erfasse deine erste Buchung. Danach erkennt Mila Muster, Rücklagen und sinnvolle nächste Schritte.',
+
         type: 'goal',
+
       },
+
     ]
+
   }
 
   const openIncomes = incomes.filter((income) => {
-    const status = String(income.status || '').toLowerCase()
+
+    const status = incomeStatus(income.status)
+
     return status === 'offen' || status === 'pending' || !status
+
   })
 
   const overdueIncomes = incomes.filter((income) => {
-    const status = String(income.status || '').toLowerCase()
+
+    const status = incomeStatus(income.status)
+
     return status === 'ueberfaellig' || status === 'überfällig' || status === 'overdue'
+
   })
 
+  if (profit < 0) {
+
+    urgent.push({
+
+      id: 'liquidity-warning',
+
+      title: '🔴 Liquidität zuerst prüfen',
+
+      message: `Deine Ausgaben liegen aktuell ${money(
+
+        Math.abs(profit)
+
+      )} über deinen Einnahmen. Mila würde zuerst erwartete Zahlungseingänge, Fixkosten und doppelte Buchungen sortieren.`,
+
+      type: 'warning',
+
+    })
+
+  }
+
   if (overdueIncomes.length > 0) {
+
     const total = overdueIncomes.reduce((sum, i) => sum + number(i.amount), 0)
 
-    insights.push({
+    urgent.push({
+
       id: 'overdue-income',
-      title: '🚨 Überfällige Kundenzahlungen',
-      message: `Du wartest auf ${overdueIncomes.length} überfällige Zahlungseingänge über ${money(
-        total
-      )}. Das ist heute deine wichtigste Baustelle.`,
-      type: 'warning',
+
+      title: '🟡 Überfällige Zahlungseingänge',
+
+      message: `Du wartest auf ${overdueIncomes.length} überfällige Zahlungseingang${
+
+        overdueIncomes.length === 1 ? '' : 'e'
+
+      } über ${money(total)}. Das ist wichtiger als neue Ausgaben zu optimieren.`,
+
+      type: 'invoice',
+
     })
+
   }
 
   if (openIncomes.length > 0) {
+
     const openTotal = openIncomes.reduce((sum, i) => sum + number(i.amount), 0)
 
-    insights.push({
-      id: 'open-income',
-      title: '📥 Erwartete Zahlungseingänge',
-      message: `Du wartest aktuell auf ${openIncomes.length} Zahlungseingang${
-        openIncomes.length === 1 ? '' : 'e'
-      } über ${money(openTotal)}. Prüfe, was davon schon bezahlt wurde.`,
-      type: 'invoice',
-    })
-  }
+    important.push({
 
-  if (profit < 0) {
-    insights.push({
-      id: 'liquidity-warning',
-      title: '⚠️ Liquidität prüfen',
-      message: `Deine Ausgaben liegen aktuell ${money(
-        Math.abs(profit)
-      )} über deinen Einnahmen. Prüfe zuerst Fixkosten, offene Kundenzahlungen und doppelte Buchungen.`,
-      type: 'warning',
+      id: 'open-income',
+
+      title: '📥 Erwartete Zahlungseingänge',
+
+      message: `Du wartest aktuell auf ${openIncomes.length} Zahlungseingang${
+
+        openIncomes.length === 1 ? '' : 'e'
+
+      } über ${money(openTotal)}. Mila würde heute nur prüfen, welche davon schon erledigt sind.`,
+
+      type: 'invoice',
+
     })
+
   }
 
   if (profit > 0) {
-    insights.push({
+
+    important.push({
+
       id: 'tax-reserve',
+
       title: '💰 Rücklage einplanen',
+
       message: `Plane ungefähr ${money(
+
         taxReserve
+
       )} als Orientierung ein. Danach bleiben rechnerisch etwa ${money(
+
         availableAfterReserve
+
       )} frei verfügbar.`,
+
       type: 'tax',
+
     })
+
   }
 
   if (incomeTotal > 0 && costRatio >= 0.8) {
-    insights.push({
+
+    important.push({
+
       id: 'high-cost-ratio',
-      title: '📉 Kostenquote hoch',
+
+      title: '🟡 Kostenquote beobachten',
+
       message: `Du nutzt rund ${Math.round(
+
         costRatio * 100
-      )}% deiner Einnahmen für Ausgaben. Mila würde zuerst Abos, Fixkosten und größere Posten prüfen.`,
+
+      )}% deiner Einnahmen für Ausgaben. Mila würde Fixkosten und größere Posten gesammelt prüfen, nicht jede einzelne Buchung dramatisieren.`,
+
       type: 'budget',
+
     })
+
   }
 
   if (incomeTotal > 0 && costRatio <= 0.35 && profit > 0) {
-    insights.push({
+
+    helpful.push({
+
       id: 'healthy-margin',
+
       title: '🟢 Solider Spielraum',
+
       message:
-        'Deine Kostenquote wirkt gesund. Nutze den Spielraum für Rücklagen, offene Verpflichtungen oder gezielte Investitionen.',
+
+        'Deine Kostenquote wirkt gesund. Das ist ein guter Moment, um Rücklagen, Ziele oder geplante Investitionen ruhig zu sortieren.',
+
       type: 'budget',
+
     })
+
   }
 
   const vendors: Record<string, { label: string; count: number; total: number }> = {}
 
   expenses.forEach((expense) => {
+
     const label = String(expense.vendor || expense.title || '').trim()
+
     const key = normalizeName(label)
+
     if (!key) return
 
     if (!vendors[key]) vendors[key] = { label, count: 0, total: 0 }
 
     vendors[key].count += 1
+
     vendors[key].total += number(expense.amount)
+
   })
 
-  Object.entries(vendors).forEach(([key, data]) => {
-    if (data.count >= 2) {
-      const monthlyEstimate = data.total / data.count
-      const yearlyEstimate = monthlyEstimate * 12
+  const recurring = Object.entries(vendors).filter(([, data]) => data.count >= 3)
 
-      insights.push({
-        id: `sub-${key}`,
-        title: '🔁 Wiederkehrende Ausgabe',
-        message: `${data.label} wurde ${data.count}x erkannt. Wenn das monatlich läuft, sind das ca. ${money(
-          yearlyEstimate
-        )} im Jahr.`,
-        type: 'subscription',
-      })
-    }
-  })
+  if (recurring.length >= 2) {
+
+    const totalRecurring = recurring.reduce((sum, [, data]) => sum + data.total, 0)
+
+    helpful.push({
+
+      id: 'recurring-summary',
+
+      title: '🔁 Wiederkehrende Kosten erkannt',
+
+      message: `Mila erkennt ${recurring.length} wiederkehrende Kostenblöcke über zusammen ${money(
+
+        totalRecurring
+
+      )}. Kein Alarm — diese Kosten sollten eher gesammelt im Monatscheck geprüft werden.`,
+
+      type: 'subscription',
+
+    })
+
+  }
 
   const softwareExpenses = expenses.filter(
+
     (expense) => getEntryCategory(expense) === 'software'
+
   )
 
-  if (
-    ['freiberufler', 'selbststaendig_gewerbe', 'selbstständig', 'selbststaendig', 'kleinunternehmer'].includes(
-      userStatus
-    ) &&
-    softwareExpenses.length > 0
-  ) {
+  if (softwareExpenses.length >= 3) {
+
     const total = softwareExpenses.reduce((sum, e) => sum + number(e.amount), 0)
 
-    insights.push({
+    helpful.push({
+
       id: 'software-tools',
-      title: '💻 Software & Tools',
-      message: `${softwareExpenses.length} Tool-Kosten erkannt (${money(
+
+      title: '💻 Tool-Kosten im Blick',
+
+      message: `${softwareExpenses.length} Software-/Tool-Kosten erkannt (${money(
+
         total
-      )}). Gerade KI-, Design- und Hosting-Tools solltest du regelmäßig auf Nutzen prüfen.`,
+
+      )}). Mila bewertet sie nicht automatisch negativ, sondern prüft später Nutzen, Häufigkeit und Liquidität zusammen.`,
+
       type: 'business',
+
     })
+
   }
 
   const privateExpenses = expenses.filter(
+
     (expense) => getEntryCategory(expense) === 'privat'
+
   )
 
-  if (privateExpenses.length > 0) {
+  if (privateExpenses.length >= 3) {
+
     const total = privateExpenses.reduce((sum, e) => sum + number(e.amount), 0)
 
-    insights.push({
+    helpful.push({
+
       id: 'private-expenses',
-      title: '🔒 Private Ausgaben erkannt',
-      message: `${privateExpenses.length} Ausgabe${
-        privateExpenses.length === 1 ? '' : 'n'
-      } wirken privat (${money(total)}). Mila hält sie getrennt, damit deine Auswertung sauber bleibt.`,
-      type: 'budget',
-    })
-  }
 
-  if (userStatus === 'angestellt' && expenseTotal > 0) {
-    insights.push({
-      id: 'employee-expenses',
-      title: '💡 Ausgaben im Blick',
-      message:
-        'Auch als Angestellte:r lohnt sich Überblick. Prüfe Arbeitsmittel, Weiterbildung, Fahrtkosten und wiederkehrende Kosten.',
-      type: 'budget',
-    })
-  }
+      title: '🔒 Private Ausgaben getrennt halten',
 
-  if (userStatus === 'freiberufler' && profit > 0) {
-    insights.push({
-      id: 'freelancer-profit',
-      title: '📈 Freiberuflicher Überschuss',
-      message: `Dein aktueller Überschuss liegt bei ${money(
-        profit
-      )}. Mila beobachtet daraus Rücklagen, Kostenquote und mögliche Engpässe.`,
-      type: 'business',
+      message: `${privateExpenses.length} Ausgaben wirken privat (${money(
+
+        total
+
+      )}). Mila hält sie getrennt, damit geschäftliche Auswertungen sauber bleiben.`,
+
+      type: 'budget',
+
     })
+
   }
 
   if (userStatus === 'kleinunternehmer') {
+
     const limit = 25000
+
     const remaining = limit - incomeTotal
 
-    insights.push({
+    important.push({
+
       id: 'ku-limit',
-      title: '⚠️ Kleinunternehmergrenze',
+
+      title: '⚠️ Kleinunternehmergrenze beobachten',
+
       message:
+
         remaining > 0
+
           ? `Bis zur 25.000 €-Grenze bleiben dir aktuell noch ${money(
+
               remaining
+
             )} Umsatz-Spielraum.`
-          : 'Du liegst über 25.000 € Umsatz. Prüfe, ob die Kleinunternehmerregelung noch passt.',
+
+          : 'Du liegst über 25.000 € Umsatz. Mila würde prüfen lassen, ob die Kleinunternehmerregelung noch passt.',
+
       type: 'warning',
+
     })
+
   }
 
   const industryMessages: Record<string, string> = {
-  dienstleistung:
-    'Achte besonders auf Kundenzahlungen, wiederkehrende Kosten, Arbeitszeit und deine Marge.',
 
-  handwerker:
-    'Material, Werkzeug, Fahrzeuge, Baustellenfahrten und größere Anschaffungen sind wichtige Kostenblöcke.',
+    digital:
 
-  handel:
-    'Wareneinkauf, Lagerbestand, Einkaufspreise und Zahlungsziele beeinflussen deine Liquidität.',
+      'Bei digitalen Leistungen achtet Mila besonders auf Software, Tools, wiederkehrende Kosten, Projektmargen und Zahlungseingänge.',
 
-  gastronomie:
-    'Wareneinsatz, Energie, Lieferanten, Personal und Schwankungen sollten regelmäßig geprüft werden.',
+    kreativ:
 
-  gesundheit:
-    'Achte auf Ausstattung, Fortbildungen, Abrechnung, Material und laufende Betriebskosten.',
+      'In der Kreativbranche sind Technik, Software, Lizenzen, Projektpreise und offene Kundenzahlungen besonders wichtig.',
 
-  beauty:
-    'Produkte, Verbrauchsmaterial, Geräte, Termine und Stammkunden beeinflussen deinen Gewinn.',
+    beratung:
 
-  kreativ:
-    'Software, Technik, Ausstattung, Lizenzen und Projektpreise solltest du im Blick behalten.',
+      'In Beratung und Coaching zählen abrechenbare Zeit, Weiterbildung, Software, Reisekosten und Zahlungseingänge.',
 
-  beratung:
-    'Achte auf offene Kundenzahlungen, Weiterbildung, Software und deine abrechenbare Zeit.',
+    handwerk:
 
-  ecommerce:
-    'Versand, Retouren, Werbung, Einkaufspreise und Gebühren beeinflussen deine Marge.',
+      'Im Handwerk achtet Mila besonders auf Material, Werkzeug, Fahrzeugkosten, Baustellenfahrten und größere Anschaffungen.',
 
-  vermietung:
-    'Behalte Reparaturen, laufende Kosten, Rücklagen und Einnahmen im Blick.',
+    gesundheit:
 
-  verein:
-    'Beiträge, Förderungen, Ausgaben und Budgets sollten sauber getrennt werden.',
+      'Im Bereich Gesundheit & Pflege sind Ausstattung, Fortbildungen, Material, Abrechnung und laufende Kosten wichtige Punkte.',
 
-  sonstiges:
-    'Mila sucht nach Mustern, Risiken, Sparmöglichkeiten und Chancen in deinen Zahlen.',
-}
+    gastro:
 
-  insights.push({
+      'In der Gastronomie wirken Wareneinsatz, Energie, Lieferanten, Personal und Schwankungen stark auf die Liquidität.',
+
+    handel:
+
+      'Im Handel achtet Mila auf Wareneinkauf, Lagerbestand, Versand, Retouren, Gebühren und Zahlungsziele.',
+
+    dienstleistung:
+
+      'Bei Dienstleistungen sind Kundenzahlungen, wiederkehrende Kosten, Arbeitszeit und Marge besonders wichtig.',
+
+    bildung:
+
+      'Bei Bildung und Coaching achtet Mila auf Kurse, Tools, Räume, Marketing, Materialien und Zahlungseingänge.',
+
+    sonstiges:
+
+      'Mila sucht nach Mustern, Risiken, Sparmöglichkeiten und Chancen in deinen Zahlen.',
+
+  }
+
+  helpful.push({
+
     id: `industry-${industry || 'sonstiges'}`,
+
     title: `🎯 Fokus ${industryLabel(industry)}`,
+
     message:
+
       industryMessages[industry || 'sonstiges'] || industryMessages.sonstiges,
+
     type: 'business',
+
   })
 
-  return insights.slice(0, 8)
-}
+  return [...urgent, ...important, ...helpful].slice(0, 6)
