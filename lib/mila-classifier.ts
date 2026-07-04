@@ -19,7 +19,7 @@ export function classifyEntry(entry: any): MilaClassification {
   const vendor = String(entry.vendor || entry.title || '').trim()
   const text = getEntryText(entry)
 
-  const memory = findMerchantMemory(vendor)
+  const memory = findMerchantMemory(vendor || text)
 
   if (memory) {
     return {
@@ -29,7 +29,7 @@ export function classifyEntry(entry: any): MilaClassification {
     }
   }
 
-  const merchant = findMerchantInfo(vendor)
+  const merchant = findMerchantInfo(vendor || text)
 
   if (merchant) {
     return {
