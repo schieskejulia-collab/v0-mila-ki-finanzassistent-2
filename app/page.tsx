@@ -260,23 +260,6 @@ const anchorMessage =
     </p>
   </div>
 ))}
-{obligationInsights.map((item) => (
-  <div
-    key={item.id}
-    className={`rounded-2xl border p-3 ${
-      item.level === 'important'
-        ? 'bg-rose-50 border-rose-100'
-        : item.level === 'reminder'
-        ? 'bg-amber-50 border-amber-100'
-        : 'bg-violet-50 border-violet-100'
-    }`}
-  >
-    <p className="font-black text-slate-800">{item.title}</p>
-    <p className="mt-1 font-semibold text-slate-700">
-      {item.message}
-    </p>
-  </div>
-))}
     {overdueCount > 0 && (
 
       <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3">
