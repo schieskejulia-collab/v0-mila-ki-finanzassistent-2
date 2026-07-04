@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-import { detectCategory } from '@/lib/categories'
-import { MERCHANTS } from '@/lib/merchants'
 import { classifyReceipt } from '@/lib/receipt-rules'
-import { merchantMemory } from '@/lib/merchant-memory'
 function cleanJson(content: string) {
   return content
     .replace(/```json/gi, '')
@@ -10,100 +7,16 @@ function cleanJson(content: string) {
     .trim()
 }
 
-function inferCategory(text: string) {
-  const value = text.toLowerCase()
+const classification = classifyReceipt({
+  title,
+  vendor,
+  amount,
+  note: parsed.note || '',
+})
 
-  if (/kita|kindergarten|hort|schule|nordspatzen|kindertagesstätte|kindertagesstaette/.test(value)) {
-    return 'privat'
-  }
-
-  if (/mahnung|bescheid|hansestadt|stadt|landkreis|amt|behörde|behoerde|verwaltungsgebühr|verwaltungsgebuehr/.test(value)) {
-    return 'steuern'
-  }
-
-  if (/dhl|dpd|hermes|gls|ups|porto|versand|post/.test(value)) {
-    return 'versand'
-  }
-
-  if (/aral|shell|esso|total|avia|tankstelle|benzin|diesel|tanken/.test(value)) {
-    return 'fahrzeug'
-  }
-
-  if (/hetzner|hosting|server|canva|figma|adobe|openai|chatgpt|notion|software|app|tool|saas/.test(value)) {
-    return 'software'
-  }
-
-  if (/vodafone|telekom|o2|telefon|internet|mobilfunk/.test(value)) {
-    return 'telefon'
-  }
-
-  if (/restaurant|cafe|café|essen|bewirtung|lunch|dinner/.test(value)) {
-    return 'bewirtung'
-  }
-
-if (
-  value.includes('fahrtticket') ||
-  value.includes('fahrticket') ||
-  value.includes('fahrkarte') ||
-  value.includes('ticket') ||
-  value.includes('dticket') ||
-  value.includes('d-ticket') ||
-  value.includes('deutschlandticket') ||
-  value.includes('d tarif') ||
-  value.includes('d-tarif') ||
-  value.includes('nahverkehr') ||
-  value.includes('bus') ||
-  value.includes('tram') ||
-  value.includes('bahn') ||
-  value.includes('db') ||
-  value.includes('zug') ||
-  value.includes('verkehr') ||
-  value.includes('öpnv') ||
-  value.includes('oepnv') ||
-  value.includes('ice') ||
-  value.includes('ic') ||
-  value.includes('ec')
-) {
-  return 'reisen'
-}
-
-  if (/hotel|bahn|db|flug|reise|airbnb|booking/.test(value)) {
-    return 'reisen'
-  }
-
-  if (/kurs|coaching|seminar|workshop|weiterbildung|fortbildung/.test(value)) {
-    return 'weiterbildung'
-  }
-
-  if (/instagram|meta|facebook|google ads|werbung|marketing/.test(value)) {
-    return 'marketing'
-  }
-
-  if (/büro|buero|papier|stift|drucker|toner/.test(value)) {
-    return 'buerobedarf'
-  }
-
-  if (/bank|gebühr|gebuehr|konto|paypal|stripe/.test(value)) {
-    return 'bank'
-  }
-
-  return 'sonstiges'
-}
-
-function normalizeAmount(value: any) {
-  const normalized = String(value ?? '')
-    .replace(',', '.')
-    .replace(/[^\d.-]/g, '')
-
-  const number = Number(normalized)
-  return Number.isFinite(number) ? number : 0
-}
-
-export async function POST(req: Request) {
-  try {
-    const apiKey = process.env.GROQ_API_KEY
-
-    if (!apiKey) {
+const category = classification.category
+const taxHint = classification.taxHint
+const confidence = classification.confidence
       return NextResponse.json(
         {
           success: false,
