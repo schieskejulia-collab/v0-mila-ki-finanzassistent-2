@@ -156,11 +156,7 @@ const anchorMessage =
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
       {/* Rotes Warnbanner oben */}
-      <div className="bg-[#9E2A2B] text-white px-4 py-3 text-center text-sm font-medium shadow-sm flex items-center justify-center gap-2">
-        <span>🚨</span>
-        <span><strong>Mila Liquiditäts-Check:</strong> Prüfe deinen Cashflow für einen stressfreien Monat.</span>
-      </div>
-
+      
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
 
         {/* --- MAIN HEADER BLOCK & MORNING BRIEFING --- */}
