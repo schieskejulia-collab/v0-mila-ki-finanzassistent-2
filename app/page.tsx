@@ -82,7 +82,13 @@ function getMainTip({ summary, expenses, incomes, userStatus, industry }: any) {
 
 // --- HAUPTKOMPONENTE ---
 export default function DashboardPage() {
-  const { summary, expenses, incomes, userName, userStatus, industry, vatStatus, isLoggedIn } = useFinance()
+  const { summary, expenses, incomes, userName, userStatus, industry, vatStatus, isLoggedIn, const {
+  expenses,
+  incomes,
+  obligations,
+  userStatus,
+  industry,
+} = useFinance()
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
