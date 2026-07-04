@@ -147,3 +147,11 @@ return NextResponse.json({
     },
   },
 })
+  } catch (error) {
+    console.error('Scan Fehler:', error)
+    return NextResponse.json(
+      { success: false, error: 'Serverfehler beim Belegscan.' },
+      { status: 500 }
+    )
+  }
+}
