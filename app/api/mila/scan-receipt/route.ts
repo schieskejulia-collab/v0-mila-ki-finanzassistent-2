@@ -1,27 +1,26 @@
 import { NextResponse } from 'next/server'
 import { classifyReceipt } from '@/lib/receipt-rules'
+
 function cleanJson(content: string) {
-  return content
-    .replace(/```json/gi, '')
-    .replace(/```/g, '')
-    .trim()
+  return content.replace(/```json/gi, '').replace(/```/g, '').trim()
 }
 
-const classification = classifyReceipt({
-  title,
-  vendor,
-  amount,
-  note: parsed.note || '',
-})
+function normalizeAmount(value: any) {
+  const normalized = String(value ?? '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '')
 
-const category = classification.category
-const taxHint = classification.taxHint
-const confidence = classification.confidence
+  const number = Number(normalized)
+  return Number.isFinite(number) ? number : 0
+}
+
+export async function POST(req: Request) {
+  try {
+    const apiKey = process.env.GROQ_API_KEY
+
+    if (!apiKey) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Scanner ist noch nicht verbunden. API-Key fehlt.',
-        },
+        { success: false, error: 'Scanner ist noch nicht verbunden. API-Key fehlt.' },
         { status: 500 }
       )
     }
@@ -30,31 +29,26 @@ const confidence = classification.confidence
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Kein Belegbild erhalten.',
-        },
+        { success: false, error: 'Kein Belegbild erhalten.' },
         { status: 400 }
       )
     }
 
-    const response = await fetch(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-  type: 'text',
-  text: `
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `
 Analysiere diesen deutschen Kassenbeleg.
 
 Antworte ausschließlich mit gültigem JSON:
@@ -62,49 +56,35 @@ Antworte ausschließlich mit gültigem JSON:
   "amount": number,
   "vendor": string,
   "title": string,
-  "category": string,
-  "taxHint": string,
-  "confidence": string
+  "note": string
 }
 
-WICHTIG FÜR amount:
-- amount ist IMMER der Brutto-Endbetrag, also der tatsächlich bezahlte Gesamtbetrag.
-- Suche nach Begriffen wie: Gesamt, Summe, Zu zahlen, Endbetrag, Brutto, Kartenzahlung, EC, Total.
-- Verwende NIEMALS Netto, MwSt, Steuer, VAT, Tax, Rabatt, Rückgeld oder Wechselgeld.
-- Wenn ein Netto-Betrag und ein Brutto-Betrag vorhanden sind, nimm IMMER den höheren Brutto-Endbetrag.
-- Beispiel: Wenn 4,87 und 5,80 vorkommen, ist amount 5.80.
-- Wenn mehrere Beträge vorhanden sind, wähle den höchsten plausiblen tatsächlich bezahlten Endbetrag.
-
+amount ist IMMER der Brutto-Endbetrag, also der tatsächlich bezahlte Gesamtbetrag.
+Suche nach: Gesamt, Summe, Zu zahlen, Endbetrag, Brutto, Kartenzahlung, EC, Total.
+Nimm niemals Netto, MwSt, Steuer, Rabatt, Rückgeld oder Wechselgeld.
 vendor ist der Händlername.
 title ist eine kurze Beschreibung des Einkaufs.
 Antwort nur als JSON, ohne Erklärung.
 `,
-},
-{
-  type: 'image_url',
-                  image_url: {
-                    url: imageBase64,
-                  },
-                },
-              ],
-            },
-          ],
-          temperature: 0.1,
-          max_tokens: 300,
-        }),
-      }
-    )
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageBase64 },
+              },
+            ],
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 300,
+      }),
+    })
 
     const data = await response.json()
 
     if (!response.ok) {
       console.error('Groq Fehler:', data)
-
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Mila konnte den Beleg gerade nicht lesen.',
-        },
+        { success: false, error: 'Mila konnte den Beleg gerade nicht lesen.' },
         { status: 500 }
       )
     }
@@ -118,12 +98,8 @@ Antwort nur als JSON, ohne Erklärung.
       parsed = JSON.parse(cleanedContent)
     } catch {
       console.error('JSON PARSE FEHLER:', content)
-
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Mila konnte die Belegdaten nicht sicher erkennen.',
-        },
+        { success: false, error: 'Mila konnte die Belegdaten nicht sicher erkennen.' },
         { status: 422 }
       )
     }
@@ -131,75 +107,32 @@ Antwort nur als JSON, ohne Erklärung.
     const vendor = String(parsed.vendor || '').trim()
     const title = String(parsed.title || vendor || 'Beleg').trim()
     const amount = normalizeAmount(parsed.amount)
-    const combinedText = `${title} ${vendor}`
-const normalizedVendor = vendor.toLowerCase()
 
-const matchedRule = RECEIPT_RULES.find((rule) => {
-  const merchantMatch = rule.merchantIncludes.some((merchant) =>
-    normalizedVendor.includes(merchant.toLowerCase())
-  )
+    const classification = classifyReceipt({
+      title,
+      vendor,
+      amount,
+      note: parsed.note || '',
+    })
 
-  const titleMatch = rule.titleIncludes.some((keyword) =>
-    title.toLowerCase().includes(keyword.toLowerCase())
-  )
-
-  return merchantMatch && titleMatch
-})
-
-const rememberedMerchant = merchantMemory.find((entry) =>
-  normalizedVendor.includes(entry.merchant.toLowerCase())
-)
-const merchantEntry = Object.entries(MERCHANTS).find(
-  ([merchantName, merchant]) => {
-    const aliases = merchant.aliases || [merchantName]
-
-    return aliases.some((alias) =>
-      normalizedVendor.includes(alias.toLowerCase())
-    )
-  }
-)
-const smartCategory = matchedRule?.category ?? null
-
-
-const detectedCategory = inferCategory(combinedText)
-
-const category =
-  smartCategory ||
-  rememberedMerchant?.category ||
-  merchantEntry?.[1]?.category ||
-  detectedCategory
-const taxHint =
-  matchedRule?.taxHint ||
-  rememberedMerchant?.taxHint ||
-  merchantEntry?.[1]?.taxHint ||
-  'unknown'
-const confidence =
-  smartCategory || rememberedMerchant || merchantEntry
-    ? 'high'
-    : detectedCategory !== 'sonstiges'
-      ? 'medium'
-      : 'low'
     return NextResponse.json({
       success: true,
       data: {
         data: {
-  amount,
-  vendor,
-  title,
-  category,
-  taxHint,
-  confidence,
-}
+          amount,
+          vendor,
+          title,
+          category: classification.category,
+          taxHint: classification.taxHint,
+          confidence: classification.confidence,
+          needsReview: classification.needsReview,
+        },
       },
     })
   } catch (error) {
     console.error('Scan Fehler:', error)
-
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Serverfehler beim Belegscan.',
-      },
+      { success: false, error: 'Serverfehler beim Belegscan.' },
       { status: 500 }
     )
   }
