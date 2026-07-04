@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
+import { useFinance } from '@/lib/store'
+import { saveMerchantMemory } from '@/lib/merchant-memory'
 const categories = CATEGORY_LIST.map((category) => category.label)
 
 function getTaxHint(category: string) {
@@ -33,6 +35,7 @@ function formatEuro(value: number) {
 }
 
 export default function NeueBuchungPage() {
+const { documents, setDocuments } = useFinance()
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
@@ -76,7 +79,11 @@ function updatePartner(value: string) {
     detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
 
   setCategory(getCategoryLabel(categoryId))
-  setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
+setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
+
+if (scannedData.document) {
+  setDocuments([...documents, scannedData.document])
+}
 }
   async function speichern() {
   if (isSaving) return
