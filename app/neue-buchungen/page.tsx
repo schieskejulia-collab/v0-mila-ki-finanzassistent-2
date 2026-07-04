@@ -98,13 +98,18 @@ function updatePartner(value: string) {
   }
 
   if (type === 'expense') {
-    } else {
+  payload.vendor = partner || ''
+  payload.category = category || 'Sonstiges'
+  payload.hasReceipt = true
+  payload.vat = 19
+  payload.source = 'scan'
+} else {
   payload.client = partner || ''
-payload.tax_reserve = taxReserve
-payload.status = status
-payload.due_date = dueDate || null
-payload.source = 'manuell'
-payload.vat = 19
+  payload.tax_reserve = taxReserve
+  payload.status = status
+  payload.due_date = dueDate || null
+  payload.source = 'manuell'
+  payload.vat = 19
 }
 
   try {
