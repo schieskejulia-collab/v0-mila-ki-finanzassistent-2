@@ -41,16 +41,17 @@ export default function LoginPage() {
       return
     }
 
-    setMessage(
-      mode === 'signup'
-        ? 'Konto erstellt. Prüfe ggf. deine E-Mail.'
-        : 'Login erfolgreich.'
-    )
+    if (mode === 'signup') {
+  setMessage('Konto erstellt. Prüfe ggf. deine E-Mail und logge dich danach ein.')
+  setLoading(false)
+  setMode('login')
+  return
+}
 
-    setLoading(false)
-    router.push('/')
-    router.refresh()
-  }
+setMessage('Login erfolgreich.')
+setLoading(false)
+router.push('/')
+router.refresh()
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-4 text-slate-950">
