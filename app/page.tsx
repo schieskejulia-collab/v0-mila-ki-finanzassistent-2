@@ -186,7 +186,8 @@ const anchorMessage =
     Du musst nicht alles auf einmal lösen. Mila zeigt dir den nächsten sinnvollen Schritt.
   </p>
 </div>
-          
+          </div>
+
           {/* Lila Hauptkarte */}
           <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
