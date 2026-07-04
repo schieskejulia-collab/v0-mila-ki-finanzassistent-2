@@ -253,13 +253,13 @@ const anchorMessage =
 
         <p className="font-black text-amber-700">
 
-          ⚠️ Offene Zahlung
+          📥 Ausstehende Zahlungseingänge
 
         </p>
 
         <p className="mt-1 font-semibold text-slate-700">
 
-          {openCount} offene Zahlung(en) über {formatEuro(totalOpenAmount)} sind noch nicht abgeschlossen.
+         Du wartest noch auf {openCount} Zahlungseingang{openCount === 1 ? '' : 'e'} über {formatEuro(totalOpenAmount)}.
 
         </p>
 
