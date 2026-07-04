@@ -115,25 +115,35 @@ Antwort nur als JSON, ohne Erklärung.
       note: parsed.note || '',
     })
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        data: {
-          amount,
-          vendor,
-          title,
-          category: classification.category,
-          taxHint: classification.taxHint,
-          confidence: classification.confidence,
-          needsReview: classification.needsReview,
-        },
-      },
-    })
-  } catch (error) {
-    console.error('Scan Fehler:', error)
-    return NextResponse.json(
-      { success: false, error: 'Serverfehler beim Belegscan.' },
-      { status: 500 }
-    )
-  }
+    const document = {
+  title,
+  partner: vendor,
+  amount,
+  type: classification.needsReview ? 'sonstiges' : 'beleg',
+  status: 'neu',
+  documentDate: new Date().toISOString().slice(0, 10),
+  dueDate: undefined,
+  fileName: title,
+  keepUntil: new Date(
+    new Date().setFullYear(new Date().getFullYear() + 1)
+  )
+    .toISOString()
+    .slice(0, 10),
+  note: 'Automatisch von Mila aus Belegscan erstellt 📸',
 }
+
+return NextResponse.json({
+  success: true,
+  data: {
+    data: {
+      amount,
+      vendor,
+      title,
+      category: classification.category,
+      taxHint: classification.taxHint,
+      confidence: classification.confidence,
+      needsReview: classification.needsReview,
+      document,
+    },
+  },
+})
