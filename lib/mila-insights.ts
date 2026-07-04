@@ -1,5 +1,10 @@
 import { getEntryCategory } from './mila-classifier'
+import {
+  getObligationInsights,
+  type ObligationInsight,
+} from './mila-obligation-insights'
 
+import type { Obligation } from './mila-obligations'
 export type MilaInsight = {
 
   id: string
@@ -103,15 +108,11 @@ function incomeStatus(value: any) {
 }
 
 export function getMilaInsights(
-
-  incomes: any[] = [],
-
-  expenses: any[] = [],
-
+  incomes: any[],
+  expenses: any[],
   userStatus: string,
-
-  industry?: string
-
+  industry?: string,
+  obligations: Obligation[] = []
 ): MilaInsight[] {
 
   const urgent: MilaInsight[] = []
