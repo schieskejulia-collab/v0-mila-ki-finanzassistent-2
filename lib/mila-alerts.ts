@@ -43,7 +43,7 @@ export function getMilaAlerts(
       type: 'danger',
       title: '🚨 Liquiditätswarnung',
       message:
-        'Deine Ausgaben liegen aktuell über deinen Einnahmen. Prüfe zuerst Fixkosten, offene Einnahmen und unnötige Abbuchungen.',
+        'Deine Ausgaben liegen aktuell über deinen Einnahmen. Prüfe zuerst Fixkosten, Ausstehende Kundenzahlungenund unnötige Abbuchungen.',
     })
   }
 
