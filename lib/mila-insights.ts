@@ -484,5 +484,37 @@ export function getMilaInsights(
     type: 'business',
 
   })
+const obligationInsights = getObligationInsights(
+  obligations,
+  availableAfterReserve
+)
 
+obligationInsights.forEach((item) => {
+  if (item.severity === 'high') {
+    urgent.push({
+      id: item.id,
+      title: item.title,
+      message: item.message,
+      type: 'warning',
+    })
+    return
+  }
+
+  if (item.severity === 'medium') {
+    important.push({
+      id: item.id,
+      title: item.title,
+      message: item.message,
+      type: 'budget',
+    })
+    return
+  }
+
+  helpful.push({
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    type: 'budget',
+  })
+})
   return [...urgent, ...important, ...helpful].slice(0, 6)
