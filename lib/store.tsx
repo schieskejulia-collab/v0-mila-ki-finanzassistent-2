@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { calculateSummary } from '@/lib/calculations'
 import type { Obligation } from './mila-obligations'
+import type { MilaDocument } from './mila-documents'
 export interface FinanceContextValue {
 
   expenses: any[]
@@ -152,6 +153,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const [assemblyWork, setAssemblyWork] = useState(false)
 const [obligations, setObligations] = useState<Obligation[]>([])
+const [documents, setDocuments] = useState<MilaDocument[]>([])
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 const [profileLoaded, setProfileLoaded] = useState(false)
@@ -211,6 +213,8 @@ if (!profileLoaded) return
       children: childrenCount,
       assemblyWork,
 obligations,
+documents,
+setDocuments,
     })
   )
 }, [
@@ -564,6 +568,7 @@ obligations,
 setObligations,
 addObligation,
 deleteObligation,
+documents,
 
     }),
 
