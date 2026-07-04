@@ -446,7 +446,13 @@ const deleteObligation = useCallback((id: string) => {
     setIncomes((p) => p.filter((i) => i.id !== id))
 
   }, [])
+const addObligation = useCallback((item: Obligation) => {
+  setObligations((prev) => [item, ...prev])
+}, [])
 
+const deleteObligation = useCallback((id: string) => {
+  setObligations((prev) => prev.filter((item) => item.id !== id))
+}, [])
   const summary = useMemo(() => {
   return calculateSummary(incomes, expenses)
 }, [incomes, expenses])
