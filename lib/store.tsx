@@ -188,6 +188,7 @@ setIndustry(savedIndustry)
   setMarried(profile.married ?? false)
   setChildren(profile.children ?? 0)
   setAssemblyWork(profile.assemblyWork ?? false)
+setDocuments(profile.documents ?? [])
 const savedObligations = localStorage.getItem('mila-obligations')
 
 if (savedObligations) {
