@@ -1,6 +1,5 @@
 import type { CategoryId } from './categories'
 import type { TaxHint } from './merchants'
-import { saveMerchantMemory } from '@/lib/merchant-memory'
 export type MerchantMemory = {
   merchant: string
   category: CategoryId
@@ -22,18 +21,17 @@ export function findMerchantMemory(vendor: string) {
   )
 }
 
-export function rememberMerchant(
-  merchant: string,
-  category: CategoryId,
+export function saveMerchantMemory(data: {
+  merchant: string
+  category: CategoryId
   taxHint: TaxHint
-) {
-  const existing = findMerchantMemory(merchant)
-
-  if (existing) {
-    existing.usageCount += 1
-    existing.lastUsed = new Date().toISOString()
-    return existing
-  }
+}) {
+  return rememberMerchant(
+    data.merchant,
+    data.category,
+    data.taxHint
+  )
+}
 
   const entry: MerchantMemory = {
     merchant,
