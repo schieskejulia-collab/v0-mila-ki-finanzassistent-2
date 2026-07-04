@@ -20,10 +20,10 @@ const navItems = [
     icon: '➕',
   },
   {
-    href: '/wissen',
-    label: 'Wissen',
-    icon: '💡',
-  },
+  href: '/wissen',
+  label: 'Leben',
+  icon: '🧭',
+},
   {
     href: '/profil',
     label: 'Profil',
