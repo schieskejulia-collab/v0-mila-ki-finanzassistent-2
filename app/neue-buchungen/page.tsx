@@ -136,7 +136,13 @@ function updatePartner(value: string) {
         return
       }
     }
-
+if (partner && type === 'expense') {
+  saveMerchantMemory({
+    merchant: partner,
+    category: detectCategory(category),
+    taxHint: taxStatus,
+  })
+}
     const res = await fetch(apiPath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
