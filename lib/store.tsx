@@ -186,6 +186,11 @@ setIndustry(savedIndustry)
   setMarried(profile.married ?? false)
   setChildren(profile.children ?? 0)
   setAssemblyWork(profile.assemblyWork ?? false)
+const savedObligations = localStorage.getItem('mila-obligations')
+
+if (savedObligations) {
+  setObligations(JSON.parse(savedObligations))
+}
 setProfileLoaded(true)
 }, [])
 useEffect(() => {
@@ -205,6 +210,7 @@ if (!profileLoaded) return
       married,
       children: childrenCount,
       assemblyWork,
+obligations,
     })
   )
 }, [
@@ -245,6 +251,14 @@ useEffect(() => {
   setChildren(profile.children ?? 0)
   setAssemblyWork(profile.assemblyWork ?? false)
 }, [])
+useEffect(() => {
+  if (!profileLoaded) return
+
+  localStorage.setItem(
+    'mila-obligations',
+    JSON.stringify(obligations)
+  )
+}, [obligations, profileLoaded])
   const fetchFinanceData = useCallback(async () => {
 const addObligation = useCallback((item: Obligation) => {
   setObligations((prev) => [item, ...prev])
