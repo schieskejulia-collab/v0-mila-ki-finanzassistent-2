@@ -97,12 +97,26 @@ export default function DashboardPage() {
   isLoggedIn,
 documents,
 } = useFinance()
-  const [isClient, setIsClient] = useState(false)
+const [isClient, setIsClient] = useState(false)
 
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 const router = useRouter()
+
+useEffect(() => {
+  async function checkLogin() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
+    setIsClient(true)
+  }
+
+  checkLogin()
+}, [router])
   // 🛡️ SICHERER LADEZUSTAND (Verhindert fehlerhafte Redirects beim Hydrieren)
   if (!isClient || !summary) {
     return (
