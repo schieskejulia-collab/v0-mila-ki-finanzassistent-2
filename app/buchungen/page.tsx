@@ -196,7 +196,29 @@ const handleDelete = async (t: any) => {
         <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 pt-2">
           Gefundene Buchungen ({gefilterteTransaktionen.length})
         </p>
+<div className="grid grid-cols-2 gap-3">
+  <Link
+    href="/buchungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">📒</p>
+    <p className="mt-2 font-black text-slate-900">Buchungen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Einnahmen und Ausgaben
+    </p>
+  </Link>
 
+  <Link
+    href="/verpflichtungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">🧾</p>
+    <p className="mt-2 font-black text-slate-900">Fristen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Rechnungen, Raten und Termine
+    </p>
+  </Link>
+</div>
         {/* --- BUCHUNGSLISTE --- */}
         <div className="space-y-6">
           {Object.entries(gruppierteTransaktionen).map(([monat, liste]) => {
