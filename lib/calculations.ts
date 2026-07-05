@@ -6,16 +6,8 @@ function toNumber(value: any) {
 }
 
 export function calculateSummary(incomes: any[] = [], expenses: any[] = []) {
-  const totalIncomes = incomes.reduce(
-    (sum, item) => sum + toNumber(item.amount),
-    0
-  )
-
-  const totalExpenses = expenses.reduce(
-    (sum, item) => sum + toNumber(item.amount),
-    0
-  )
-
+  const totalIncomes = incomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
+  const totalExpenses = expenses.reduce((sum, item) => sum + toNumber(item.amount), 0)
   const balance = totalIncomes - totalExpenses
 
   return {
@@ -26,56 +18,28 @@ export function calculateSummary(incomes: any[] = [], expenses: any[] = []) {
   }
 }
 
-
-// -----------------------------
-// OFFENE ZAHLUNGEN
-// -----------------------------
-
 export function calculatePayments(incomes: any[] = []) {
   const open = incomes.filter((item) => {
     const status = String(item.status || '').toLowerCase()
-    return status === 'offen' || status === 'pending'
+    return status === 'offen' || status === 'pending' || status === 'unbezahlt'
   })
 
   const overdue = incomes.filter((item) => {
     const status = String(item.status || '').toLowerCase()
-    return (
-      status === 'überfällig' ||
-      status === 'ueberfaellig'
-    )
+    return status === 'überfällig' || status === 'ueberfaellig' || status === 'overdue'
   })
 
   return {
     openCount: open.length,
     overdueCount: overdue.length,
-
-    openAmount: open.reduce(
-      (sum, item) => sum + toNumber(item.amount),
-      0
-    ),
-
-    overdueAmount: overdue.reduce(
-      (sum, item) => sum + toNumber(item.amount),
-      0
-    ),
+    openAmount: open.reduce((sum, item) => sum + toNumber(item.amount), 0),
+    overdueAmount: overdue.reduce((sum, item) => sum + toNumber(item.amount), 0),
   }
 }
 
-
-// -----------------------------
-// RÜCKLAGE
-// -----------------------------
-
-export function calculateReserve(
-  balance: number
-) {
+export function calculateReserve(balance: number) {
   return 0
 }
-
-
-// -----------------------------
-// FINANZ SCORE
-// -----------------------------
 
 export function calculateFinanceScore({
   balance,
@@ -84,55 +48,56 @@ export function calculateFinanceScore({
   openCount = 0,
   overdueCount = 0,
 }: any) {
-  let score = 75
+  let score = 50
 
-  if (balance < 0) score -= 35
+  const hasData = totalIncomes > 0 || totalExpenses > 0
 
-  if (
-    totalIncomes > 0 &&
-    totalExpenses / totalIncomes > 0.8
-  ) {
-    score -= 15
+  if (!hasData) return 35
+
+  if (totalIncomes > 0) score += 15
+
+  if (balance > 0) score += 10
+  if (balance < 0) score -= 25
+
+  if (totalIncomes > 0) {
+    const costRatio = totalExpenses / totalIncomes
+
+    if (costRatio <= 0.4) score += 10
+    else if (costRatio <= 0.7) score += 5
+    else if (costRatio > 0.9) score -= 15
+    else if (costRatio > 0.75) score -= 8
   }
 
-  if (
-    totalIncomes > 0 &&
-    totalExpenses / totalIncomes < 0.4
-  ) {
-    score += 10
-  }
+  if (openCount > 0) score -= Math.min(10, openCount * 3)
+  if (overdueCount > 0) score -= Math.min(25, overdueCount * 12)
 
-  if (balance > 1000) score += 10
-
-  if (openCount > 3) score -= 5
-
-  if (overdueCount > 0) score -= 20
-
-  return Math.max(0, Math.min(100, score))
+  return Math.max(0, Math.min(100, Math.round(score)))
 }
 
-
-// -----------------------------
-// AMPEL
-// -----------------------------
-
 export function calculateTrafficLight(score: number, balance: number) {
-  if (score < 50 || balance < 0) {
+  if (score < 45 || balance < 0) {
     return {
-      status: '🔴 Liquiditätsrisiko',
+      status: '🔴 Erst sortieren',
       level: 'danger',
     }
   }
 
-  if (score < 75) {
+  if (score < 70) {
     return {
-      status: '🟡 Beobachten',
+      status: '🟡 Aufbau',
       level: 'warning',
     }
   }
 
+  if (score < 85) {
+    return {
+      status: '🟢 Stabil',
+      level: 'success',
+    }
+  }
+
   return {
-    status: '🟢 Alles gut',
+    status: '🟢 Gute Basis',
     level: 'success',
   }
 }
