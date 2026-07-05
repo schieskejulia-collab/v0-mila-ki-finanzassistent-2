@@ -26,6 +26,11 @@ const {
   userName,
   userStatus,
   vatStatus,
+summary,
+incomes,
+expenses,
+obligations,
+documents,
 } = useFinance()
 
   // 🌸 Empathischerer Willkommenstext beim allerersten Start
@@ -91,6 +96,8 @@ context: {
     userName,
     userStatus,
     vatStatus,
+obligations,
+documents,
   },
 
   summary: {
@@ -159,6 +166,8 @@ Sprich Julia persönlich an.
   expenses,
   budgetStatus,
   milaFeedback,
+obligations,
+documents,
 
   financeScore: summary?.score ?? 0,
 },
