@@ -12,7 +12,11 @@ function money(value: number) {
 }
 
 export default function VerpflichtungenPage() {
-  const { obligations, addObligation, deleteObligation } = useFinance()
+  const {
+  obligations = [],
+  addObligation,
+  deleteObligation,
+} = useFinance()
 
   const [title, setTitle] = useState('')
   const [partner, setPartner] = useState('')
@@ -120,7 +124,7 @@ export default function VerpflichtungenPage() {
 
       <section className="space-y-3">
 
-        {obligations.map((item) => (
+        {(obligations || []).map((item) => (
 
           <div
             key={item.id}
