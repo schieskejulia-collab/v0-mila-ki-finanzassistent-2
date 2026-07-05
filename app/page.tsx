@@ -15,6 +15,7 @@ import { getMilaAssistantFindings } from '@/lib/mila-assistant'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { estimateTaxProfile } from '@/lib/tax-profile'
+import { MorningBriefing } from '@/components/ui/morning-briefing'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
