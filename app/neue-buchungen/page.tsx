@@ -123,68 +123,65 @@ if (scannedData.document) {
   }
 
   if (type === 'expense') {
-  payload.vendor = partner || ''
-  payload.category = category || 'Sonstiges'
-  payload.hasReceipt = true
-  payload.vat = 19
-  payload.source = 'scan'
-} else {
-  payload.client = partner || ''
-  payload.tax_reserve = taxReserve
-  payload.status = status
-  payload.due_date = dueDate || null
-  payload.source = 'manuell'
-  payload.vat = 19
-}
+    payload.vendor = partner || ''
+    payload.category = category || 'Sonstiges'
+    payload.hasReceipt = true
+    payload.vat = 19
+    payload.source = 'manuell'
+  } else {
+    payload.client = partner || ''
+    payload.tax_reserve = taxReserve
+    payload.status = status
+    payload.due_date = dueDate || null
+    payload.source = 'manuell'
+    payload.vat = 19
+  }
 
   try {
+    const existingItems = type === 'expense' ? expenses : incomes
 
-   const existingItems = type === 'expense' ? expenses : incomes
+    const duplicate = existingItems.find((item: any) => {
+      const sameTitle =
+        String(item.title || '').trim().toLowerCase() ===
+        String(payload.title || '').trim().toLowerCase()
 
-const duplicate = existingItems.find((item: any) => {
-  const sameTitle =
-    String(item.title || '').trim().toLowerCase() ===
-    String(payload.title || '').trim().toLowerCase()
+      const sameAmount = Number(item.amount) === Number(payload.amount)
 
-  const sameAmount = Number(item.amount) === Number(payload.amount)
+      const sameDate =
+        String(item.date || '').slice(0, 10) ===
+        String(payload.date || '').slice(0, 10)
 
-  const sameDate =
-    String(item.date || '').slice(0, 10) ===
-    String(payload.date || '').slice(0, 10)
+      return sameTitle && sameAmount && sameDate
+    })
 
-  return sameTitle && sameAmount && sameDate
-})
-
-if (duplicate) {
-  alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
-  return
-}
+    if (duplicate) {
+      alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
+      return
     }
-if (partner && type === 'expense') {
-  saveMerchantMemory({
-    merchant: partner,
-    category: detectCategory(category),
-    taxHint: taxStatus,
-  })
-}
+
+    if (partner && type === 'expense') {
+      saveMerchantMemory({
+        merchant: partner,
+        category: detectCategory(category),
+        taxHint: taxStatus,
+      })
+    }
+
     if (type === 'expense') {
-  await addExpense(payload)
-} else {
-  await addIncome(payload)
-}
-
-if (true) {
-      alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
-      setTitle('')
-      setAmount('')
-      setPartner('')
-      setNote('')
-setStatus('offen')
-setDueDate('')
-      setCategory('Sonstiges')
+      await addExpense(payload)
     } else {
-      alert(`Fehler beim Speichern: ${data.error} ❌`)
+      await addIncome(payload)
     }
+
+    alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
+
+    setTitle('')
+    setAmount('')
+    setPartner('')
+    setNote('')
+    setStatus('offen')
+    setDueDate('')
+    setCategory('Sonstiges')
   } catch (error: any) {
     alert(`Netzwerkfehler: ${error.message} ❌`)
   } finally {
