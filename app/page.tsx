@@ -221,19 +221,6 @@ const anchorMessage =
         <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
      <MorningBriefing />
 
-  <p className="mt-2 text-sm font-bold leading-relaxed text-slate-800">
-    {overdueCount > 0
-      ? `Du hast ${overdueCount} überfällige Einnahme(n) über ${formatEuro(totalOverdueAmount)}. Das sollte heute zuerst geprüft werden.`
-      : openCount > 0
-      ? `Du wartest aktuell auf ${openCount} Zahlungseingang${openCount === 1 ? '' : 'e'} über ${formatEuro(totalOpenAmount)}. Prüfe heute, was davon schon erledigt ist.`
-      : 'Heute sind keine Zahlungseingänge offen. Dein Fokus darf auf Rücklagen und neuen Buchungen liegen.'}
-  </p>
-
-  <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-600">
-    Du musst nicht alles auf einmal lösen. Mila zeigt dir den nächsten sinnvollen Schritt.
-  </p>
-</div>
-          </div>
 
           {/* Lila Hauptkarte */}
           <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
