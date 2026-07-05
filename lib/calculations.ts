@@ -37,8 +37,35 @@ export function calculatePayments(incomes: any[] = []) {
   }
 }
 
-export function calculateReserve(balance: number) {
-  return 0
+export function calculateReserve({
+  balance,
+  totalIncomes,
+  userStatus,
+  vatStatus,
+}: any) {
+  if (balance <= 0) return 0
+
+  let percentage = 0.1
+
+  if (
+    userStatus === 'freiberufler' ||
+    userStatus === 'selbststaendig_gewerbe'
+  ) {
+    percentage = 0.25
+  }
+
+  if (userStatus === 'kleinunternehmer') {
+    percentage = 0.15
+  }
+
+  if (
+    vatStatus === 'regelbesteuerung_19' ||
+    vatStatus === 'ermaessigt_7'
+  ) {
+    percentage += 0.1
+  }
+
+  return balance * percentage
 }
 
 export function calculateFinanceScore({
