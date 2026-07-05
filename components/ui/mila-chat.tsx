@@ -138,17 +138,27 @@ Wichtig:
 Wenn offene Einnahmen vorhanden sind, priorisiere diese zuerst.
 Wenn Rücklagen gefragt sind, unterscheide zwischen Notreserve, Steuer-Rücklage und freiem Puffer.
 Wenn Julia Sorgen äußert, beruhige sie zuerst kurz, aber bleib handlungsorientiert.
-
+Du kennst den Finanzscore aus context.financeScore.
+Wenn nach dem Score gefragt wird, erkläre anhand Einnahmen, Ausgaben, Cashflow, offenen Zahlungen und Risiken warum dieser Wert entsteht.
+Sage niemals, dass du den Score nicht kennst, wenn ein Wert vorhanden ist.
 Du gibst keine Steuerberatung. Du gibst Orientierung.
 Sprich Julia persönlich an.
           `,
           context: {
-            summary,
-            incomes,
-            expenses,
-            budgetStatus,
-            milaFeedback,
-          },
+  summary: {
+    totalIncomes: summary?.totalIncomes ?? 0,
+    totalExpenses: summary?.totalExpenses ?? 0,
+    balance: summary?.balance ?? 0,
+    score: summary?.score ?? 0,
+  },
+
+  incomes,
+  expenses,
+  budgetStatus,
+  milaFeedback,
+
+  financeScore: summary?.score ?? 0,
+},
           userName,
           userStatus,
         }),
