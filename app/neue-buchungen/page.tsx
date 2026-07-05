@@ -1,6 +1,6 @@
 'use client'
-
 import { useState } from 'react'
+import { useFinance } from '@/lib/store'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
 import { useFinance } from '@/lib/store'
@@ -94,8 +94,6 @@ if (scannedData.document) {
   }
 
   setIsSaving(true)
-
-  const apiPath = type === 'expense' ? '/api/expenses' : '/api/incomes'
 
   const payload: any = {
     title: title.trim(),
