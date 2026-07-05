@@ -32,7 +32,25 @@ function formatEuro(value: number) {
     currency: 'EUR',
   })
 }
+function shouldCalculateTaxReserve(title: string) {
+  const text = title.toLowerCase()
 
+  return ![
+    'test',
+    'kindergeld',
+    'unterhalt',
+    'erstattung',
+    'rückzahlung',
+    'rueckzahlung',
+    'darlehen',
+    'kredit',
+    'privat',
+    'umbuchung',
+    'geschenk',
+    'lohn',
+    'gehalt',
+  ].some((word) => text.includes(word))
+}
 export default function NeueBuchungPage() {
 const { documents, setDocuments, addExpense, addIncome, incomes, expenses } = useFinance()
   const [type, setType] = useState<'expense' | 'income'>('expense')
@@ -47,7 +65,10 @@ const [isSaving, setIsSaving] = useState(false)
   const numericAmount = Number(amount || 0)
   const taxStatus = getTaxHint(category)
 const deductible = type === 'expense' && taxStatus === 'wahrscheinlich ja'
-  const taxReserve = type === 'income' ? numericAmount * 0.3 : 0
+  const taxReserve =
+  type === 'income' && shouldCalculateTaxReserve(title)
+    ? numericAmount * 0.3
+    : 0
   const taxHint = deductible ? numericAmount * 0.3 : 0
 
   function updateTitle(value: string) {
@@ -118,7 +139,6 @@ if (scannedData.document) {
 
   try {
 
-    if (checkData.success && Array.isArray(checkData.data)) {
    const existingItems = type === 'expense' ? expenses : incomes
 
 const duplicate = existingItems.find((item: any) => {
