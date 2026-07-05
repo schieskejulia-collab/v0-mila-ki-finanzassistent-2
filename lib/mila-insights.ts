@@ -238,28 +238,14 @@ export function getMilaInsights(
   }
 
   if (profit > 0) {
-
-    important.push({
-
-      id: 'tax-reserve',
-
-      title: '💰 Rücklage einplanen',
-
-      message: `Plane ungefähr ${money(
-
-        taxReserve
-
-      )} als Orientierung ein. Danach bleiben rechnerisch etwa ${money(
-
-        availableAfterReserve
-
-      )} frei verfügbar.`,
-
-      type: 'tax',
-
-    })
-
-  }
+  helpful.push({
+    id: 'tax-reserve-paused',
+    title: '💰 Rücklage später fein berechnen',
+    message:
+      'Mila sammelt deine Einnahmen, Ausgaben und dein Profil. Die genaue Rücklagen-Logik wird erst berechnet, wenn dein Steuerprofil vollständig genug ist.',
+    type: 'tax',
+  })
+}
 
   if (incomeTotal > 0 && costRatio >= 0.8) {
 
