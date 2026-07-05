@@ -26,9 +26,6 @@ const {
   userName,
   userStatus,
   vatStatus,
-summary,
-incomes,
-expenses,
 obligations,
 documents,
 } = useFinance()
