@@ -17,38 +17,16 @@ const starterMessages = [
 ]
 
 export function MilaChat() {
-context: {
-  profile: {
-    userName,
-    userStatus,
-    vatStatus,
-  },
-
-  summary: {
-    totalIncomes: summary?.totalIncomes ?? 0,
-    totalExpenses: summary?.totalExpenses ?? 0,
-    balance: summary?.balance ?? 0,
-    profit: summary?.profit ?? summary?.balance ?? 0,
-  },
-
-  score: budgetStatus?.score ?? null,
-  trafficLight: budgetStatus?.trafficLight ?? budgetStatus?.status ?? null,
-
+const {
+  summary,
+  incomes,
+  expenses,
   budgetStatus,
   milaFeedback,
-
-  incomes: incomes.slice(0, 10),
-  expenses: expenses.slice(0, 10),
-
-  counts: {
-    incomeCount: incomes.length,
-    expenseCount: expenses.length,
-  },
-},
-    userName,
-    userStatus,
-    vatStatus,
-  } = useFinance()
+  userName,
+  userStatus,
+  vatStatus,
+} = useFinance()
 
   // 🌸 Empathischerer Willkommenstext beim allerersten Start
   const [messages, setMessages] = useState<Message[]>([
