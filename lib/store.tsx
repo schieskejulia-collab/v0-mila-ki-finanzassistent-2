@@ -423,12 +423,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addObligation = useCallback((item: Obligation) => {
-    setObligations((prev) => [item, ...prev])
-  }, [])
+  const safeItem = {
+    ...item,
+    id: item.id || `obligation-${Date.now()}`,
+    status: item.status || 'offen',
+    amount: Number(item.amount || 0),
+    reminder_days: Number((item as any).reminder_days || 3),
+  }
 
-  const deleteObligation = useCallback((id: string) => {
-    setObligations((prev) => prev.filter((item) => item.id !== id))
-  }, [])
+  setObligations((prev) => [safeItem, ...prev])
+}, [])
+
+const deleteObligation = useCallback((id: string) => {
+  setObligations((prev) => prev.filter((item) => item.id !== id))
+}, [])
 
   const summary = useMemo(() => {
     return calculateSummary(incomes, expenses)
