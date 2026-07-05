@@ -87,30 +87,56 @@ export function MorningBriefing() {
     vatStatus === 'regelbesteuerung_19' || vatStatus === 'ermaessigt_7'
 
   let title = ''
-  let message = ''
+let message = ''
 
-  if (overdueIncomes.length > 0) {
-    title = 'Zahlungseingang prüfen'
-    message = `Du hast ${overdueIncomes.length} überfällige Einnahme(n). Mila würde diese zuerst prüfen, bevor du neue Ausgaben planst.`
-  } else if (openIncomes.length > 0) {
-    title = 'Offene Einnahmen im Blick behalten'
-    message = `Du hast ${openIncomes.length} offene Einnahme(n). Dein Fokus sollte heute darauf liegen, Zahlungseingänge und Fristen ruhig nachzuhalten.`
-  } else if (balance < 0) {
-    title = 'Liquidität zuerst stabilisieren'
-    message = `Dein aktueller Stand liegt bei ${money(balance)}. Mila würde heute keine neuen Verpflichtungen planen, sondern Einnahmen, Fristen und notwendige Ausgaben sortieren.`
-  } else if (isBusiness && needsVatAttention && incomeTotal > 0) {
-    title = 'Rücklagen bewusst im Blick behalten'
-    message = `Du hast ${money(incomeTotal)} Einnahmen und ${money(expenseTotal)} Ausgaben erfasst. Bei deinem Profil ist Rücklage wichtig — nicht aus Angst, sondern damit dich später nichts überrascht.`
-  } else if (softwareExpenses.length > 0) {
-    title = 'Digitale Kosten gesammelt prüfen'
-    message = `Mila erkennt digitale Kosten oder Tools. Diese können beruflich relevant sein, sollten aber gesammelt geprüft werden statt einzeln Stress zu machen.`
-  } else if (balance > 0) {
-    title = 'Solider Spielraum vorhanden'
-    message = `Du hast aktuell ${money(balance)} rechnerischen Spielraum. Ein guter Moment, um Rücklagen, nächste Zahlungen und neue Buchungen sauber zu sortieren.`
-  } else {
-    title = 'Heute ruhig sortieren'
-    message = 'Noch sind wenig Daten vorhanden. Mila kann besser helfen, sobald Einnahmen, Ausgaben, Fristen und Profil sauber gepflegt sind.'
-  }
+const profit = incomeTotal - expenseTotal
+
+const dataQuality =
+  incomes.length + expenses.length
+
+const reserveSuggestion =
+  isBusiness && needsVatAttention
+    ? incomeTotal * 0.25
+    : isBusiness
+    ? incomeTotal * 0.15
+    : 0
+
+
+if (overdueIncomes.length > 0) {
+  title = 'Zuerst offene Zahlungen sichern'
+  message = `Du hast ${overdueIncomes.length} überfällige Zahlung(en). Mila würde heute zuerst Eingänge, Fristen und deine Planung sortieren.`
+
+} else if (openIncomes.length > 0) {
+  title = 'Einnahmen im Blick behalten'
+  message = `Du wartest noch auf ${openIncomes.length} Zahlung(en). Dein Geld ist geplant — Mila hilft dir nur, den Überblick zu behalten.`
+
+} else if (balance < 0) {
+  title = 'Heute Stabilität schaffen'
+  message = `Dein Stand liegt bei ${money(balance)}. Mila würde zuerst feste Kosten, offene Beträge und mögliche Spielräume ansehen.`
+
+} else if (dataQuality < 3) {
+  title = 'Mila lernt dein Muster kennen'
+  message = 'Die ersten Daten sind da. Nach weiteren Buchungen erkennt Mila Gewohnheiten, wiederkehrende Kosten und bessere Empfehlungen.'
+
+} else if (isBusiness && profit > 0) {
+  title = 'Dein Geschäft wirkt stabil'
+  message = `Du hast ${money(profit)} Überschuss. Mila würde davon etwa ${money(
+    reserveSuggestion
+  )} als Orientierung für Rücklagen einplanen.`
+
+} else if (softwareExpenses.length > 0) {
+  title = 'Digitale Kosten erkannt'
+  message = `Mila sieht ${softwareExpenses.length} digitale Ausgabe(n). Tools können Investitionen sein — wichtig ist, ob sie dir Nutzen bringen.`
+
+} else if (balance > 0) {
+  title = 'Dein Cashflow wirkt stabil'
+  message = `Du hast aktuell ${money(balance)} Spielraum. Mila behält Rücklagen, Zahlungen und Veränderungen weiter im Blick.`
+
+} else {
+  title = 'Mila baut dein Finanzbild auf'
+  message =
+    'Trage weiter Einnahmen und Ausgaben ein. Mila erkennt mit der Zeit Muster und zeigt dir die wichtigsten nächsten Schritte.'
+}
 
   return (
     <section className="rounded-[2rem] bg-white p-6 shadow-sm space-y-5">
