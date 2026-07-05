@@ -40,7 +40,7 @@ export function MorningBriefing() {
 
   const balance = Number(summary.balance || 0)
 
-  const taxReserve = balance > 0 ? balance * 0.3 : 0
+  const taxReserve = 0
 
   const mainTask =
 
