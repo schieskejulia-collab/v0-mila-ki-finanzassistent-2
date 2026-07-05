@@ -14,6 +14,7 @@ import { getObligationInsights } from '@/lib/mila-obligation-insights'
 import { getMilaAssistantFindings } from '@/lib/mila-assistant'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { estimateTaxProfile } from '@/lib/tax-profile'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -96,6 +97,15 @@ export default function DashboardPage() {
   vatStatus,
   isLoggedIn,
 documents,
+  taxClass,
+  annualGross,
+  annualProfit,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
 } = useFinance()
 const [isClient, setIsClient] = useState(false)
 
@@ -142,7 +152,24 @@ const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
   obligations: obligations || [],
 })
-const taxReserve = calculateReserve(summary.balance)
+const taxProfile = estimateTaxProfile({
+  userType: assemblyWork ? 'montagearbeiter' : userStatus,
+  annualGrossSalary: Number(annualGross || 0),
+  estimatedAnnualProfit: Number(annualProfit || 0),
+  annualRevenueGross: summary.totalIncomes,
+  vatStatus,
+  federalState,
+  churchTax,
+  taxClass,
+  isMarried: married,
+  hasChildren: Number(children || 0) > 0,
+  assemblyWork,
+})
+
+const taxReserve =
+  summary.balance > 0 && taxProfile.reserveMax > 0
+    ? taxProfile.reserveMax
+    : 0
 
 const financeScore = calculateFinanceScore({
   balance: summary.balance,
