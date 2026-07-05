@@ -130,8 +130,8 @@ const taxRate =
   contextData?.userStatus === 'angestellt'
     ? 0.1
     : contextData?.userStatus === 'kleinunternehmer'
-    ? 0.25
-    : 0.3
+    ? 0
+    : 0
 
 const taxReserve = balance > 0 ? balance * taxRate : 0
 const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
