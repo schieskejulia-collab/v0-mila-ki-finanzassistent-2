@@ -129,8 +129,8 @@ if (overdueIncomes.length > 0) {
   message = `Mila sieht ${softwareExpenses.length} digitale Ausgabe(n). Tools können Investitionen sein — wichtig ist, ob sie dir Nutzen bringen.`
 
 } else if (balance > 0) {
-  title = 'Dein Cashflow wirkt stabil'
-  message = `Du hast aktuell ${money(balance)} Spielraum. Mila behält Rücklagen, Zahlungen und Veränderungen weiter im Blick.`
+  title = 'Mila lernt dein Muster kennen'
+  message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mila erkennt mit jeder Buchung besser deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte.`
 
 } else {
   title = 'Mila baut dein Finanzbild auf'
