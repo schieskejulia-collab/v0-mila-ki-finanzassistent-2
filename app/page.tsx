@@ -219,18 +219,7 @@ const anchorMessage =
 
         {/* --- MAIN HEADER BLOCK & MORNING BRIEFING --- */}
         <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-600">Heute für dich</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950 flex items-center gap-2">
-              {getGreeting()}, {userName || 'Julia'} 🌸
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Status: <span className="font-semibold capitalize">{userStatus}</span> ({industry === 'webdesigner' ? 'Webdesign' : industry}) · <span className="font-semibold">{vatStatus === 'kleinunternehmer' ? 'Kleinunternehmer' : 'Regelbest.'}</span>
-            </p>
-<div className="rounded-2xl bg-violet-50 p-4 border border-violet-100">
-  <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-700">
-    🪬 Heute wichtig
-  </p>
+     <MorningBriefing />
 
   <p className="mt-2 text-sm font-bold leading-relaxed text-slate-800">
     {overdueCount > 0
