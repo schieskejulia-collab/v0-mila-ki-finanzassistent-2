@@ -64,11 +64,8 @@ const [dueDate, setDueDate] = useState('')
 const [isSaving, setIsSaving] = useState(false)
   const numericAmount = Number(amount || 0)
   const taxStatus = getTaxHint(category)
-const deductible = type === 'expense' && taxStatus === 'wahrscheinlich ja'
-  const taxReserve =
-  type === 'income' && shouldCalculateTaxReserve(title)
-    ? numericAmount * 0.3
-    : 0
+const deductible = type === 'expense' && taxStatus === 'wahrscheinlich 
+const taxReserve = 0
   const taxHint = deductible ? numericAmount * 0.3 : 0
 
   function updateTitle(value: string) {
