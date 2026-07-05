@@ -17,12 +17,34 @@ const starterMessages = [
 ]
 
 export function MilaChat() {
-  const {
-    summary,
-    incomes,
-    expenses,
-    budgetStatus,
-    milaFeedback,
+context: {
+  profile: {
+    userName,
+    userStatus,
+    vatStatus,
+  },
+
+  summary: {
+    totalIncomes: summary?.totalIncomes ?? 0,
+    totalExpenses: summary?.totalExpenses ?? 0,
+    balance: summary?.balance ?? 0,
+    profit: summary?.profit ?? summary?.balance ?? 0,
+  },
+
+  score: budgetStatus?.score ?? null,
+  trafficLight: budgetStatus?.trafficLight ?? budgetStatus?.status ?? null,
+
+  budgetStatus,
+  milaFeedback,
+
+  incomes: incomes.slice(0, 10),
+  expenses: expenses.slice(0, 10),
+
+  counts: {
+    incomeCount: incomes.length,
+    expenseCount: expenses.length,
+  },
+},
     userName,
     userStatus,
     vatStatus,
@@ -100,7 +122,7 @@ Deine Antwort-Regeln:
 1. Antworte kurz. Maximal 6–8 Sätze.
 2. Keine langen Listen mit 1., 2., 3., 4.
 3. Keine allgemeinen Tipps wie „Netzwerk aufbauen“, wenn es nicht konkret gefragt wurde.
-4. Nutze zuerst Julias echte Zahlen aus dem Kontext.
+4. Nutze zuerst die echten Zahlen aus dem Kontext: summary, score, trafficLight, incomes, expenses und profile.
 5. Immer nach diesem Muster antworten:
    - Ich sehe ...
    - Ich würde als Nächstes ...
