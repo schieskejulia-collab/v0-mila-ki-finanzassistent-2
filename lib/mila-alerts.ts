@@ -20,12 +20,6 @@ function number(value: any) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function getText(entry: any) {
-  return `${entry.title || ''} ${entry.vendor || ''} ${entry.client || ''} ${
-    entry.category || ''
-  } ${entry.note || ''}`.toLowerCase()
-}
-
 export function getMilaAlerts(
   incomes: any[],
   expenses: any[],
@@ -37,33 +31,15 @@ export function getMilaAlerts(
   const totalExpenses = number(summary?.totalExpenses)
   const balance = number(summary?.balance ?? totalIncomes - totalExpenses)
 
-  if (totalExpenses > totalIncomes) {
-    alerts.push({
-      id: 'liquidity',
-      type: 'danger',
-      title: '🚨 Liquiditätswarnung',
-      message:
-        'Deine Ausgaben liegen aktuell über deinen Einnahmen. Prüfe zuerst Fixkosten, Ausstehende Kundenzahlungenund unnötige Abbuchungen.',
-    })
-  }
+  const paidIncomes = incomes.filter((income) => {
+    const status = String(income.status || '').toLowerCase()
+    return status === 'bezahlt' || status === 'paid'
+  })
 
   const openIncomes = incomes.filter((income) => {
     const status = String(income.status || '').toLowerCase()
-    return status === 'offen' || status === 'pending' || status === 'unbezahlt' || !status
+    return status === 'offen' || status === 'pending' || status === 'unbezahlt'
   })
-
-  if (openIncomes.length > 0) {
-    const openTotal = openIncomes.reduce((sum, income) => sum + number(income.amount), 0)
-
-    alerts.push({
-      id: 'open-incomes',
-      type: openTotal > 1000 || openIncomes.length >= 3 ? 'warning' : 'info',
-      title: '📄 Ausstehende Kundenzahlungen',
-      message: `${openIncomes.length} offene Einnahme${
-        openIncomes.length === 1 ? '' : 'n'
-      } über ${money(openTotal)}. Prüfe, was bezahlt, offen oder überfällig ist.`,
-    })
-  }
 
   const overdueIncomes = incomes.filter((income) => {
     const status = String(income.status || '').toLowerCase()
@@ -79,23 +55,44 @@ export function getMilaAlerts(
     alerts.push({
       id: 'overdue-incomes',
       type: 'danger',
-      title: '🚨 Überfällige Zahlungseingänge',
-      message: `${overdueIncomes.length} Einnahme${
-        overdueIncomes.length === 1 ? ' ist' : 'n sind'
-      } überfällig (${money(overdueTotal)}). Das ist heute wichtiger als neue Ausgaben zu sortieren.`,
+      title: '🔴 Zahlung zuerst prüfen',
+      message: `${overdueIncomes.length} Zahlung${
+        overdueIncomes.length === 1 ? ' ist' : 'en sind'
+      } überfällig (${money(overdueTotal)}). Mila würde heute zuerst diese Eingänge klären.`,
     })
   }
 
-  if (balance > 0) {
-    const taxReserve = 0
+  if (openIncomes.length > 0) {
+    const openTotal = openIncomes.reduce(
+      (sum, income) => sum + number(income.amount),
+      0
+    )
 
     alerts.push({
-      id: 'tax',
+      id: 'open-incomes',
+      type: openTotal > 1000 || openIncomes.length >= 3 ? 'warning' : 'info',
+      title: '🟡 Offene Einnahmen im Blick',
+      message: `${openIncomes.length} offene Zahlung${
+        openIncomes.length === 1 ? '' : 'en'
+      } über ${money(openTotal)}. Kein Alarm — aber gut, wenn du den Status aktuell hältst.`,
+    })
+  }
+
+  if (balance < 0) {
+    alerts.push({
+      id: 'liquidity',
+      type: 'warning',
+      title: '🟠 Liquidität sortieren',
+      message: `Dein aktueller Stand liegt bei ${money(balance)}. Mila würde heute Fixkosten, offene Einnahmen und notwendige Ausgaben zuerst sortieren.`,
+    })
+  }
+
+  if (balance > 0 && totalIncomes > 0) {
+    alerts.push({
+      id: 'cashflow-stable',
       type: 'info',
-      title: '💰 Rücklage einplanen',
-      message: `Empfohlene Orientierung: ${money(
-        taxReserve
-      )}. Mila markiert das nur als Planungshilfe, nicht als Steuerberatung.`,
+      title: '🟢 Spielraum vorhanden',
+      message: `Du hast aktuell ${money(balance)} Überschuss. Mila betrachtet das nicht automatisch als frei verfügbar, sondern behält Rücklagen und nächste Zahlungen mit im Blick.`,
     })
   }
 
@@ -105,10 +102,10 @@ export function getMilaAlerts(
     alerts.push({
       id: 'missing-receipts',
       type: 'warning',
-      title: '📸 Belege fehlen',
+      title: '📸 Belege nachreichen',
       message: `${missingReceipts.length} Ausgabe${
         missingReceipts.length === 1 ? '' : 'n'
-      } haben aktuell keinen Beleg. Das sollte Mila später sauber nachfordern.`,
+      } haben noch keinen Beleg. Mila kann sie später gesammelt statt einzeln stressig erinnern.`,
     })
   }
 
@@ -127,18 +124,20 @@ export function getMilaAlerts(
     vendorMap[vendor].total += number(expense.amount)
   })
 
-  Object.entries(vendorMap).forEach(([vendor, data]) => {
-    if (data.count >= 3) {
-      alerts.push({
-        id: `recurring-${vendor.toLowerCase().replace(/\s+/g, '-')}`,
-        type: 'info',
-        title: '💡 Wiederkehrende Ausgabe',
-        message: `${vendor} wurde ${data.count}x gebucht (${money(
-          data.total
-        )} gesamt). Mila sollte prüfen, ob das ein Abo, Fixkostenblock oder Muster ist.`,
-      })
-    }
-  })
+  const recurring = Object.entries(vendorMap).filter(([, data]) => data.count >= 3)
+
+  if (recurring.length > 0) {
+    const totalRecurring = recurring.reduce((sum, [, data]) => sum + data.total, 0)
+
+    alerts.push({
+      id: 'recurring-summary',
+      type: 'info',
+      title: '🔁 Muster erkannt',
+      message: `Mila erkennt ${recurring.length} wiederkehrende Kostenblock${
+        recurring.length === 1 ? '' : 'e'
+      } über zusammen ${money(totalRecurring)}. Das ist gut für spätere Monatschecks.`,
+    })
+  }
 
   const vehicleExpenses = expenses.filter(
     (expense) => getEntryCategory(expense) === 'fahrzeug'
@@ -148,9 +147,9 @@ export function getMilaAlerts(
     alerts.push({
       id: 'vehicle-pattern',
       type: 'info',
-      title: '⛽ Fahrtkosten erkannt',
+      title: '🚗 Fahrtkosten erkannt',
       message:
-        'Mila sieht mehrere Fahrzeug-/Fahrtkosten. Prüfe später, ob Fahrten oder Kilometer dokumentiert werden müssen.',
+        'Mila sieht mehrere Fahrt-/Fahrzeugkosten. Später kann sie helfen, berufliche Fahrten sauberer zu dokumentieren.',
     })
   }
 
@@ -162,12 +161,38 @@ export function getMilaAlerts(
     alerts.push({
       id: 'private-expenses',
       type: 'info',
-      title: '🔒 Private Ausgaben erkannt',
+      title: '🔒 Privat getrennt halten',
       message: `${privateExpenses.length} Ausgabe${
         privateExpenses.length === 1 ? '' : 'n'
-      } wirken privat. Mila sollte sie getrennt halten, damit die Auswertung sauber bleibt.`,
+      } wirken privat. Mila hält sie getrennt, damit deine Auswertung sauber bleibt.`,
     })
   }
 
-  return alerts.slice(0, 10)
+  if (
+    alerts.length === 0 &&
+    incomes.length + expenses.length < 3
+  ) {
+    alerts.push({
+      id: 'learning',
+      type: 'info',
+      title: '🌱 Mila lernt dein Muster',
+      message:
+        'Noch sind wenige Daten vorhanden. Nach weiteren Buchungen erkennt Mila bessere Muster, Risiken und Chancen.',
+    })
+  }
+
+  if (
+    alerts.length === 0 &&
+    balance >= 0
+  ) {
+    alerts.push({
+      id: 'calm',
+      type: 'info',
+      title: '🟢 Ruhige Lage',
+      message:
+        'Mila sieht aktuell nichts Dringendes. Behalte Rücklagen, Fristen und neue Buchungen einfach weiter im Blick.',
+    })
+  }
+
+  return alerts.slice(0, 6)
 }
