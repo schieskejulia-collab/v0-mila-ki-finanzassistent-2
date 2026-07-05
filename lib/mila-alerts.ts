@@ -87,7 +87,7 @@ export function getMilaAlerts(
   }
 
   if (balance > 0) {
-    const taxReserve = balance * 0.3
+    const taxReserve = 0
 
     alerts.push({
       id: 'tax',
