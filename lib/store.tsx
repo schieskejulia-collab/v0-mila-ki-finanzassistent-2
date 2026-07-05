@@ -302,13 +302,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(() => {
-    setIsLoggedIn(false)
-    setUserId('')
-    setExpenses([])
-    setIncomes([])
-    setObligations([])
-    setDocuments([])
-  }, [])
+  setProfileLoaded(false)
+  setIsLoggedIn(false)
+  setUserId('')
+  setExpenses([])
+  setIncomes([])
+  setObligations([])
+  setDocuments([])
+  setUserName('')
+  setUserStatus('')
+  setIndustry('sonstiges')
+  setAnnualGross(0)
+  setAnnualProfit(0)
+  setVatStatus('')
+  setFederalState('')
+  setChurchTax(false)
+  setMarried(false)
+  setChildren(0)
+  setAssemblyWork(false)
+}, [])
 
   const addExpense = useCallback(
     async (exp: any) => {
