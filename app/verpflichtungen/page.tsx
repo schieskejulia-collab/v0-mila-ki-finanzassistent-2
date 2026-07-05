@@ -27,35 +27,28 @@ export default function VerpflichtungenPage() {
       return
     }
 
-    const item: Obligation = {
-      id: crypto.randomUUID(),
+  const item: Obligation = {
+  id: crypto.randomUUID(),
 
-      title,
-      partner,
+  title,
+  partner,
+  creditor: partner as any,
 
-      amount: Number(amount),
+  amount: Number(amount),
 
-      type: 'rechnung',
+  type: 'rechnung',
+  area: 'privat',
 
-      area: 'privat',
+  dueDate,
+  due_date: dueDate as any,
 
-      dueDate,
+  status: 'offen',
 
-      status: 'geplant',
+  priority,
 
-      priority,
-
-      reminderDays: [14, 3, 0],
-    }
-
-    addObligation(item)
-
-    setTitle('')
-    setPartner('')
-    setAmount('')
-    setDueDate('')
-    setPriority('normal')
-  }
+  reminderDays: [14, 3, 0],
+  reminder_days: 3 as any,
+}
 
   return (
     <main className="min-h-screen max-w-md mx-auto p-6 pb-32 space-y-5">
