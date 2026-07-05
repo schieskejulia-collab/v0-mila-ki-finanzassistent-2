@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
-import { useFinance } from '@/lib/store'
 import { saveMerchantMemory } from '@/lib/merchant-memory'
 const categories = CATEGORY_LIST.map((category) => category.label)
 
@@ -35,7 +34,7 @@ function formatEuro(value: number) {
 }
 
 export default function NeueBuchungPage() {
-const { documents, setDocuments } = useFinance()
+const { documents, setDocuments, addExpense, addIncome, incomes, expenses } = useFinance()
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
@@ -118,28 +117,28 @@ if (scannedData.document) {
 }
 
   try {
-    const checkRes = await fetch(apiPath)
-    const checkData = await checkRes.json()
 
     if (checkData.success && Array.isArray(checkData.data)) {
-      const duplicate = checkData.data.find((item: any) => {
-        const sameTitle =
-          String(item.title || '').trim().toLowerCase() ===
-          String(payload.title || '').trim().toLowerCase()
+   const existingItems = type === 'expense' ? expenses : incomes
 
-        const sameAmount = Number(item.amount) === Number(payload.amount)
+const duplicate = existingItems.find((item: any) => {
+  const sameTitle =
+    String(item.title || '').trim().toLowerCase() ===
+    String(payload.title || '').trim().toLowerCase()
 
-        const sameDate =
-          String(item.date || '').slice(0, 10) ===
-          String(payload.date || '').slice(0, 10)
+  const sameAmount = Number(item.amount) === Number(payload.amount)
 
-        return sameTitle && sameAmount && sameDate
-      })
+  const sameDate =
+    String(item.date || '').slice(0, 10) ===
+    String(payload.date || '').slice(0, 10)
 
-      if (duplicate) {
-        alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
-        return
-      }
+  return sameTitle && sameAmount && sameDate
+})
+
+if (duplicate) {
+  alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
+  return
+}
     }
 if (partner && type === 'expense') {
   saveMerchantMemory({
@@ -148,15 +147,13 @@ if (partner && type === 'expense') {
     taxHint: taxStatus,
   })
 }
-    const res = await fetch(apiPath, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    if (type === 'expense') {
+  await addExpense(payload)
+} else {
+  await addIncome(payload)
+}
 
-    const data = await res.json()
-
-    if (data.success) {
+if (true) {
       alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
       setTitle('')
       setAmount('')
