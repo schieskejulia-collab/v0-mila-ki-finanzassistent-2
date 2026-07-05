@@ -67,12 +67,9 @@ export function calculatePayments(incomes: any[] = []) {
 // -----------------------------
 
 export function calculateReserve(
-  balance: number,
-  rate = 0.3
+  balance: number
 ) {
-  if (balance <= 0) return 0
-
-  return balance * rate
+  return 0
 }
 
 
