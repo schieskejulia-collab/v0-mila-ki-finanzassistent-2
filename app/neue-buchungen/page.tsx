@@ -90,7 +90,7 @@ function updatePartner(value: string) {
   setTitle(String(scannedData.title || '').trim())
   setAmount(String(scannedData.amount ?? ''))
   setPartner(String(scannedData.vendor || '').trim())
-
+setDueDate(String(scannedData.dueDate || scannedData.document?.dueDate || ''))
   const categoryId =
     scannedData.category ||
     detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
@@ -187,6 +187,9 @@ async function alsVerpflichtungSpeichern() {
         taxHint: taxStatus,
       })
     }
+if (scannedData.category === 'inkasso') {
+  setCategory('⚖️ Inkasso / Forderung')
+}
 
     if (type === 'expense') {
       await addExpense(payload)
