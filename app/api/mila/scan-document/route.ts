@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-
+import { classifyDocument } from '@/lib/document-classifier'
 function cleanJson(content: string) {
   return content.replace(/```json/gi, '').replace(/```/g, '').trim()
 }
@@ -153,7 +153,11 @@ Antwort nur als JSON, ohne Erklärung.
     const dueDate = String(parsed.dueDate || '').trim()
     const documentType = String(parsed.documentType || 'rechnung').trim()
     const invoiceNumber = String(parsed.invoiceNumber || '').trim()
-
+const documentClassification = classifyDocument({
+  title,
+  vendor,
+  note: `${parsed.note || ''} ${documentType}`,
+})
     return NextResponse.json({
       success: true,
       data: {
@@ -161,7 +165,10 @@ Antwort nur als JSON, ohne Erklärung.
         vendor,
         amount: amount || '',
         dueDate,
-        category: documentType === 'rechnung' ? 'sonstiges' : documentType,
+        category: documentClassification.category || (documentType === 'rechnung' ? 'sonstiges' : documentType),
+documentType: documentClassification.type,
+documentMessage: documentClassification.message,
+documentPriority: documentClassification.priority,
         note:
           invoiceNumber
             ? `PDF ausgelesen 📄 · Rechnungsnummer: ${invoiceNumber}`
@@ -170,7 +177,7 @@ Antwort nur als JSON, ohne Erklärung.
           title,
           partner: vendor,
           amount,
-          type: documentType,
+          type: documentClassification.type,
           status: 'neu',
           documentDate: new Date().toISOString().slice(0, 10),
           dueDate: dueDate || undefined,
