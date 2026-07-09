@@ -11,6 +11,23 @@ export type MilaReceiptRule = {
 
 export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
   {
+    category: 'privat',
+    keywords: [
+      'kita',
+      'kindergarten',
+      'hort',
+      'schule',
+      'essengeld',
+      'verpflegung kindergarten',
+      'verpflegung kita',
+      'verpflegungsleistungen',
+      'betreuung',
+      'besseressen',
+    ],
+    taxHint: 'no',
+    question: 'Das sieht nach Familie/Kinderbetreuung aus. Soll ich es privat einordnen?',
+  },
+  {
     category: 'reisen',
     keywords: [
       'parken',
