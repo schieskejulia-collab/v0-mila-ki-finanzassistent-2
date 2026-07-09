@@ -278,21 +278,19 @@ async function alsVerpflichtungSpeichern() {
           onChange={(e) => updatePartner(e.target.value)}
         />
 {type === 'income' && (
-  <>
-    <select
-      value={status}
-      onChange={(e) => setStatus(e.target.value)}
-      className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-    >
-      <option value="offen">🟡 Offen</option>
-      <option value="bezahlt">🟢 Bezahlt</option>
-      <option value="ueberfaellig">🔴 Überfällig</option>
-    </select>
+  <select
+    value={status}
+    onChange={(e) => setStatus(e.target.value)}
+    className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+  >
+    <option value="offen">🟡 Offen</option>
+    <option value="bezahlt">🟢 Bezahlt</option>
+    <option value="ueberfaellig">🔴 Überfällig</option>
+  </select>
+)}
 
- <div className="space-y-1">
-  <p className="text-xs font-bold text-slate-500">
-    Fällig am
-  </p>
+<div className="space-y-1">
+  <p className="text-xs font-bold text-slate-500">Fällig am</p>
 
   <input
     type="date"
@@ -305,15 +303,6 @@ async function alsVerpflichtungSpeichern() {
     Optional – Mila nutzt das für Rechnungen, Fristen und Erinnerungen 🧾
   </p>
 </div>
-  </>
-)}
-<input
-  type="date"
-  value={dueDate}
-  onChange={(e) => setDueDate(e.target.value)}
-  className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-  aria-label="Fälligkeitsdatum"
-/>
 
 <p className="text-xs text-slate-500">
   Fälligkeitsdatum optional – für Rechnungen/PDFs wichtig
