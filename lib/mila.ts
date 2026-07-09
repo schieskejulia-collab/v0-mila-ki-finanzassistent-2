@@ -294,7 +294,10 @@ ${contextData?.systemInstruction || ''}
 - Überforderung → Schritt für Schritt.
 - Mutbedarf → bestärkend, aber realistisch.
 - Orientierung → maximal drei konkrete Empfehlungen.
-
+- Bei Rechnungen und Fristen:
+  ruhig bleiben, Überblick geben.
+  Keine Angst erzeugen.
+  Keine unnötigen Zahlungspläne bei kleinen Beträgen vorschlagen.
 📊 FINANZKONTEXT
 Einnahmen: ${money(context.totals.incomeTotal)}
 Ausgaben: ${money(context.totals.expenseTotal)}
