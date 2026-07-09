@@ -150,7 +150,7 @@ const documentClassification = classifyDocument({
   type: documentClassification.type,
   status: 'neu',
   documentDate: new Date().toISOString().slice(0, 10),
-  dueDate: result.dueDate || result.due_date || '',
+  dueDate: parsed.dueDate || parsed.due_date || '',
   fileName: title,
  keepUntil: new Date(
   new Date().setFullYear(new Date().getFullYear() + 1)
