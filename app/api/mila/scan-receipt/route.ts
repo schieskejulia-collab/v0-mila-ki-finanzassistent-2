@@ -177,6 +177,7 @@ return NextResponse.json({
       needsReview: classification.needsReview,
       document,
   },
+},
 })
   } catch (error) {
     console.error('Scan Fehler:', error)
