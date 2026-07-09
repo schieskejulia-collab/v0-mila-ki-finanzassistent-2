@@ -20,9 +20,7 @@ const navItems = [
     icon: '➕',
   },
   {
-  href: '/wissen',
-  label: 'Leben',
-  icon: '🧭',
+  { href: '/verpflichtungen', label: 'Pflichten', icon: '🧾' }
 },
   {
     href: '/profil',
