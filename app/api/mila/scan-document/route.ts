@@ -120,20 +120,25 @@ Antwort nur als JSON, ohne Erklärung.
     const result = await response.json()
 
     if (!response.ok) {
-      console.error('Groq PDF Fehler:', result)
+  console.error('Groq PDF Fehler:', result)
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          title: fileName,
-          vendor: '',
-          amount: '',
-          dueDate: '',
-          category: 'sonstiges',
-          note: 'PDF erfolgreich empfangen 📄 – konnte aber noch nicht sicher ausgelesen werden.',
-        },
-      })
-    }
+  const groqMessage =
+    result?.error?.message ||
+    result?.message ||
+    'Unbekannter PDF-Fehler'
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      title: fileName,
+      vendor: '',
+      amount: '',
+      dueDate: '',
+      category: 'sonstiges',
+      note: `PDF empfangen 📄 – Groq konnte sie nicht lesen: ${groqMessage}`,
+    },
+  })
+}
 
     const content = result?.choices?.[0]?.message?.content || '{}'
     const cleaned = cleanJson(content)
