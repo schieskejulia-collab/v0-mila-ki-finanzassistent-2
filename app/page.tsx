@@ -148,9 +148,13 @@ const openCount = payments.openCount
 const overdueCount = payments.overdueCount
 const totalOpenAmount = payments.openAmount
 const totalOverdueAmount = payments.overdueAmount
+const openObligations = (obligations || []).filter(
+  (item: any) => String(item.status || '').toLowerCase() !== 'bezahlt'
+)
+
 const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
-  obligations: obligations || [],
+  obligations: openObligations,
 })
 const taxProfile = estimateTaxProfile({
   userType: assemblyWork ? 'montagearbeiter' : userStatus,
