@@ -5,6 +5,12 @@ import { useFinance } from '@/lib/store'
 import type { Obligation } from '@/lib/mila-obligations'
 
 function money(value: number) {
+  return Number(value || 0).toLocaleString('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+  })
+}
+
 function dateDE(value: string) {
   if (!value) return ''
   const [year, month, day] = value.split('-')
