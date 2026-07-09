@@ -128,8 +128,34 @@ Antwort nur als JSON, ohne Erklärung.
     result?.error?.message ||
     result?.message ||
     'Unbekannter PDF-Fehler'
-
-  
+const fileName = file.name.replace(/\.pdf$/i, '')
+  return NextResponse.json({
+  success: true,
+  data: {
+    title: fileName,
+    vendor: '',
+    amount: '',
+    dueDate: '',
+    category: 'sonstiges',
+    note:
+      'PDF gespeichert 📄 Für automatische Analyse bitte als Bild oder Screenshot hochladen.',
+    document: {
+      title: fileName,
+      partner: '',
+      amount: 0,
+      type: 'document',
+      status: 'neu',
+      documentDate: new Date().toISOString().slice(0, 10),
+      fileName,
+      keepUntil: new Date(
+        new Date().setFullYear(new Date().getFullYear() + 1)
+      )
+        .toISOString()
+        .slice(0, 10),
+      note: 'PDF Dokument gespeichert',
+    },
+  },
+})
 }
 
     const content = result?.choices?.[0]?.message?.content || '{}'
