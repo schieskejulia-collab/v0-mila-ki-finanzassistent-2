@@ -73,10 +73,6 @@ deleteObligation: (id: string) => Promise<void>
   summary: any
   budgetStatus: any[]
 }
-const updateObligation = useCallback(
-  async (id: string, updates: Partial<Obligation>) => {
-    if (!userId) throw new Error('Nicht angemeldet.')
-
     const payload: any = {}
 
     if (updates.title !== undefined) payload.title = updates.title
@@ -111,6 +107,10 @@ const updateObligation = useCallback(
   },
   [userId]
 )
+const updateObligation = useCallback(
+  async (id: string, updates: Partial<Obligation>) => {
+    if (!userId) throw new Error('Nicht angemeldet.')
+
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 function profileKey(userId?: string) {
