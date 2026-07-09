@@ -289,17 +289,22 @@ async function alsVerpflichtungSpeichern() {
       <option value="ueberfaellig">🔴 Überfällig</option>
     </select>
 
-    <input
-      type="date"
-      value={dueDate}
-      onChange={(e) => setDueDate(e.target.value)}
-      className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-      aria-label="Fälligkeitsdatum"
-    />
+ <div className="space-y-1">
+  <p className="text-xs font-bold text-slate-500">
+    Fällig am
+  </p>
 
-    <p className="text-xs text-slate-500">
-      Fälligkeitsdatum optional
-    </p>
+  <input
+    type="date"
+    value={dueDate}
+    onChange={(e) => setDueDate(e.target.value)}
+    className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+  />
+
+  <p className="text-xs text-slate-500">
+    Optional – Mila nutzt das für Rechnungen, Fristen und Erinnerungen 🧾
+  </p>
+</div>
   </>
 )}
 <input
