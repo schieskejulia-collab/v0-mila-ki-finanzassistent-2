@@ -72,6 +72,9 @@ Regeln:
 - vendor ist Händler, Anbieter, Gläubiger, Inkasso oder Absender.
 - title ist kurz und verständlich.
 - documentType ist: "beleg", "rechnung", "mahnung", "inkasso", "vertrag", "bescheid" oder "sonstiges".
+- dueDate ist das Zahlungsziel / "zahlen bis" / "1. Rate bis" / "fällig am" Datum
+- Wenn ein Datum gefunden wird, gib dueDate im Format YYYY-MM-DD zurück
+- Bei Inkasso, Mahnung oder Forderung ist documentType "verpflichtung"
 Kategorie-Regeln:
 - Wenn Wörter wie Inkasso, Forderung, Gläubiger, Aktenzeichen, Mahnung, Ratenzahlung oder Vollstreckung vorkommen:
   category = "inkasso"
