@@ -224,15 +224,7 @@ setNote('')
 setStatus('offen')
 setDueDate('')
 setCategory('Sonstiges')
-    const categoryId =
-  scannedData.category ||
-  detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
-
-setCategory(
-  categoryId === 'Inkasso / Forderung'
-    ? getCategoryLabel('Inkasso / Forderung')
-    : getCategoryLabel(categoryId)
-)
+  
   } catch (error: any) {
     alert(`Netzwerkfehler: ${error.message} ❌`)
   } finally {
