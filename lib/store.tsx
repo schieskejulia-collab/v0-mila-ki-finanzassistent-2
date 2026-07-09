@@ -173,7 +173,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setDocuments(savedDocuments ? JSON.parse(savedDocuments) : [])
     setProfileLoaded(true)
   }, [])
-
+function normalizeObligation(item: any): Obligation {
+  return {
+    ...item,
+    dueDate: item.dueDate || item.due_date || '',
+    due_date: item.due_date || item.dueDate || '',
+    reminderDays: item.reminderDays || [14, 3, 0],
+    reminder_days: item.reminder_days || 3,
+  } as Obligation
+}
   const fetchFinanceData = useCallback(async (uid?: string) => {
     if (!uid) {
       setExpenses([])
@@ -184,7 +192,7 @@ const { data: obligationsData } = await supabase
   .eq('user_id', uid)
   .order('created_at', { ascending: false })
 
-setObligations(obligationsData || [])
+setObligations((obligationsData || []).map(normalizeObligation))
 
 
 const { data: documentsData } = await supabase
@@ -466,7 +474,7 @@ setDocuments(documentsData || [])
     throw error
   }
 
-  setObligations((prev) => [data as any, ...prev])
+  setObligations((prev) => [normalizeObligation(data), ...prev])
 }, [userId])
 const deleteObligation = useCallback(async (id: string) => {
   if (!userId) throw new Error('Nicht angemeldet.')
