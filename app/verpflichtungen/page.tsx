@@ -146,15 +146,18 @@ export default function VerpflichtungenPage() {
     🟡 {item.status || 'offen'}
   </span>
 </div>
-             <div className="mt-4 flex gap-4">
-
+          <div className="mt-4 flex gap-4">
   {item.status !== 'bezahlt' && (
     <button
-      onClick={() =>
-        finance.updateObligation?.(item.id, {
-          status: 'bezahlt',
-        })
-      }
+      onClick={async () => {
+        try {
+          await finance.updateObligation(item.id, {
+            status: 'bezahlt',
+          })
+        } catch (error: any) {
+          alert(`Status konnte nicht geändert werden: ${error.message}`)
+        }
+      }}
       className="font-bold text-green-600"
     >
       ✅ Bezahlt
@@ -167,7 +170,6 @@ export default function VerpflichtungenPage() {
   >
     Löschen
   </button>
-
 </div>
             </div>
           ))
