@@ -49,21 +49,32 @@ export async function POST(req: Request) {
               {
                 type: 'text',
                 text: `
-Analysiere diesen deutschen Kassenbeleg.
+Analysiere dieses deutsche Finanzdokument oder diesen Beleg.
 
 Antworte ausschließlich mit gültigem JSON:
 {
   "amount": number,
   "vendor": string,
   "title": string,
-  "note": string
+  "note": string,
+  "documentType": string,
+  "isObligation": boolean,
+  "dueDate": string,
+  "caseNumber": string
 }
 
-amount ist IMMER der Brutto-Endbetrag, also der tatsächlich bezahlte Gesamtbetrag.
-Suche nach: Gesamt, Summe, Zu zahlen, Endbetrag, Brutto, Kartenzahlung, EC, Total.
-Nimm niemals Netto, MwSt, Steuer, Rabatt, Rückgeld oder Wechselgeld.
-vendor ist der Händlername.
-title ist eine kurze Beschreibung des Einkaufs.
+Regeln:
+- amount ist der Brutto-Endbetrag oder die geforderte Gesamtsumme.
+- vendor ist Händler, Anbieter, Gläubiger, Inkasso oder Absender.
+- title ist kurz und verständlich.
+- documentType ist: "beleg", "rechnung", "mahnung", "inkasso", "vertrag", "bescheid" oder "sonstiges".
+- isObligation ist true bei Rechnung, Mahnung, Inkasso, Rate, Vertrag mit Zahlungspflicht oder Zahlungsfrist.
+- dueDate im Format YYYY-MM-DD, wenn erkennbar. Sonst "".
+- caseNumber ist Aktenzeichen, Kundennummer, Vertragsnummer oder Rechnungsnummer, wenn eindeutig erkennbar.
+- Erfinde keine Werte.
+
+Bei Inkasso/Forderungen besonders suchen nach:
+Inkasso, Forderung, Aktenzeichen, Gläubiger, Hauptforderung, Gebühren, Mahnung, Zahlungsfrist, Ratenzahlung.
 Antwort nur als JSON, ohne Erklärung.
 `,
               },
