@@ -4,6 +4,7 @@ export type ObligationType =
   | 'vertrag'
   | 'abo'
   | 'miete'
+| 'inkasso'
   | 'sonstiges'
 
 export type ObligationArea =
