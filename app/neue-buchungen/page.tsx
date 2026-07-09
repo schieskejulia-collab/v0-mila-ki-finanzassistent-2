@@ -81,32 +81,47 @@ function updatePartner(value: string) {
   setPartner(value)
 }
 
-  const handleScanSuccess = (rawData: any) => {
+ const handleScanSuccess = (rawData: any) => {
   const scannedData = rawData?.data || rawData
 
   if (!scannedData) return
+
+  const categoryId =
+    scannedData.category ||
+    detectCategory(
+      `${scannedData.title || ''} ${scannedData.vendor || ''}`
+    )
 
   setType('expense')
   setTitle(String(scannedData.title || '').trim())
   setAmount(String(scannedData.amount ?? ''))
   setPartner(String(scannedData.vendor || '').trim())
-setDueDate(String(scannedData.dueDate || scannedData.document?.dueDate || ''))
-  const categoryId =
-    scannedData.category ||
-    detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
+  setDueDate(
+    String(
+      scannedData.dueDate ||
+      scannedData.document?.dueDate ||
+      ''
+    )
+  )
 
-  setCategory(getCategoryLabel(categoryId))
-setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
+  setCategory(
+    categoryId === 'inkasso'
+      ? '⚖️ Inkasso / Forderung'
+      : getCategoryLabel(categoryId)
+  )
 
-if (scannedData.document) {
-  setDocuments([...documents, scannedData.document])
-}
-}
-async function alsVerpflichtungSpeichern() {
-  if (!title || !amount || !partner || !dueDate) {
-    alert('Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾')
-    return
+  setNote(
+    scannedData.note ||
+    'Automatisch von Mila ausgelesen 📸'
+  )
+
+  if (scannedData.document) {
+    setDocuments([
+      ...documents,
+      scannedData.document,
+    ])
   }
+}
 
   addObligation({
     id: crypto.randomUUID(),
@@ -187,9 +202,6 @@ async function alsVerpflichtungSpeichern() {
         taxHint: taxStatus,
       })
     }
-if (scannedData.category === 'Inkasso / Forderung') {
-  setCategory('⚖️ Inkasso / Forderung')
-}
 
     if (type === 'expense') {
       await addExpense(payload)
@@ -197,18 +209,21 @@ if (scannedData.category === 'Inkasso / Forderung') {
       await addIncome(payload)
     }
 
-    alert(`${type === 'expense' ? 'Ausgabe' : 'Einnahme'} erfolgreich gespeichert! ✅`)
-
-    setTitle('')
-    setAmount('')
-    setPartner('')
-    setNote('')
-    setStatus('offen')
-    setDueDate(
-  data.dueDate
-    ? new Date(data.dueDate).toLocaleDateString('de-DE')
-    : ''
+    alert(
+  `${
+    type === 'expense'
+      ? 'Ausgabe'
+      : 'Einnahme'
+  } erfolgreich gespeichert! ✅`
 )
+
+setTitle('')
+setAmount('')
+setPartner('')
+setNote('')
+setStatus('offen')
+setDueDate('')
+setCategory('Sonstiges')
     const categoryId =
   scannedData.category ||
   detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
