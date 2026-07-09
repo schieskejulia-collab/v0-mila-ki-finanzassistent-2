@@ -10,25 +10,26 @@ const navItems = [
     icon: '🏠',
   },
   {
-  href: '/buchungen',
-  label: 'Finanzen',
-  icon: '💰',
-},
+    href: '/buchungen',
+    label: 'Finanzen',
+    icon: '💰',
+  },
   {
     href: '/neue-buchungen',
     label: 'Neu',
     icon: '➕',
   },
   {
-  { href: '/verpflichtungen', label: 'Pflichten', icon: '🧾' }
-},
+    href: '/verpflichtungen',
+    label: 'Pflichten',
+    icon: '🧾',
+  },
   {
     href: '/profil',
     label: 'Profil',
     icon: '👤',
   },
 ]
-
 export function BottomNav() {
   const pathname = usePathname()
 
