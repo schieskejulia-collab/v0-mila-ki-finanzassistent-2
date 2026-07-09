@@ -52,11 +52,13 @@ export async function POST(req: Request) {
 Analysiere dieses deutsche Finanzdokument oder diesen Beleg.
 
 Antworte ausschließlich mit gültigem JSON:
-{
+
+ {
   "amount": number,
   "vendor": string,
   "title": string,
   "note": string,
+  "category": string,
   "documentType": string,
   "isObligation": boolean,
   "dueDate": string,
@@ -68,6 +70,12 @@ Regeln:
 - vendor ist Händler, Anbieter, Gläubiger, Inkasso oder Absender.
 - title ist kurz und verständlich.
 - documentType ist: "beleg", "rechnung", "mahnung", "inkasso", "vertrag", "bescheid" oder "sonstiges".
+Kategorie-Regeln:
+- Wenn Wörter wie Inkasso, Forderung, Gläubiger, Aktenzeichen, Mahnung, Ratenzahlung oder Vollstreckung vorkommen:
+  category = "inkasso"
+- Inkasso ist niemals "sonstiges".
+- Eine Inkasso-Forderung ist immer isObligation = true.
+- Speichere ursprünglichen Anbieter (z.B. Klarna) in note, wenn erkennbar.
 - isObligation ist true bei Rechnung, Mahnung, Inkasso, Rate, Vertrag mit Zahlungspflicht oder Zahlungsfrist.
 - dueDate im Format YYYY-MM-DD, wenn erkennbar. Sonst "".
 - caseNumber ist Aktenzeichen, Kundennummer, Vertragsnummer oder Rechnungsnummer, wenn eindeutig erkennbar.
