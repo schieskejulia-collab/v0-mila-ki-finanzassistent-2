@@ -87,31 +87,7 @@ deleteObligation: (id: string) => Promise<void>
     if ((updates as any).due_date !== undefined) payload.due_date = (updates as any).due_date
     if ((updates as any).reminder_days !== undefined) payload.reminder_days = Number((updates as any).reminder_days || 3)
 
-    const { data, error } = await supabase
-      .from('obligations')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Verpflichtung aktualisieren fehlgeschlagen:', error)
-      throw error
-    }
-
-    setObligations((prev) =>
-      prev.map((item) =>
-        item.id === id ? normalizeObligation(data) : item
-      )
-    )
-  },
-  [userId]
-)
-const updateObligation = useCallback(
-  async (id: string, updates: Partial<Obligation>) => {
-    if (!userId) throw new Error('Nicht angemeldet.')
-
-export const FinanceContext = createContext<FinanceContextValue | null>(null)
+    export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 function profileKey(userId?: string) {
   return userId ? `mila-profile-${userId}` : 'mila-profile-guest'
@@ -139,6 +115,16 @@ function normalizeIndustry(value?: string) {
   }
 
   return oldToNew[value] || value
+}
+
+function normalizeObligation(item: any): Obligation {
+  return {
+    ...item,
+    dueDate: item.dueDate || item.due_date || '',
+    due_date: item.due_date || item.dueDate || '',
+    reminderDays: item.reminderDays || [14, 3, 0],
+    reminder_days: item.reminder_days || 3,
+  } as Obligation
 }
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
