@@ -178,6 +178,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!uid) {
       setExpenses([])
       setIncomes([])
+const { data: obligationsData } = await supabase
+  .from('obligations')
+  .select('*')
+  .eq('user_id', uid)
+  .order('created_at', { ascending: false })
+
+setObligations(obligationsData || [])
+
+
+const { data: documentsData } = await supabase
+  .from('documents')
+  .select('*')
+  .eq('user_id', uid)
+  .order('created_at', { ascending: false })
+
+setDocuments(documentsData || [])
       return
     }
 
