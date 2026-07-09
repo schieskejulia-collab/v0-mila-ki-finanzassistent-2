@@ -5,6 +5,10 @@ import { useFinance } from '@/lib/store'
 import type { Obligation } from '@/lib/mila-obligations'
 
 function money(value: number) {
+function dateDE(value: string) {
+  if (!value) return ''
+  return new Date(value).toLocaleDateString('de-DE')
+}
   return Number(value || 0).toLocaleString('de-DE', {
     style: 'currency',
     currency: 'EUR',
@@ -93,7 +97,9 @@ export default function VerpflichtungenPage() {
               <p className="text-xl font-black">{item.title}</p>
               <p className="text-sm font-semibold text-slate-500">{item.partner || item.creditor}</p>
               <p className="mt-2 text-2xl font-black text-purple-700">{money(item.amount)}</p>
-              <p className="text-sm text-slate-500">Fällig: {item.dueDate || item.due_date}</p>
+              <p className="text-sm text-slate-500">
+  Fällig: {dateDE(item.dueDate || item.due_date)}
+</p>
 
               <button onClick={() => deleteObligation(item.id)} className="mt-3 text-sm font-bold text-red-500">
                 Löschen
