@@ -103,12 +103,11 @@ Antwort nur als JSON, ohne Erklärung.
 `,
               },
               {
-                type: 'file',
-                file: {
-                  filename: file.name,
-                  file_data: pdfDataUrl,
-                },
-              },
+  type: 'document',
+  document: {
+    url: pdfDataUrl,
+  },
+},
             ],
           },
         ],
