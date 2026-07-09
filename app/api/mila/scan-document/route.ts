@@ -129,17 +129,7 @@ Antwort nur als JSON, ohne Erklärung.
     result?.message ||
     'Unbekannter PDF-Fehler'
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      title: fileName,
-      vendor: '',
-      amount: '',
-      dueDate: '',
-      category: 'sonstiges',
-      note: `PDF empfangen 📄 – Groq konnte sie nicht lesen: ${groqMessage}`,
-    },
-  })
+  
 }
 
     const content = result?.choices?.[0]?.message?.content || '{}'
