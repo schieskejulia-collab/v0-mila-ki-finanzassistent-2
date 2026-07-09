@@ -10,6 +10,7 @@ type ChatMessage = {
 type MilaContextData = {
   expenses?: Expense[]
   incomes?: Income[]
+obligations?: any[]
   userName?: string
   userStatus?: string
   systemInstruction?: string
@@ -46,6 +47,7 @@ function compactEntry(entry: any) {
 function buildFinancialContext(contextData?: MilaContextData) {
   const expenses = contextData?.expenses ?? []
   const incomes = contextData?.incomes ?? []
+const obligations = contextData?.obligations ?? []
   const summary = contextData?.summary ?? {}
 
   const expenseTotal =
@@ -63,6 +65,21 @@ function buildFinancialContext(contextData?: MilaContextData) {
 
   const openIncomes = incomes.filter((income: any) => {
     const status = String(income.status || '').toLowerCase()
+const openObligations = obligations.filter((item: any) => {
+  const status = String(item.status || '').toLowerCase()
+  return status !== 'bezahlt' && status !== 'paid'
+})
+
+const upcomingObligations = openObligations
+  .slice(0, 8)
+  .map((item: any) => ({
+    title: item.title || '',
+    partner: item.partner || item.creditor || '',
+    amount: toNumber(item.amount),
+    dueDate: item.dueDate || item.due_date || '',
+    priority: item.priority || 'normal',
+    status: item.status || 'offen',
+  }))
     return status === 'offen' || status === 'pending'
   })
 
@@ -70,6 +87,10 @@ function buildFinancialContext(contextData?: MilaContextData) {
     (sum, income) => sum + toNumber(income.amount),
     0
   )
+Offene Verpflichtungen: ${context.obligations.openCount}
+Nächste Verpflichtungen: ${context.obligations.upcoming
+  .map((o: any) => `${o.title} bei ${o.partner}, ${money(o.amount)}, fällig ${o.dueDate}`)
+  .join(' | ') || 'keine'}
 
   const recentExpenses = expenses.slice(0, 12).map(compactEntry)
   const recentIncomes = incomes.slice(0, 12).map(compactEntry)
@@ -153,6 +174,9 @@ return {
     freeAfterReserve,
     openIncomeCount: openIncomes.length,
     openIncomeTotal,
+obligations: {
+  openCount: openObligations.length,
+  upcoming: upcomingObligations,
   },
   counts: {
     incomes: incomes.length,
@@ -244,10 +268,8 @@ Deine Antwort-Regeln:
 2. Keine langen Listen mit 1., 2., 3., 4.
 3. Keine allgemeinen Tipps wie „Netzwerk aufbauen“, wenn es nicht konkret gefragt wurde.
 4. Nutze zuerst Julias echte Zahlen aus dem Kontext.
-5. Immer nach diesem Muster antworten:
-   - Ich sehe ...
-   - Ich würde als Nächstes ...
-   - Soll ich dich dabei Schritt für Schritt begleiten?
+5. Antworte natürlich. Nutze nicht jedes Mal denselben Abschlusssatz.
+6. Wenn Verpflichtungen, Fristen oder Zahlungen gefragt sind, prüfe zuerst den Verpflichtungen-Kontext.
 
 Wichtig:
 Wenn noch Zahlungseingänge ausstehen
