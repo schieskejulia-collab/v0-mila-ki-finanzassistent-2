@@ -32,7 +32,7 @@ export default function VerpflichtungenPage() {
   const [priority, setPriority] =
     useState<Obligation['priority']>('normal')
 
-  function speichern() {
+  async function speichern() {
     if (!title.trim() || !amount.trim() || !dueDate) {
       alert('Bitte Titel, Betrag und Datum eintragen 🪬')
       return
@@ -54,7 +54,12 @@ export default function VerpflichtungenPage() {
       reminder_days: 3 as any,
     }
 
-    addObligation(item)
+    try {
+  await addObligation(item)
+} catch (error: any) {
+  alert(`Verpflichtung konnte nicht gespeichert werden: ${error.message}`)
+  return
+}
 
     setTitle('')
     setPartner('')
