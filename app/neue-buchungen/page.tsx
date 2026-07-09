@@ -201,7 +201,11 @@ async function alsVerpflichtungSpeichern() {
     setPartner('')
     setNote('')
     setStatus('offen')
-    setDueDate('')
+    setDueDate(
+  data.dueDate
+    ? new Date(data.dueDate).toLocaleDateString('de-DE')
+    : ''
+)
     setCategory('Sonstiges')
   } catch (error: any) {
     alert(`Netzwerkfehler: ${error.message} ❌`)
