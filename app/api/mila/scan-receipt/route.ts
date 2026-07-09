@@ -152,17 +152,17 @@ const documentClassification = classifyDocument({
   documentDate: new Date().toISOString().slice(0, 10),
   dueDate: undefined,
   fileName: title,
-  keepUntil: new Date(
-    new Date().setFullYear(new Date().getFullYear() + 1)
-  )
-caseNumber: result.caseNumber || '',
-originalCreditor: result.originalCreditor || '',
-installmentAmount: result.installmentAmount || 0,
-    .toISOString()
-    .slice(0, 10),
-  note: 'Automatisch von Mila aus Belegscan erstellt 📸',
-}
+ keepUntil: new Date(
+  new Date().setFullYear(new Date().getFullYear() + 1)
+)
+  .toISOString()
+  .slice(0, 10),
 
+caseNumber: parsed.caseNumber || '',
+originalCreditor: parsed.originalCreditor || '',
+installmentAmount: Number(parsed.installmentAmount || 0),
+
+note: 'Automatisch von Mila aus Belegscan erstellt 📸',
 return NextResponse.json({
   success: true,
   data: {
@@ -175,10 +175,6 @@ return NextResponse.json({
       confidence: classification.confidence,
       needsReview: classification.needsReview,
       document,
-documentType: documentClassification.type,
-documentMessage: documentClassification.message,
-documentPriority: documentClassification.priority,
-
   },
 })
   } catch (error) {
