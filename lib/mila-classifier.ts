@@ -40,7 +40,17 @@ export function classifyEntry(entry: any): MilaClassification {
   }
 
   const category = detectCategory(text)
-
+if (
+  text.includes('inkasso') ||
+  text.includes('forderung') ||
+  text.includes('mahnung') ||
+  text.includes('gläubiger')
+) {
+  return {
+    category: 'verpflichtung',
+    taxHint: 'nicht absetzbar / privat',
+  }
+}
   if (category !== 'sonstiges') {
     return {
       category,
