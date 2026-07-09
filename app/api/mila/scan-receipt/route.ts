@@ -62,7 +62,9 @@ Antworte ausschließlich mit gültigem JSON:
   "documentType": string,
   "isObligation": boolean,
   "dueDate": string,
-  "caseNumber": string
+"caseNumber": string,
+"originalCreditor": string,
+"installmentAmount": number
 }
 
 Regeln:
@@ -79,6 +81,9 @@ Kategorie-Regeln:
 - isObligation ist true bei Rechnung, Mahnung, Inkasso, Rate, Vertrag mit Zahlungspflicht oder Zahlungsfrist.
 - dueDate im Format YYYY-MM-DD, wenn erkennbar. Sonst "".
 - caseNumber ist Aktenzeichen, Kundennummer, Vertragsnummer oder Rechnungsnummer, wenn eindeutig erkennbar.
+- originalCreditor ist der ursprüngliche Gläubiger oder Anbieter, z.B. Klarna, Vodafone, PayPal.
+- installmentAmount ist die angebotene oder geforderte Rate, wenn eine Ratenzahlung genannt wird. Sonst 0.
+- Bei Inkasso/Forderungen ist documentType immer "inkasso" und category immer "inkasso".
 - Erfinde keine Werte.
 
 Bei Inkasso/Forderungen besonders suchen nach:
