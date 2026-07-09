@@ -187,7 +187,7 @@ async function alsVerpflichtungSpeichern() {
         taxHint: taxStatus,
       })
     }
-if (scannedData.category === 'inkasso') {
+if (scannedData.category === 'Inkasso / Forderung') {
   setCategory('⚖️ Inkasso / Forderung')
 }
 
@@ -214,8 +214,8 @@ if (scannedData.category === 'inkasso') {
   detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
 
 setCategory(
-  categoryId === 'inkasso'
-    ? getCategoryLabel('inkasso')
+  categoryId === 'Inkasso / Forderung'
+    ? getCategoryLabel('Inkasso / Forderung')
     : getCategoryLabel(categoryId)
 )
   } catch (error: any) {
