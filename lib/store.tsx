@@ -438,21 +438,36 @@ setDocuments(documentsData || [])
     )
   }, [])
 
-  const addObligation = useCallback((item: Obligation) => {
-  const safeItem = {
-    ...item,
-    id: item.id || `obligation-${Date.now()}`,
-    status: item.status || 'offen',
+  const addObligation = useCallback(async (item: Obligation) => {
+  if (!userId) throw new Error('Nicht angemeldet.')
+
+  const payload = {
+    user_id: userId,
+    title: item.title,
+    partner: item.partner || '',
+    creditor: (item as any).creditor || item.partner || '',
     amount: Number(item.amount || 0),
+    type: item.type || 'rechnung',
+    area: item.area || 'privat',
+    due_date: item.dueDate || (item as any).due_date || null,
+    status: item.status || 'offen',
+    priority: item.priority || 'normal',
     reminder_days: Number((item as any).reminder_days || 3),
   }
 
-  setObligations((prev) => [safeItem, ...prev])
-}, [])
+  const { data, error } = await supabase
+    .from('obligations')
+    .insert([payload])
+    .select()
+    .single()
 
-const deleteObligation = useCallback((id: string) => {
-  setObligations((prev) => prev.filter((item) => item.id !== id))
-}, [])
+  if (error) {
+    console.error('Verpflichtung speichern fehlgeschlagen:', error)
+    throw error
+  }
+
+  setObligations((prev) => [data as any, ...prev])
+}, [userId])
 
   const summary = useMemo(() => {
     return calculateSummary(incomes, expenses)
