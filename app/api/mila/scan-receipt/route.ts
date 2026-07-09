@@ -185,9 +185,13 @@ return NextResponse.json({
       caseNumber,
       originalCreditor,
       installmentAmount,
-      category: classification.category,
+      category: documentClassification.type === 'inkasso'
+  ? 'inkasso'
+  : classification.category,
       documentType: documentClassification.type,
-      taxHint: classification.taxHint,
+      taxHint: documentClassification.type === 'inkasso'
+  ? 'nicht steuerlich relevant / private Verpflichtung'
+  : classification.taxHint,
       confidence: classification.confidence,
       needsReview: classification.needsReview,
       document,
