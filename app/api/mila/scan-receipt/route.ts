@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { classifyReceipt } from '@/lib/receipt-rules'
-
+import { classifyDocument } from '@/lib/document-classifier'
 function cleanJson(content: string) {
   return content.replace(/```json/gi, '').replace(/```/g, '').trim()
 }
@@ -114,7 +114,11 @@ Antwort nur als JSON, ohne Erklärung.
       amount,
       note: parsed.note || '',
     })
-
+const documentClassification = classifyDocument({
+  title,
+  vendor,
+  note: parsed.note || '',
+})
     const document = {
   title,
   partner: vendor,
