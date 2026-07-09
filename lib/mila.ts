@@ -47,7 +47,7 @@ function compactEntry(entry: any) {
 function buildFinancialContext(contextData?: MilaContextData) {
   const expenses = contextData?.expenses ?? []
   const incomes = contextData?.incomes ?? []
-const obligations = contextData?.obligations ?? []
+  const obligations = contextData?.obligations ?? []
   const summary = contextData?.summary ?? {}
 
   const expenseTotal =
@@ -65,14 +65,15 @@ const obligations = contextData?.obligations ?? []
 
   const openIncomes = incomes.filter((income: any) => {
     const status = String(income.status || '').toLowerCase()
-const openObligations = obligations.filter((item: any) => {
-  const status = String(item.status || '').toLowerCase()
-  return status !== 'bezahlt' && status !== 'paid'
-})
+    return status === 'offen' || status === 'pending'
+  })
 
-const upcomingObligations = openObligations
-  .slice(0, 8)
-  .map((item: any) => ({
+  const openObligations = obligations.filter((item: any) => {
+    const status = String(item.status || '').toLowerCase()
+    return status !== 'bezahlt' && status !== 'paid'
+  })
+
+  const upcomingObligations = openObligations.slice(0, 8).map((item: any) => ({
     title: item.title || '',
     partner: item.partner || item.creditor || '',
     amount: toNumber(item.amount),
@@ -80,8 +81,6 @@ const upcomingObligations = openObligations
     priority: item.priority || 'normal',
     status: item.status || 'offen',
   }))
-    return status === 'offen' || status === 'pending'
-  })
 
   const openIncomeTotal = openIncomes.reduce(
     (sum, income) => sum + toNumber(income.amount),
@@ -92,100 +91,101 @@ const upcomingObligations = openObligations
   const recentIncomes = incomes.slice(0, 12).map(compactEntry)
 
   const categoryTotals: Record<string, number> = {}
-// Kategorien aus Titel/Vendor automatisch erkennen
-const detectedCategories = expenses.map((expense: any) =>
-  getEntryCategory(expense)
-)
 
-// Häufigste automatisch erkannten Kategorien
-const autoCategoryTotals: Record<string, number> = {}
+  const detectedCategories = expenses.map((expense: any) =>
+    getEntryCategory(expense)
+  )
 
-detectedCategories.forEach((cat) => {
-  autoCategoryTotals[cat] = (autoCategoryTotals[cat] || 0) + 1
-})
+  const autoCategoryTotals: Record<string, number> = {}
 
-const topAutoCategories = Object.entries(autoCategoryTotals)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 5)
-  .map(([category, count]) => ({ category, count }))
+  detectedCategories.forEach((cat) => {
+    autoCategoryTotals[cat] = (autoCategoryTotals[cat] || 0) + 1
+  })
+
+  const topAutoCategories = Object.entries(autoCategoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([category, count]) => ({ category, count }))
 
   expenses.forEach((expense: any) => {
-  const category = expense.category || 'sonstiges'
-  categoryTotals[category] =
-    (categoryTotals[category] || 0) + toNumber(expense.amount)
-})
+    const category = expense.category || 'sonstiges'
+    categoryTotals[category] =
+      (categoryTotals[category] || 0) + toNumber(expense.amount)
+  })
 
-const topCategories = Object.entries(categoryTotals)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 6)
-  .map(([category, total]) => ({ category, total }))
+  const topCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([category, total]) => ({ category, total }))
 
-const vendorGroups: Record<string, { count: number; total: number }> = {}
+  const vendorGroups: Record<string, { count: number; total: number }> = {}
 
-expenses.forEach((expense: any) => {
-  const vendor = String(expense.vendor || expense.title || '').trim()
-  if (!vendor) return
+  expenses.forEach((expense: any) => {
+    const vendor = String(expense.vendor || expense.title || '').trim()
+    if (!vendor) return
 
-  const key = vendor.toLowerCase()
-  if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
+    const key = vendor.toLowerCase()
+    if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
 
-  vendorGroups[key].count += 1
-  vendorGroups[key].total += toNumber(expense.amount)
-})
+    vendorGroups[key].count += 1
+    vendorGroups[key].total += toNumber(expense.amount)
+  })
 
-const recurring = Object.entries(vendorGroups)
-  .filter(([, data]) => data.count >= 2)
-  .slice(0, 6)
-  .map(([vendor, data]) => ({
-    vendor,
-    count: data.count,
-    total: data.total,
-    monthlyEstimate: data.total / data.count,
-  }))
+  const recurring = Object.entries(vendorGroups)
+    .filter(([, data]) => data.count >= 2)
+    .slice(0, 6)
+    .map(([vendor, data]) => ({
+      vendor,
+      count: data.count,
+      total: data.total,
+      monthlyEstimate: data.total / data.count,
+    }))
 
-const taxRate =
-  contextData?.userStatus === 'angestellt'
-    ? 0.1
-    : contextData?.userStatus === 'kleinunternehmer'
-    ? 0
-    : 0
+  const taxRate =
+    contextData?.userStatus === 'angestellt'
+      ? 0.1
+      : contextData?.userStatus === 'kleinunternehmer'
+      ? 0
+      : 0
 
-const taxReserve = balance > 0 ? balance * taxRate : 0
-const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
-// Automatisch erkannte Kategorien hinzufügen
-const autoCategories = {
-  detectedCategories,
-  topAutoCategories,
-}
-return {
-  user: {
-    name: contextData?.userName || 'Julia',
-    status: contextData?.userStatus || 'freelancer',
-  },
-  totals: {
-    incomeTotal,
-    expenseTotal,
-    balance,
-    taxReserve,
-    freeAfterReserve,
-    openIncomeCount: openIncomes.length,
-    openIncomeTotal,
-obligations: {
-  openCount: openObligations.length,
-  upcoming: upcomingObligations,
-  },
-  counts: {
-    incomes: incomes.length,
-    expenses: expenses.length,
-  },
-  topCategories,
-  recurring,
-  recentIncomes,
-  recentExpenses,
-  budgetStatus: contextData?.budgetStatus ?? [],
-  milaFeedback: contextData?.milaFeedback || '',
-  autoCategories, // ⬅️ HIER EINTRAGEN
-}
+  const taxReserve = balance > 0 ? balance * taxRate : 0
+  const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
+
+  const autoCategories = {
+    detectedCategories,
+    topAutoCategories,
+  }
+
+  return {
+    user: {
+      name: contextData?.userName || 'Julia',
+      status: contextData?.userStatus || 'freelancer',
+    },
+    totals: {
+      incomeTotal,
+      expenseTotal,
+      balance,
+      taxReserve,
+      freeAfterReserve,
+      openIncomeCount: openIncomes.length,
+      openIncomeTotal,
+    },
+    counts: {
+      incomes: incomes.length,
+      expenses: expenses.length,
+    },
+    topCategories,
+    recurring,
+    obligations: {
+      openCount: openObligations.length,
+      upcoming: upcomingObligations,
+    },
+    recentIncomes,
+    recentExpenses,
+    budgetStatus: contextData?.budgetStatus ?? [],
+    milaFeedback: contextData?.milaFeedback || '',
+    autoCategories,
+  }
 }
 
 async function callGroqChat(messages: ChatMessage[]) {
