@@ -64,7 +64,12 @@ export default function VerpflichtungenPage() {
         <input className="w-full rounded-2xl border p-4" placeholder="Rechnung / Rate / Frist" value={title} onChange={(e) => setTitle(e.target.value)} />
         <input className="w-full rounded-2xl border p-4" placeholder="Gläubiger / Anbieter" value={partner} onChange={(e) => setPartner(e.target.value)} />
         <input className="w-full rounded-2xl border p-4" placeholder="Betrag" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <input className="w-full rounded-2xl border p-4" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+       <input
+  className="block w-full max-w-full rounded-2xl border p-4"
+  type="date"
+  value={dueDate}
+  onChange={(e) => setDueDate(e.target.value)}
+/>
 
         <select className="w-full rounded-2xl border p-4" value={priority} onChange={(e) => setPriority(e.target.value as Obligation['priority'])}>
           <option value="existenz">🔴 Existenz wichtig</option>
