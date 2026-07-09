@@ -29,8 +29,10 @@ export type CategoryId =
   | 'steuern'
   | 'privat'
   | 'sonstiges'
+| 'inkasso'
   | 'bekleidung'
   | 'dekoration'
+
 export interface Category {
   id: CategoryId
   label: string
@@ -275,6 +277,9 @@ sonstiges: {
   icon: 'Tag',
   color: 'var(--chart-5)',
 
+},
+inkasso: {
+  label: '⚖️ Inkasso / Forderung',
 },
 }
 export const CATEGORY_LIST = Object.values(CATEGORIES)
