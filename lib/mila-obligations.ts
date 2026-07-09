@@ -29,7 +29,9 @@ export type Obligation = {
   title: string
   partner: string
   amount: number
-
+  caseNumber?: string
+  originalCreditor?: string
+  installmentAmount?: number
   type: ObligationType
   area: ObligationArea
 
