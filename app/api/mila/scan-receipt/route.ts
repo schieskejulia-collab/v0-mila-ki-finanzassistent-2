@@ -163,6 +163,7 @@ originalCreditor: parsed.originalCreditor || '',
 installmentAmount: Number(parsed.installmentAmount || 0),
 
 note: 'Automatisch von Mila aus Belegscan erstellt 📸',
+}
 return NextResponse.json({
   success: true,
   data: {
