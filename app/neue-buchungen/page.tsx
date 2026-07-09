@@ -209,11 +209,15 @@ if (scannedData.category === 'inkasso') {
     ? new Date(data.dueDate).toLocaleDateString('de-DE')
     : ''
 )
-    if (scannedData.isObligation || scannedData.category === 'inkasso') {
-  setCategory('inkasso')
-} else {
-  setCategory(scannedData.category || 'sonstiges')
-}
+    const categoryId =
+  scannedData.category ||
+  detectCategory(`${scannedData.title || ''} ${scannedData.vendor || ''}`)
+
+setCategory(
+  categoryId === 'inkasso'
+    ? getCategoryLabel('inkasso')
+    : getCategoryLabel(categoryId)
+)
   } catch (error: any) {
     alert(`Netzwerkfehler: ${error.message} ❌`)
   } finally {
