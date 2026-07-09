@@ -102,10 +102,13 @@ Rechnung, Rechnungsnummer, Betrag, Gesamtbetrag, zu zahlen, Fälligkeit, zahlbar
 Antwort nur als JSON, ohne Erklärung.
 `,
               },
-    {
+ {
   type: 'document',
   document: {
-    data: pdfDataUrl,
+    data: {
+      mime_type: 'application/pdf',
+      content: pdfDataUrl.split(',')[1],
+    },
   },
 },
             ],
