@@ -34,9 +34,9 @@ export interface FinanceContextValue {
 
   obligations: Obligation[]
   setObligations: (items: Obligation[]) => void
-  addObligation: (item: Obligation) => void
-  deleteObligation: (id: string) => void
-
+  addObligation: (item: Obligation) => Promise<void>
+updateObligation: (id: string, updates: Partial<Obligation>) => Promise<void>
+deleteObligation: (id: string) => Promise<void>
   documents: MilaDocument[]
   setDocuments: (items: MilaDocument[]) => void
 
@@ -73,7 +73,44 @@ export interface FinanceContextValue {
   summary: any
   budgetStatus: any[]
 }
+const updateObligation = useCallback(
+  async (id: string, updates: Partial<Obligation>) => {
+    if (!userId) throw new Error('Nicht angemeldet.')
 
+    const payload: any = {}
+
+    if (updates.title !== undefined) payload.title = updates.title
+    if (updates.partner !== undefined) payload.partner = updates.partner
+    if ((updates as any).creditor !== undefined) payload.creditor = (updates as any).creditor
+    if (updates.amount !== undefined) payload.amount = Number(updates.amount || 0)
+    if (updates.type !== undefined) payload.type = updates.type
+    if (updates.area !== undefined) payload.area = updates.area
+    if (updates.status !== undefined) payload.status = updates.status
+    if (updates.priority !== undefined) payload.priority = updates.priority
+    if (updates.dueDate !== undefined) payload.due_date = updates.dueDate
+    if ((updates as any).due_date !== undefined) payload.due_date = (updates as any).due_date
+    if ((updates as any).reminder_days !== undefined) payload.reminder_days = Number((updates as any).reminder_days || 3)
+
+    const { data, error } = await supabase
+      .from('obligations')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Verpflichtung aktualisieren fehlgeschlagen:', error)
+      throw error
+    }
+
+    setObligations((prev) =>
+      prev.map((item) =>
+        item.id === id ? normalizeObligation(data) : item
+      )
+    )
+  },
+  [userId]
+)
 export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 function profileKey(userId?: string) {
@@ -519,7 +556,8 @@ const deleteObligation = useCallback(async (id: string) => {
       obligations,
       setObligations,
       addObligation,
-      deleteObligation,
+updateObligation,
+deleteObligation,
 
       documents,
       setDocuments,
@@ -569,7 +607,8 @@ const deleteObligation = useCallback(async (id: string) => {
       updateIncomeStatus,
       obligations,
       addObligation,
-      deleteObligation,
+updateObligation,
+deleteObligation,
       documents,
       userName,
       userStatus,
