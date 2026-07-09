@@ -87,10 +87,6 @@ const upcomingObligations = openObligations
     (sum, income) => sum + toNumber(income.amount),
     0
   )
-Offene Verpflichtungen: ${context.obligations.openCount}
-Nächste Verpflichtungen: ${context.obligations.upcoming
-  .map((o: any) => `${o.title} bei ${o.partner}, ${money(o.amount)}, fällig ${o.dueDate}`)
-  .join(' | ') || 'keine'}
 
   const recentExpenses = expenses.slice(0, 12).map(compactEntry)
   const recentIncomes = incomes.slice(0, 12).map(compactEntry)
