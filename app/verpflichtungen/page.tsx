@@ -7,12 +7,9 @@ import type { Obligation } from '@/lib/mila-obligations'
 function money(value: number) {
 function dateDE(value: string) {
   if (!value) return ''
-  return new Date(value).toLocaleDateString('de-DE')
-}
-  return Number(value || 0).toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+  const [year, month, day] = value.split('-')
+  if (!year || !month || !day) return value
+  return `${day}.${month}.${year}`
 }
 
 export default function VerpflichtungenPage() {
