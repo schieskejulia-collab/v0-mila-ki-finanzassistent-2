@@ -296,6 +296,10 @@ Ausgaben: ${money(context.totals.expenseTotal)}
 Überschuss: ${money(context.totals.balance)}
 Rücklage: ${money(context.totals.taxReserve)}
 Offene Einnahmen: ${context.totals.openIncomeCount} (${money(context.totals.openIncomeTotal)})
+Offene Verpflichtungen: ${context.obligations.openCount}
+Nächste Verpflichtungen: ${context.obligations.upcoming
+  .map((o: any) => `${o.title} bei ${o.partner}, ${money(o.amount)}, fällig ${o.dueDate}`)
+  .join(' | ') || 'keine'}
 Häufige Kategorien: ${context.topCategories.map(c => c.category).slice(0,3).join(', ')}
 
 Nutze diese Werte nur, wenn sie zur aktuellen Frage passen.
