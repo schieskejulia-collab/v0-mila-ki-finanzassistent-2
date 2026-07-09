@@ -363,12 +363,13 @@ const anchorMessage =
 
     {openCount === 0 &&
 
-      overdueCount === 0 &&
+  overdueCount === 0 &&
 
-      recurringExpenses.length === 0 &&
+  openObligations.length === 0 &&
 
-      softwareExpenses.length === 0 && (
+  recurringExpenses.length === 0 &&
 
+  softwareExpenses.length === 0 && (
         <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-3">
 
           <p className="font-black text-emerald-700">
