@@ -468,6 +468,21 @@ setDocuments(documentsData || [])
 
   setObligations((prev) => [data as any, ...prev])
 }, [userId])
+const deleteObligation = useCallback(async (id: string) => {
+  if (!userId) throw new Error('Nicht angemeldet.')
+
+  const { error } = await supabase
+    .from('obligations')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Verpflichtung löschen fehlgeschlagen:', error)
+    throw error
+  }
+
+  setObligations((prev) => prev.filter((item) => item.id !== id))
+}, [userId])
 
   const summary = useMemo(() => {
     return calculateSummary(incomes, expenses)
