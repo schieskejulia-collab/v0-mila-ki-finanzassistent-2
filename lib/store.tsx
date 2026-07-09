@@ -75,18 +75,7 @@ deleteObligation: (id: string) => Promise<void>
 }
     const payload: any = {}
 
-    if (updates.title !== undefined) payload.title = updates.title
-    if (updates.partner !== undefined) payload.partner = updates.partner
-    if ((updates as any).creditor !== undefined) payload.creditor = (updates as any).creditor
-    if (updates.amount !== undefined) payload.amount = Number(updates.amount || 0)
-    if (updates.type !== undefined) payload.type = updates.type
-    if (updates.area !== undefined) payload.area = updates.area
-    if (updates.status !== undefined) payload.status = updates.status
-    if (updates.priority !== undefined) payload.priority = updates.priority
-    if (updates.dueDate !== undefined) payload.due_date = updates.dueDate
-    if ((updates as any).due_date !== undefined) payload.due_date = (updates as any).due_date
-    if ((updates as any).reminder_days !== undefined) payload.reminder_days = Number((updates as any).reminder_days || 3)
-
+  
     export const FinanceContext = createContext<FinanceContextValue | null>(null)
 
 function profileKey(userId?: string) {
@@ -437,7 +426,45 @@ setDocuments(documentsData || [])
 
     setExpenses((prev) => prev.filter((expense) => expense.id !== id))
   }, [])
+const updateObligation = useCallback(
+  async (id: string, updates: Partial<Obligation>) => {
+    if (!userId) throw new Error('Nicht angemeldet.')
 
+    const payload: any = {}
+
+    if (updates.title !== undefined) payload.title = updates.title
+    if (updates.partner !== undefined) payload.partner = updates.partner
+    if ((updates as any).creditor !== undefined)
+      payload.creditor = (updates as any).creditor
+    if (updates.amount !== undefined)
+      payload.amount = Number(updates.amount || 0)
+    if (updates.type !== undefined) payload.type = updates.type
+    if (updates.area !== undefined) payload.area = updates.area
+    if (updates.status !== undefined) payload.status = updates.status
+    if (updates.priority !== undefined) payload.priority = updates.priority
+    if (updates.dueDate !== undefined)
+      payload.due_date = updates.dueDate
+
+    const { data, error } = await supabase
+      .from('obligations')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Verpflichtung aktualisieren fehlgeschlagen:', error)
+      throw error
+    }
+
+    setObligations((prev) =>
+      prev.map((item) =>
+        item.id === id ? normalizeObligation(data) : item
+      )
+    )
+  },
+  [userId]
+)
   const deleteIncome = useCallback(async (id: any) => {
     const { error } = await supabase.from('incomes').delete().eq('id', id)
 
