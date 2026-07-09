@@ -209,7 +209,11 @@ if (scannedData.category === 'inkasso') {
     ? new Date(data.dueDate).toLocaleDateString('de-DE')
     : ''
 )
-    setCategory('Sonstiges')
+    if (scannedData.isObligation || scannedData.category === 'inkasso') {
+  setCategory('inkasso')
+} else {
+  setCategory(scannedData.category || 'sonstiges')
+}
   } catch (error: any) {
     alert(`Netzwerkfehler: ${error.message} ❌`)
   } finally {
