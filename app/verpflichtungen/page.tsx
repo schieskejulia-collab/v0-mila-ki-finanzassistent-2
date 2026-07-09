@@ -17,7 +17,32 @@ function dateDE(value: string) {
   if (!year || !month || !day) return value
   return `${day}.${month}.${year}`
 }
+function daysUntil(value: string) {
+  if (!value) return null
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(value)
+  due.setHours(0, 0, 0, 0)
+
+  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function priorityLabel(value: string) {
+  if (value === 'existenz') return '🔴 Existenz wichtig'
+  if (value === 'wichtig') return '🟡 Wichtig'
+  return '🟢 Normal'
+}
+
+function dueLabel(days: number | null) {
+  if (days === null) return ''
+  if (days < 0) return `🚨 ${Math.abs(days)} Tag(e) überfällig`
+  if (days === 0) return '🚨 Heute fällig'
+  if (days === 1) return '⏰ Morgen fällig'
+  if (days <= 3) return `⏰ In ${days} Tagen fällig`
+  return `📅 In ${days} Tagen fällig`
+}
 export default function VerpflichtungenPage() {
   const finance = useFinance()
 
@@ -108,7 +133,19 @@ export default function VerpflichtungenPage() {
               <p className="text-sm text-slate-500">
   Fällig: {dateDE(item.dueDate || item.due_date)}
 </p>
+<div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+    {priorityLabel(item.priority)}
+  </span>
 
+  <span className="rounded-full bg-purple-50 px-3 py-1 text-purple-700">
+    {dueLabel(daysUntil(item.dueDate || item.due_date))}
+  </span>
+
+  <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+    🟡 {item.status || 'offen'}
+  </span>
+</div>
               <button onClick={() => deleteObligation(item.id)} className="mt-3 text-sm font-bold text-red-500">
                 Löschen
               </button>
