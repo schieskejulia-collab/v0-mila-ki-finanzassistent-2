@@ -146,9 +146,29 @@ export default function VerpflichtungenPage() {
     🟡 {item.status || 'offen'}
   </span>
 </div>
-              <button onClick={() => deleteObligation(item.id)} className="mt-3 text-sm font-bold text-red-500">
-                Löschen
-              </button>
+             <div className="mt-4 flex gap-4">
+
+  {item.status !== 'bezahlt' && (
+    <button
+      onClick={() =>
+        finance.updateObligation?.(item.id, {
+          status: 'bezahlt',
+        })
+      }
+      className="font-bold text-green-600"
+    >
+      ✅ Bezahlt
+    </button>
+  )}
+
+  <button
+    onClick={() => deleteObligation(item.id)}
+    className="font-bold text-red-500"
+  >
+    Löschen
+  </button>
+
+</div>
             </div>
           ))
         )}
