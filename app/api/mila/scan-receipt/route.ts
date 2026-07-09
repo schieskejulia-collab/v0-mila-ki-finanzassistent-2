@@ -155,6 +155,9 @@ const documentClassification = classifyDocument({
   keepUntil: new Date(
     new Date().setFullYear(new Date().getFullYear() + 1)
   )
+caseNumber: result.caseNumber || '',
+originalCreditor: result.originalCreditor || '',
+installmentAmount: result.installmentAmount || 0,
     .toISOString()
     .slice(0, 10),
   note: 'Automatisch von Mila aus Belegscan erstellt 📸',
@@ -175,7 +178,7 @@ return NextResponse.json({
 documentType: documentClassification.type,
 documentMessage: documentClassification.message,
 documentPriority: documentClassification.priority,
-    },
+
   },
 })
   } catch (error) {
