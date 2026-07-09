@@ -79,7 +79,7 @@ Kategorie-Regeln:
 - Eine Inkasso-Forderung ist immer isObligation = true.
 - Speichere ursprünglichen Anbieter (z.B. Klarna) in note, wenn erkennbar.
 - isObligation ist true bei Rechnung, Mahnung, Inkasso, Rate, Vertrag mit Zahlungspflicht oder Zahlungsfrist.
-- dueDate im Format YYYY-MM-DD, wenn erkennbar. Sonst "".
+- dueDate im Format DD-MM-YYYY, wenn erkennbar. Sonst "".
 - caseNumber ist Aktenzeichen, Kundennummer, Vertragsnummer oder Rechnungsnummer, wenn eindeutig erkennbar.
 - originalCreditor ist der ursprüngliche Gläubiger oder Anbieter, z.B. Klarna, Vodafone, PayPal.
 - installmentAmount ist die angebotene oder geforderte Rate, wenn eine Ratenzahlung genannt wird. Sonst 0.
@@ -150,7 +150,7 @@ const documentClassification = classifyDocument({
   type: documentClassification.type,
   status: 'neu',
   documentDate: new Date().toISOString().slice(0, 10),
-  dueDate: undefined,
+  dueDate: result.dueDate || result.due_date || '',
   fileName: title,
  keepUntil: new Date(
   new Date().setFullYear(new Date().getFullYear() + 1)
