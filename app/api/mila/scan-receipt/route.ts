@@ -132,41 +132,48 @@ Antwort nur als JSON, ohne Erklärung.
     }
 
     const vendor = String(parsed.vendor || '').trim()
-    const title = String(parsed.title || vendor || 'Beleg').trim()
-    const amount = normalizeAmount(parsed.amount)
+const title = String(parsed.title || vendor || 'Beleg').trim()
+const amount = normalizeAmount(parsed.amount)
+const dueDate = String(parsed.dueDate || parsed.due_date || '').trim()
+const caseNumber = String(parsed.caseNumber || '').trim()
+const originalCreditor = String(parsed.originalCreditor || '').trim()
+const installmentAmount = normalizeAmount(parsed.installmentAmount)
 
-    const classification = classifyReceipt({
-      title,
-      vendor,
-      amount,
-      note: parsed.note || '',
-    })
+console.log('MILA SCAN RESULT:', parsed)
+
+const classification = classifyReceipt({
+  title,
+  vendor,
+  amount,
+  note: parsed.note || '',
+})
+
 const documentClassification = classifyDocument({
   title,
   vendor,
   note: parsed.note || '',
 })
-    const document = {
+
+const document = {
   title,
   partner: vendor,
   amount,
   type: documentClassification.type,
   status: 'neu',
   documentDate: new Date().toISOString().slice(0, 10),
-  dueDate: parsed.dueDate || parsed.due_date || '',
+  dueDate,
   fileName: title,
- keepUntil: new Date(
-  new Date().setFullYear(new Date().getFullYear() + 1)
-)
-  .toISOString()
-  .slice(0, 10),
-
-caseNumber: parsed.caseNumber || '',
-originalCreditor: parsed.originalCreditor || '',
-installmentAmount: Number(parsed.installmentAmount || 0),
-
-note: 'Automatisch von Mila aus Belegscan erstellt 📸',
+  keepUntil: new Date(
+    new Date().setFullYear(new Date().getFullYear() + 1)
+  )
+    .toISOString()
+    .slice(0, 10),
+  caseNumber,
+  originalCreditor,
+  installmentAmount,
+  note: 'Automatisch von Mila aus Belegscan erstellt 📸',
 }
+
 return NextResponse.json({
   success: true,
   data: {
@@ -174,13 +181,18 @@ return NextResponse.json({
       amount,
       vendor,
       title,
+      dueDate,
+      caseNumber,
+      originalCreditor,
+      installmentAmount,
       category: classification.category,
+      documentType: documentClassification.type,
       taxHint: classification.taxHint,
       confidence: classification.confidence,
       needsReview: classification.needsReview,
       document,
+    },
   },
-},
 })
   } catch (error) {
     console.error('Scan Fehler:', error)
