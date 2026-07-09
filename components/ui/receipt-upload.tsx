@@ -27,7 +27,7 @@ export function ReceiptUpload({
       const formData = new FormData()
       formData.append('file', file)
 
-      setStatusText('Mila liest deine PDF-Rechnung...')
+      setStatusText('PDF wird sicher abgelegt...')
 
       res = await fetch('/api/mila/scan-document', {
         method: 'POST',
@@ -95,8 +95,8 @@ if (scanPayload && onScanSuccess) {
         </p>
 
         <p className="mt-1 text-xs font-semibold text-slate-400">
-          Mila erkennt Betrag, Händler und Kategorie automatisch.
-        </p>
+  Bilder liest Mila automatisch. PDFs werden erstmal sicher abgelegt.
+</p>
 
         <input
   ref={inputRef}
