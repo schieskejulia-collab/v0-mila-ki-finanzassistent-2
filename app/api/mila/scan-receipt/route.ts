@@ -123,7 +123,7 @@ const documentClassification = classifyDocument({
   title,
   partner: vendor,
   amount,
-  type: classification.needsReview ? 'sonstiges' : 'beleg',
+  type: documentClassification.type,
   status: 'neu',
   documentDate: new Date().toISOString().slice(0, 10),
   dueDate: undefined,
@@ -148,6 +148,9 @@ return NextResponse.json({
       confidence: classification.confidence,
       needsReview: classification.needsReview,
       document,
+documentType: documentClassification.type,
+documentMessage: documentClassification.message,
+documentPriority: documentClassification.priority,
     },
   },
 })
