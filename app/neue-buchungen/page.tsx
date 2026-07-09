@@ -52,7 +52,7 @@ function shouldCalculateTaxReserve(title: string) {
   ].some((word) => text.includes(word))
 }
 export default function NeueBuchungPage() {
-const { documents, setDocuments, addExpense, addIncome, incomes, expenses } = useFinance()
+const { documents, setDocuments, addExpense, addIncome, addObligation, incomes, expenses } = useFinance()
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
@@ -101,6 +101,30 @@ setNote(scannedData.note || 'Automatisch von Mila ausgelesen 📸')
 if (scannedData.document) {
   setDocuments([...documents, scannedData.document])
 }
+}
+async function alsVerpflichtungSpeichern() {
+  if (!title || !amount || !partner || !dueDate) {
+    alert('Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾')
+    return
+  }
+
+  addObligation({
+    id: crypto.randomUUID(),
+    title: title.trim(),
+    partner: partner.trim(),
+    creditor: partner.trim(),
+    amount: Number(String(amount).replace(',', '.')),
+    type: 'rechnung',
+    area: 'privat',
+    dueDate,
+    due_date: dueDate as any,
+    status: 'offen',
+    priority: 'normal',
+    reminderDays: [14, 3, 0],
+    reminder_days: 3 as any,
+  })
+
+  alert('Als Verpflichtung gespeichert ✅')
 }
   async function speichern() {
   if (isSaving) return
@@ -278,6 +302,17 @@ if (scannedData.document) {
     </p>
   </>
 )}
+<input
+  type="date"
+  value={dueDate}
+  onChange={(e) => setDueDate(e.target.value)}
+  className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+  aria-label="Fälligkeitsdatum"
+/>
+
+<p className="text-xs text-slate-500">
+  Fälligkeitsdatum optional – für Rechnungen/PDFs wichtig
+</p>
         {type === 'expense' && (
           <select
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
@@ -327,7 +362,15 @@ if (scannedData.document) {
           </p>
         </section>
       )}
-
+{type === 'expense' && title && (
+  <button
+    type="button"
+    onClick={alsVerpflichtungSpeichern}
+    className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white shadow-md"
+  >
+    🧾 Als Verpflichtung speichern
+  </button>
+)}
      <button
   type="button"
   onClick={speichern}
