@@ -185,15 +185,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setDocuments(savedDocuments ? JSON.parse(savedDocuments) : [])
     setProfileLoaded(true)
   }, [])
-function normalizeObligation(item: any): Obligation {
-  return {
-    ...item,
-    dueDate: item.dueDate || item.due_date || '',
-    due_date: item.due_date || item.dueDate || '',
-    reminderDays: item.reminderDays || [14, 3, 0],
-    reminder_days: item.reminder_days || 3,
-  } as Obligation
-}
+
   const fetchFinanceData = useCallback(async (uid?: string) => {
   if (!uid) {
     setExpenses([])
