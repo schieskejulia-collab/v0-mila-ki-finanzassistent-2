@@ -1161,49 +1161,50 @@ export function FinanceProvider({
       [userId]
     )
 
-  const deleteDocument = useCallback((id: string) => {
+const deleteObligation = useCallback(
+  async (id: string) => {
+    if (!id) {
+      console.warn(
+        'Verpflichtung konnte nicht gelöscht werden: ID fehlt.'
+      )
+      return
+    }
+
+    if (!userId) {
+      setObligations((previous) =>
+        previous.filter((item) => item.id !== id)
+      )
+      return
+    }
+
+    const { error } = await supabase
+      .from('obligations')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error(
+        'Verpflichtung löschen fehlgeschlagen:',
+        error
+      )
+      throw error
+    }
+
+    setObligations((previous) =>
+      previous.filter((item) => item.id !== id)
+    )
+  },
+  [userId]
+)
+
+const deleteDocument = useCallback((id: string) => {
   if (!id) {
-    console.warn('Dokument konnte nicht gelöscht werden: ID fehlt.')
+    console.warn(
+      'Dokument konnte nicht gelöscht werden: ID fehlt.'
+    )
     return
   }
 
-  setDocuments((previous) =>
-    previous.filter((item: any) => item.id !== id)
-  )
-}, [])
-          return
-        }
-const deleteDocument = useCallback((id: string) => {
-  setDocuments((previous) =>
-    previous.filter((item: any) => item.id !== id)
-  )
-}, [])
-        const { error } =
-          await supabase
-            .from('obligations')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-          console.error(
-            'Verpflichtung löschen fehlgeschlagen:',
-            error
-          )
-
-          throw error
-        }
-
-        setObligations(
-          (previous) =>
-            previous.filter(
-              (item) =>
-                item.id !== id
-            )
-        )
-      },
-      [userId]
-    )
-const deleteDocument = useCallback((id: string) => {
   setDocuments((previous) =>
     previous.filter((item: any) => item.id !== id)
   )
