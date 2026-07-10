@@ -962,26 +962,29 @@ export function FinanceProvider({
       new Date().toISOString(),
   })
         if (!userId) {
-          setObligations(
-            (previous) => [
-const alreadyExists = previous.some(
-  (old) =>
-    old.partner?.toLowerCase() ===
-      normalizedItem.partner?.toLowerCase() &&
-    Number(old.amount) === Number(normalizedItem.amount)
-)
+  setObligations((previous) => {
+    const alreadyExists = previous.some(
+      (old) =>
+        String(old.partner || '').toLowerCase() ===
+          String(normalizedItem.partner || '').toLowerCase() &&
+        Number(old.amount) === Number(normalizedItem.amount) &&
+        String(old.dueDate || '') ===
+          String(normalizedItem.dueDate || '')
+    )
 
-if (alreadyExists) {
-  return previous
+    if (alreadyExists) {
+      alert('Diese Verpflichtung ist bereits vorhanden. ⚠️')
+      return previous
+    }
+
+    return [
+      normalizedItem,
+      ...previous,
+    ]
+  })
+
+  return
 }
-              normalizedItem,
-              ...previous,
-            ]
-          )
-
-          return
-        }
-
         const payload = {
   user_id: userId,
 
