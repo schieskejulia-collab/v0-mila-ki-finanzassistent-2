@@ -1048,143 +1048,99 @@ export function FinanceProvider({
       ...updates,
       paidAt:
         updates.status === 'bezahlt'
-          ? new Date().toISOString()
+          ? updates.paidAt || new Date().toISOString()
           : updates.paidAt,
     }
-        id: string,
-        updates: Partial<Obligation>
-      ) => {
-        if (!userId) {
-          setObligations(
-            (previous) =>
-              previous.map((item) =>
-                item.id === id
-                  ? normalizeObligation({
-                      ...item,
-                      ...updates,
-                    })
-                  : item
-              )
-          )
 
-          return
-        }
-
-        const payload: any = {}
-
-        if (
-          updates.title !== undefined
-        ) {
-          payload.title =
-            updates.title
-        }
-
-        if (
-          updates.partner !==
-          undefined
-        ) {
-          payload.partner =
-            updates.partner
-        }
-
-        if (
-          (updates as any)
-            .creditor !== undefined
-        ) {
-          payload.creditor = (
-            updates as any
-          ).creditor
-        }
-
-        if (
-          updates.amount !== undefined
-        ) {
-          payload.amount = Number(
-            updates.amount || 0
-          )
-        }
-
-        if (
-          updates.type !== undefined
-        ) {
-          payload.type = updates.type
-        }
-
-        if (
-          updates.area !== undefined
-        ) {
-          payload.area = updates.area
-        }
-
-        if (
-          updates.status !== undefined
-        ) {
-          payload.status =
-            updates.status
-        }
-
-        if (
-          updates.priority !==
-          undefined
-        ) {
-          payload.priority =
-            updates.priority
-        }
-if (finalUpdates.status !== undefined) {
-  payload.status = finalUpdates.status
-}
-
-if (finalUpdates.paidAt !== undefined) {
-  payload.paid_at = finalUpdates.paidAt
-}
-        if (
-          updates.dueDate !==
-          undefined
-        ) {
-          payload.due_date =
-            updates.dueDate
-        }
-
-        if (
-          (updates as any)
-            .due_date !== undefined
-        ) {
-          payload.due_date = (
-            updates as any
-          ).due_date
-        }
-
-        const { data, error } =
-          await supabase
-            .from('obligations')
-            .update(payload)
-            .eq('id', id)
-            .select()
-            .single()
-
-        if (error) {
-          console.error(
-            'Verpflichtung aktualisieren fehlgeschlagen:',
-            error
-          )
-
-          throw error
-        }
-
-        setObligations(
-          (previous) =>
-            previous.map((item) =>
-              item.id === id
-                ? normalizeObligation(
-                    data
-                  )
-                : item
-            )
+    if (!userId) {
+      setObligations((previous) =>
+        previous.map((item) =>
+          item.id === id
+            ? normalizeObligation({
+                ...item,
+                ...finalUpdates,
+              })
+            : item
         )
-      },
-      [userId]
-    )
+      )
 
+      return
+    }
+
+    const payload: any = {}
+
+    if (finalUpdates.title !== undefined) {
+      payload.title = finalUpdates.title
+    }
+
+    if (finalUpdates.partner !== undefined) {
+      payload.partner = finalUpdates.partner
+    }
+
+    if ((finalUpdates as any).creditor !== undefined) {
+      payload.creditor = (finalUpdates as any).creditor
+    }
+
+    if (finalUpdates.amount !== undefined) {
+      payload.amount = Number(finalUpdates.amount || 0)
+    }
+
+    if (finalUpdates.type !== undefined) {
+      payload.type = finalUpdates.type
+    }
+
+    if (finalUpdates.area !== undefined) {
+      payload.area = finalUpdates.area
+    }
+
+    if (finalUpdates.status !== undefined) {
+      payload.status = finalUpdates.status
+    }
+
+    if (finalUpdates.priority !== undefined) {
+      payload.priority = finalUpdates.priority
+    }
+
+    if (finalUpdates.dueDate !== undefined) {
+      payload.due_date = finalUpdates.dueDate
+    }
+
+    if ((finalUpdates as any).due_date !== undefined) {
+      payload.due_date = (finalUpdates as any).due_date
+    }
+
+    if (finalUpdates.paidAt !== undefined) {
+      payload.paid_at = finalUpdates.paidAt
+    }
+
+    const { data, error } = await supabase
+      .from('obligations')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error(
+        'Verpflichtung aktualisieren fehlgeschlagen:',
+        error
+      )
+      throw error
+    }
+
+    setObligations((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? normalizeObligation({
+              ...data,
+              paidAt: data.paid_at || '',
+            })
+          : item
+      )
+    )
+  },
+  [userId]
+)
 const deleteObligation = useCallback(
   async (id: string) => {
     if (!id) {
