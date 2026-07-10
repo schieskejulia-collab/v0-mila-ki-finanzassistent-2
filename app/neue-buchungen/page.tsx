@@ -1,13 +1,24 @@
 'use client'
+
 import { useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
-import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
+import {
+  CATEGORY_LIST,
+  detectCategory,
+  getCategoryLabel,
+} from '@/lib/categories'
 import { saveMerchantMemory } from '@/lib/merchant-memory'
-const categories = [
-  ...CATEGORY_LIST.map((category) => category.label),
-  '⚖️ Inkasso / Forderung',
-]
+
+const INKASSO_LABEL = '⚖️ Inkasso / Forderung'
+
+const categories = Array.from(
+  new Set([
+    ...CATEGORY_LIST.map((category) => category.label),
+    INKASSO_LABEL,
+  ])
+)
+
 function getTaxHint(category: string) {
   const pruefen = [
     'Reisen & Unterkünfte',
@@ -17,8 +28,11 @@ function getTaxHint(category: string) {
     'Sonstiges',
   ]
 
-  if (category === 'Privat / Nicht absetzbar') {
-    return 'wahrscheinlich nein'
+  if (
+    category === 'Privat / Nicht absetzbar' ||
+    category === INKASSO_LABEL
+  ) {
+    return 'wahrscheinlich nein / private Verpflichtung'
   }
 
   if (pruefen.includes(category)) {
@@ -29,223 +43,289 @@ function getTaxHint(category: string) {
 }
 
 function formatEuro(value: number) {
-  return value.toLocaleString('de-DE', {
+  return Number(value || 0).toLocaleString('de-DE', {
     style: 'currency',
     currency: 'EUR',
   })
 }
-function shouldCalculateTaxReserve(title: string) {
-  const text = title.toLowerCase()
 
-  return ![
-    'test',
-    'kindergeld',
-    'unterhalt',
-    'erstattung',
-    'rückzahlung',
-    'rueckzahlung',
-    'darlehen',
-    'kredit',
-    'privat',
-    'umbuchung',
-    'geschenk',
-    'lohn',
-    'gehalt',
-  ].some((word) => text.includes(word))
-}
 export default function NeueBuchungPage() {
-const { documents, setDocuments, addExpense, addIncome, addObligation, incomes, expenses } = useFinance()
-  const [type, setType] = useState<'expense' | 'income'>('expense')
+  const {
+    documents,
+    setDocuments,
+    addExpense,
+    addIncome,
+    addObligation,
+    incomes,
+    expenses,
+  } = useFinance()
+
+  const [type, setType] =
+    useState<'expense' | 'income'>('expense')
+
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [partner, setPartner] = useState('')
   const [category, setCategory] = useState('Sonstiges')
-const [note, setNote] = useState('')
-const [status, setStatus] = useState('offen')
-const [dueDate, setDueDate] = useState('')
-const [isSaving, setIsSaving] = useState(false)
-  const numericAmount = Number(amount || 0)
+  const [note, setNote] = useState('')
+  const [status, setStatus] = useState('offen')
+  const [dueDate, setDueDate] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const numericAmount = Number(
+    String(amount || 0).replace(',', '.')
+  )
+
   const taxStatus = getTaxHint(category)
-const deductible = type === 'expense' && taxStatus === 'wahrscheinlich ja'
-const taxReserve = 0
+
+  const deductible =
+    type === 'expense' &&
+    taxStatus === 'wahrscheinlich ja'
+
+  const taxReserve = 0
   const taxHint = deductible ? numericAmount * 0.3 : 0
 
   function updateTitle(value: string) {
-  setTitle(value)
+    setTitle(value)
 
-  if (type === 'expense') {
-    const detected = detectCategory(value)
-    setCategory(getCategoryLabel(detected))
-  }
-}
-
-function updatePartner(value: string) {
-  setPartner(value)
-}
-
- const handleScanSuccess = (rawData: any) => {
-  const scannedData =
-    rawData?.data?.data ||
-    rawData?.data ||
-    rawData
-
-  if (!scannedData) {
-    alert('Mila hat keine auswertbaren Daten erhalten.')
-    return
+    if (type === 'expense') {
+      const detected = detectCategory(value)
+      setCategory(getCategoryLabel(detected))
+    }
   }
 
-  setType('expense')
-  setTitle(String(scannedData.title || '').trim())
-  setAmount(String(scannedData.amount ?? ''))
-  setPartner(String(scannedData.vendor || '').trim())
-
-  setDueDate(
-    String(
-      scannedData.dueDate ||
-      scannedData.document?.dueDate ||
-      ''
-    )
-  )
-
- const categoryId =
-  scannedData.documentType === 'inkasso' ||
-  scannedData.category === 'inkasso'
-    ? 'inkasso'
-    : detectCategory(
-        `${scannedData.title || ''} ${scannedData.vendor || ''}`
-      )
-
-const categoryLabel = getCategoryLabel(categoryId)
-setCategory(categoryLabel)
-
-  setNote(
-    scannedData.note ||
-    'Automatisch von Mila ausgelesen 📸'
-  )
-
-  if (scannedData.document) {
-    setDocuments([
-      ...documents,
-      scannedData.document,
-    ])
-  }
-}
-
-async function alsVerpflichtungSpeichern() {
-  addObligation({
-    id: crypto.randomUUID(),
-    title: title.trim(),
-    partner: partner.trim(),
-    creditor: partner.trim(),
-    amount: Number(String(amount).replace(',', '.')),
-    type: 'rechnung',
-    area: 'privat',
-    dueDate,
-    due_date: dueDate as any,
-    status: 'offen',
-    priority: 'normal',
-    reminderDays: [14, 3, 0],
-    reminder_days: 3 as any,
-  })
-
-  alert('Als Verpflichtung gespeichert ✅')
-}
-  async function speichern() {
-  if (isSaving) return
-
-  if (!title || !amount) {
-    alert('Bitte zumindest Titel und Betrag ausfüllen! ⚠️')
-    return
+  function updatePartner(value: string) {
+    setPartner(value)
   }
 
-  setIsSaving(true)
+  const handleScanSuccess = (rawData: any) => {
+    const scannedData =
+      rawData?.data?.data ||
+      rawData?.data ||
+      rawData
 
-  const payload: any = {
-    title: title.trim(),
-    amount: numericAmount,
-    note: note || '',
-    date: new Date().toISOString().slice(0, 10),
-  }
-
-  if (type === 'expense') {
-    payload.vendor = partner || ''
-    payload.category = category || 'Sonstiges'
-    payload.hasReceipt = true
-    payload.vat = 19
-    payload.source = 'manuell'
-  } else {
-    payload.client = partner || ''
-    payload.tax_reserve = taxReserve
-    payload.status = status
-    payload.due_date = dueDate || null
-    payload.source = 'manuell'
-    payload.vat = 19
-  }
-
-  try {
-    const existingItems = type === 'expense' ? expenses : incomes
-
-    const duplicate = existingItems.find((item: any) => {
-      const sameTitle =
-        String(item.title || '').trim().toLowerCase() ===
-        String(payload.title || '').trim().toLowerCase()
-
-      const sameAmount = Number(item.amount) === Number(payload.amount)
-
-      const sameDate =
-        String(item.date || '').slice(0, 10) ===
-        String(payload.date || '').slice(0, 10)
-
-      return sameTitle && sameAmount && sameDate
-    })
-
-    if (duplicate) {
-      alert('⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.')
+    if (!scannedData) {
+      alert('Mila hat keine auswertbaren Daten erhalten.')
       return
     }
 
-    if (partner && type === 'expense') {
-      saveMerchantMemory({
-        merchant: partner,
-        category: detectCategory(category),
-        taxHint: taxStatus,
+    const scannedTitle = String(
+      scannedData.title || ''
+    ).trim()
+
+    const scannedVendor = String(
+      scannedData.vendor || ''
+    ).trim()
+
+    const isInkasso =
+      scannedData.category === 'inkasso' ||
+      scannedData.documentType === 'inkasso' ||
+      scannedData.isObligation === true
+
+    const detectedCategory = detectCategory(
+      `${scannedTitle} ${scannedVendor}`
+    )
+
+    const categoryLabel = isInkasso
+      ? INKASSO_LABEL
+      : getCategoryLabel(
+          scannedData.category || detectedCategory
+        )
+
+    setType('expense')
+    setTitle(scannedTitle)
+    setAmount(String(scannedData.amount ?? ''))
+    setPartner(scannedVendor)
+
+    setDueDate(
+      String(
+        scannedData.dueDate ||
+          scannedData.due_date ||
+          scannedData.document?.dueDate ||
+          scannedData.document?.due_date ||
+          ''
+      )
+    )
+
+    setCategory(categoryLabel)
+
+    setNote(
+      scannedData.note ||
+        'Automatisch von Mila ausgelesen 📸'
+    )
+
+    if (scannedData.document) {
+      setDocuments([
+        ...documents,
+        scannedData.document,
+      ])
+    }
+  }
+
+  async function alsVerpflichtungSpeichern() {
+    if (!title.trim() || !amount || !partner.trim() || !dueDate) {
+      alert(
+        'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
+      )
+      return
+    }
+
+    try {
+      await addObligation({
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        partner: partner.trim(),
+        creditor: partner.trim(),
+        amount: numericAmount,
+        type:
+          category === INKASSO_LABEL
+            ? 'inkasso'
+            : 'rechnung',
+        area: 'privat',
+        dueDate,
+        due_date: dueDate as any,
+        status: 'offen',
+        priority:
+          category === INKASSO_LABEL
+            ? 'wichtig'
+            : 'normal',
+        reminderDays: [14, 3, 0],
+        reminder_days: 3 as any,
       })
+
+      alert('Als Verpflichtung gespeichert ✅')
+    } catch (error: any) {
+      alert(
+        `Verpflichtung konnte nicht gespeichert werden: ${
+          error?.message || 'Unbekannter Fehler'
+        }`
+      )
+    }
+  }
+
+  async function speichern() {
+    if (isSaving) return
+
+    if (!title.trim() || !amount) {
+      alert(
+        'Bitte zumindest Titel und Betrag ausfüllen! ⚠️'
+      )
+      return
+    }
+
+    setIsSaving(true)
+
+    const payload: any = {
+      title: title.trim(),
+      amount: numericAmount,
+      note: note || '',
+      date: new Date().toISOString().slice(0, 10),
     }
 
     if (type === 'expense') {
-      await addExpense(payload)
+      payload.vendor = partner || ''
+      payload.category = category || 'Sonstiges'
+      payload.hasReceipt = true
+      payload.vat = 19
+      payload.source = 'manuell'
     } else {
-      await addIncome(payload)
+      payload.client = partner || ''
+      payload.tax_reserve = taxReserve
+      payload.status = status
+      payload.due_date = dueDate || null
+      payload.source = 'manuell'
+      payload.vat = 19
     }
 
-    alert(
-  `${
-    type === 'expense'
-      ? 'Ausgabe'
-      : 'Einnahme'
-  } erfolgreich gespeichert! ✅`
-)
+    try {
+      const existingItems =
+        type === 'expense' ? expenses : incomes
 
-setTitle('')
-setAmount('')
-setPartner('')
-setNote('')
-setStatus('offen')
-setDueDate('')
-setCategory('Sonstiges')
-  
-  } catch (error: any) {
-    alert(`Netzwerkfehler: ${error.message} ❌`)
-  } finally {
-    setIsSaving(false)
+      const duplicate = existingItems.find(
+        (item: any) => {
+          const sameTitle =
+            String(item.title || '')
+              .trim()
+              .toLowerCase() ===
+            String(payload.title || '')
+              .trim()
+              .toLowerCase()
+
+          const sameAmount =
+            Number(item.amount) ===
+            Number(payload.amount)
+
+          const sameDate =
+            String(item.date || '').slice(0, 10) ===
+            String(payload.date || '').slice(0, 10)
+
+          return (
+            sameTitle &&
+            sameAmount &&
+            sameDate
+          )
+        }
+      )
+
+      if (duplicate) {
+        alert(
+          '⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.'
+        )
+        return
+      }
+
+      if (partner && type === 'expense') {
+        saveMerchantMemory({
+          merchant: partner,
+          category:
+            category === INKASSO_LABEL
+              ? 'inkasso'
+              : detectCategory(category),
+          taxHint: taxStatus,
+        })
+      }
+
+      if (type === 'expense') {
+        await addExpense(payload)
+      } else {
+        await addIncome(payload)
+      }
+
+      alert(
+        `${
+          type === 'expense'
+            ? 'Ausgabe'
+            : 'Einnahme'
+        } erfolgreich gespeichert! ✅`
+      )
+
+      setTitle('')
+      setAmount('')
+      setPartner('')
+      setNote('')
+      setStatus('offen')
+      setDueDate('')
+      setCategory('Sonstiges')
+    } catch (error: any) {
+      alert(
+        `Netzwerkfehler: ${
+          error?.message || 'Unbekannter Fehler'
+        } ❌`
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
 
   return (
     <main className="min-h-screen max-w-md mx-auto p-6 pb-40 space-y-4">
-      <h1 className="text-3xl font-black text-slate-950">Neue Buchung</h1>
+      <h1 className="text-3xl font-black text-slate-950">
+        Neue Buchung
+      </h1>
 
-      <ReceiptUpload onScanSuccess={handleScanSuccess} />
+      <ReceiptUpload
+        onScanSuccess={handleScanSuccess}
+      />
 
       <div className="border-t border-gray-100 pt-4">
         <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-400">
@@ -256,8 +336,8 @@ setCategory('Sonstiges')
       <div className="relative z-50 grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-2">
         <button
           type="button"
-          onPointerDown={(e) => {
-            e.preventDefault()
+          onPointerDown={(event) => {
+            event.preventDefault()
             setType('expense')
           }}
           className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
@@ -271,8 +351,8 @@ setCategory('Sonstiges')
 
         <button
           type="button"
-          onPointerDown={(e) => {
-            e.preventDefault()
+          onPointerDown={(event) => {
+            event.preventDefault()
             setType('income')
           }}
           className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
@@ -290,7 +370,9 @@ setCategory('Sonstiges')
           className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Titel"
           value={title}
-          onChange={(e) => updateTitle(e.target.value)}
+          onChange={(event) =>
+            updateTitle(event.target.value)
+          }
         />
 
         <input
@@ -299,53 +381,79 @@ setCategory('Sonstiges')
           type="number"
           step="0.01"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(event) =>
+            setAmount(event.target.value)
+          }
         />
 
         <input
           className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-          placeholder={type === 'expense' ? 'Händler / Laden' : 'Kunde / Client'}
+          placeholder={
+            type === 'expense'
+              ? 'Händler / Laden'
+              : 'Kunde / Client'
+          }
           value={partner}
-          onChange={(e) => updatePartner(e.target.value)}
+          onChange={(event) =>
+            updatePartner(event.target.value)
+          }
         />
-{type === 'income' && (
-  <select
-    value={status}
-    onChange={(e) => setStatus(e.target.value)}
-    className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-  >
-    <option value="offen">🟡 Offen</option>
-    <option value="bezahlt">🟢 Bezahlt</option>
-    <option value="ueberfaellig">🔴 Überfällig</option>
-  </select>
-)}
 
-<div className="space-y-1">
-  <p className="text-xs font-bold text-slate-500">Fällig am</p>
+        {type === 'income' && (
+          <select
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value)
+            }
+            className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="offen">
+              🟡 Offen
+            </option>
 
-  <input
-    type="date"
-    value={dueDate}
-    onChange={(e) => setDueDate(e.target.value)}
-    className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-  />
+            <option value="bezahlt">
+              🟢 Bezahlt
+            </option>
 
-  <p className="text-xs text-slate-500">
-    Optional – Mila nutzt das für Rechnungen, Fristen und Erinnerungen 🧾
-  </p>
-</div>
+            <option value="ueberfaellig">
+              🔴 Überfällig
+            </option>
+          </select>
+        )}
 
-<p className="text-xs text-slate-500">
-  Fälligkeitsdatum optional – für Rechnungen/PDFs wichtig
-</p>
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-slate-500">
+            Fällig am
+          </p>
+
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(event) =>
+              setDueDate(event.target.value)
+            }
+            className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+          />
+
+          <p className="text-xs text-slate-500">
+            Optional – Mila nutzt das für
+            Rechnungen, Fristen und Erinnerungen 🧾
+          </p>
+        </div>
+
         {type === 'expense' && (
           <select
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(event) =>
+              setCategory(event.target.value)
+            }
           >
             {categories.map((cat) => (
-              <option key={cat} value={cat}>
+              <option
+                key={cat}
+                value={cat}
+              >
                 {cat}
               </option>
             ))}
@@ -356,25 +464,34 @@ setCategory('Sonstiges')
           className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Notiz"
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(event) =>
+            setNote(event.target.value)
+          }
         />
       </div>
 
       {type === 'expense' && amount && (
         <section className="rounded-2xl bg-violet-50 p-4 text-sm text-slate-700">
-          <p className="font-black text-violet-700">Mila Einschätzung</p>
-          <p className="mt-1">
-            Kategorie: <strong>
-  {category}
-</strong>
+          <p className="font-black text-violet-700">
+            Mila Einschätzung
           </p>
+
+          <p className="mt-1">
+            Kategorie:{' '}
+            <strong>{category}</strong>
+          </p>
+
           <p>
             Steuerlich absetzbar:{' '}
-      <strong>{taxStatus}</strong>
+            <strong>{taxStatus}</strong>
           </p>
+
           {deductible && (
             <p>
-              Grobe Steuerwirkung bei 30%: <strong>{formatEuro(taxHint)}</strong>
+              Grobe Steuerwirkung bei 30%:{' '}
+              <strong>
+                {formatEuro(taxHint)}
+              </strong>
             </p>
           )}
         </section>
@@ -382,38 +499,45 @@ setCategory('Sonstiges')
 
       {type === 'income' && amount && (
         <section className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-          <p className="font-black text-emerald-700">Mila Einschätzung</p>
+          <p className="font-black text-emerald-700">
+            Mila Einschätzung
+          </p>
+
           <p>
             Empfohlene Rücklage fürs Finanzamt:{' '}
-            <strong>{formatEuro(taxReserve)}</strong>
+            <strong>
+              {formatEuro(taxReserve)}
+            </strong>
           </p>
         </section>
       )}
-{type === 'expense' && title && (
-  <button
-    type="button"
-    onClick={alsVerpflichtungSpeichern}
-    className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white shadow-md"
-  >
-    🧾 Als Verpflichtung speichern
-  </button>
-)}
-     <button
-  type="button"
-  onClick={speichern}
-  disabled={isSaving}
-  className={`w-full rounded-2xl py-4 font-black text-white shadow-md disabled:opacity-50 ${
-    type === 'expense'
-      ? 'bg-slate-900'
-      : 'bg-purple-600'
-  }`}
->
-  {isSaving
-    ? 'Speichere...'
-    : type === 'expense'
-    ? 'Ausgabe speichern'
-    : 'Einnahme speichern'}
-</button>
+
+      {type === 'expense' && title && (
+        <button
+          type="button"
+          onClick={alsVerpflichtungSpeichern}
+          className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white shadow-md"
+        >
+          🧾 Als Verpflichtung speichern
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={speichern}
+        disabled={isSaving}
+        className={`w-full rounded-2xl py-4 font-black text-white shadow-md disabled:opacity-50 ${
+          type === 'expense'
+            ? 'bg-slate-900'
+            : 'bg-purple-600'
+        }`}
+      >
+        {isSaving
+          ? 'Speichere...'
+          : type === 'expense'
+            ? 'Ausgabe speichern'
+            : 'Einnahme speichern'}
+      </button>
     </main>
   )
 }
