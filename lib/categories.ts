@@ -39,10 +39,7 @@ export interface Category {
   icon: string
   color: string
 }
-export function getCategoryLabel(id: string) {
-  if (id === 'inkasso') {
-    return '⚖️ Inkasso / Forderung'
-  export function getCategoryLabel(categoryId: string) {
+export function getCategoryLabel(categoryId: string) {
   if (categoryId === 'inkasso') {
     return '⚖️ Inkasso / Forderung'
   }
