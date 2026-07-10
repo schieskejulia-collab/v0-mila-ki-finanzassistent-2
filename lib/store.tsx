@@ -1172,7 +1172,11 @@ export function FinanceProvider({
 
           return
         }
-
+const deleteDocument = useCallback((id: string) => {
+  setDocuments((previous) =>
+    previous.filter((item: any) => item.id !== id)
+  )
+}, [])
         const { error } =
           await supabase
             .from('obligations')
@@ -1243,7 +1247,8 @@ export function FinanceProvider({
       deleteObligation,
 
       documents,
-      setDocuments,
+setDocuments,
+deleteDocument,
 
       userName,
       setUserName,
@@ -1308,7 +1313,7 @@ export function FinanceProvider({
       deleteObligation,
 
       documents,
-
+deleteDocument,
       userName,
       userStatus,
       industry,
