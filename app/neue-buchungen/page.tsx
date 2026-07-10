@@ -112,12 +112,8 @@ function updatePartner(value: string) {
     : detectCategory(
         `${scannedData.title || ''} ${scannedData.vendor || ''}`
       )
-    : detectCategory(
-        `${scannedData.title || ''} ${scannedData.vendor || ''}`
-      )
 
 const categoryLabel = getCategoryLabel(categoryId)
-
 setCategory(categoryLabel)
 
   setNote(
