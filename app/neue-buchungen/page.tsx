@@ -82,42 +82,20 @@ function updatePartner(value: string) {
 }
 
  const handleScanSuccess = (rawData: any) => {
-  const scannedData =
-    rawData?.data?.data ||
-    rawData?.data ||
-    rawData
+  const categoryId =
+  scannedData.documentType === 'inkasso' ||
+  scannedData.category === 'inkasso'
+    ? 'inkasso'
+    : scannedData.category ||
+      detectCategory(
+        `${scannedData.title || ''} ${scannedData.vendor || ''}`
+      )
 
-  if (!scannedData) {
-    alert('Mila hat keine auswertbaren Daten erhalten.')
-    return
-  }
-
-  setType('expense')
-  setTitle(String(scannedData.title || '').trim())
-  setAmount(String(scannedData.amount ?? ''))
-  setPartner(String(scannedData.vendor || '').trim())
-
-  setDueDate(
-    String(
-      scannedData.dueDate ||
-      scannedData.document?.dueDate ||
-      ''
-    )
-  )
-
-  const isInkasso =
-    scannedData.category === 'inkasso' ||
-    scannedData.documentType === 'inkasso' ||
-    scannedData.isObligation === true
-
-  setCategory(
-    isInkasso
-      ? getCategoryLabel('inkasso')
-      : getCategoryLabel(
-          scannedData.category ||
-          detectCategory(
-            `${scannedData.title || ''} ${scannedData.vendor || ''}`
-          )
+if (categoryId === 'inkasso') {
+  setCategory('⚖️ Inkasso / Forderung')
+} else {
+  setCategory(getCategoryLabel(categoryId))
+}
         )
   )
 
