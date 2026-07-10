@@ -108,10 +108,10 @@ function updatePartner(value: string) {
   )
 
   setCategory(
-    categoryId === 'inkasso'
-      ? '⚖️ Inkasso / Forderung'
-      : getCategoryLabel(categoryId)
-  )
+  categoryId === 'inkasso'
+    ? getCategoryLabel('inkasso')
+    : getCategoryLabel(categoryId)
+)
 
   setNote(
     scannedData.note ||
