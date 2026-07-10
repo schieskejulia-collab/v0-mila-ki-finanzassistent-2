@@ -1042,6 +1042,13 @@ export function FinanceProvider({
   const updateObligation =
     useCallback(
       async (
+const finalUpdates = {
+  ...updates,
+  paidAt:
+    updates.status === 'bezahlt'
+      ? new Date().toISOString()
+      : updates.paidAt,
+}
         id: string,
         updates: Partial<Obligation>
       ) => {
