@@ -1205,7 +1205,11 @@ const deleteDocument = useCallback((id: string) => {
       },
       [userId]
     )
-
+const deleteDocument = useCallback((id: string) => {
+  setDocuments((previous) =>
+    previous.filter((item: any) => item.id !== id)
+  )
+}, [])
   const summary = useMemo(
     () =>
       calculateSummary(
