@@ -96,9 +96,6 @@ if (categoryId === 'inkasso') {
 } else {
   setCategory(getCategoryLabel(categoryId))
 }
-        )
-  )
-
   setNote(
     scannedData.note ||
     'Automatisch von Mila ausgelesen 📸'
