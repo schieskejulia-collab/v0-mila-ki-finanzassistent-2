@@ -162,14 +162,7 @@ const isInkasso =
       scannedData.note ||
         'Automatisch von Mila ausgelesen 📸'
     )
-
-    if (scannedData.document) {
-      setDocuments([
-        ...documents,
-        scannedData.document,
-      ])
-    }
-  }
+}
 
   async function alsVerpflichtungSpeichern() {
     if (!title.trim() || !amount || !partner.trim() || !dueDate) {
