@@ -89,30 +89,13 @@ function updatePartner(value: string) {
   const categoryId =
   scannedData.documentType === 'inkasso' ||
   scannedData.category === 'inkasso'
-    ? 'Inkasso / Forderung'
+    ? 'inkasso'
     : scannedData.category ||
       detectCategory(
         `${scannedData.title || ''} ${scannedData.vendor || ''}`
       )
 
-  setType('expense')
-  setTitle(String(scannedData.title || '').trim())
-  setAmount(String(scannedData.amount ?? ''))
-  setPartner(String(scannedData.vendor || '').trim())
-  setDueDate(
-    String(
-      scannedData.dueDate ||
-      scannedData.document?.dueDate ||
-      ''
-    )
-  )
-
-  setCategory(
-  categoryId === 'inkasso'
-    ? getCategoryLabel('inkasso')
-    : getCategoryLabel(categoryId)
-)
-
+setCategory(getCategoryLabel(categoryId))
   setNote(
     scannedData.note ||
     'Automatisch von Mila ausgelesen 📸'
