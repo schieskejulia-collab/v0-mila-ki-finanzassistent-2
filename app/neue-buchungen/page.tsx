@@ -117,10 +117,19 @@ export default function NeueBuchungPage() {
       scannedData.vendor || ''
     ).trim()
 
-    const isInkasso =
-      scannedData.category === 'inkasso' ||
-      scannedData.documentType === 'inkasso' ||
-      scannedData.isObligation === true
+    const scanText = `
+${scannedData.title || ''}
+${scannedData.vendor || ''}
+${scannedData.note || ''}
+${scannedData.category || ''}
+${scannedData.documentType || ''}
+`.toLowerCase()
+
+const isInkasso =
+  scanText.includes('inkasso') ||
+  scanText.includes('forderung') ||
+  scanText.includes('klarna') ||
+  scannedData.isObligation === true
 
     const detectedCategory = detectCategory(
       `${scannedTitle} ${scannedVendor}`
