@@ -1,4 +1,4 @@
-'use client'
+#'use client'
 
 import {
   createContext,
@@ -1161,18 +1161,16 @@ export function FinanceProvider({
       [userId]
     )
 
-  const deleteObligation =
-    useCallback(
-      async (id: string) => {
-        if (!userId) {
-          setObligations(
-            (previous) =>
-              previous.filter(
-                (item) =>
-                  item.id !== id
-              )
-          )
+  const deleteDocument = useCallback((id: string) => {
+  if (!id) {
+    console.warn('Dokument konnte nicht gelöscht werden: ID fehlt.')
+    return
+  }
 
+  setDocuments((previous) =>
+    previous.filter((item: any) => item.id !== id)
+  )
+}, [])
           return
         }
 const deleteDocument = useCallback((id: string) => {
