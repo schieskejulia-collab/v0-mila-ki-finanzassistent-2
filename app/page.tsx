@@ -151,7 +151,43 @@ const totalOverdueAmount = payments.overdueAmount
 const openObligations = (obligations || []).filter(
   (item: any) => String(item.status || '').toLowerCase() !== 'bezahlt'
 )
+const today = new Date()
+today.setHours(0, 0, 0, 0)
 
+const overdueObligations = openObligations.filter((item: any) => {
+  const dueDate = item.dueDate || item.due_date
+  if (!dueDate) return false
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  return due.getTime() < today.getTime()
+})
+
+const dueSoonObligations = openObligations.filter((item: any) => {
+  const dueDate = item.dueDate || item.due_date
+  if (!dueDate) return false
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  const days =
+    (due.getTime() - today.getTime()) /
+    (1000 * 60 * 60 * 24)
+
+  return days >= 0 && days <= 3
+})
+
+const inkassoObligations = openObligations.filter((item: any) => {
+  const text = `${item.type || ''} ${item.title || ''} ${
+    item.partner || item.creditor || ''
+  }`.toLowerCase()
+
+  return (
+    text.includes('inkasso') ||
+    text.includes('forderung')
+  )
+})
 const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
   obligations: openObligations,
@@ -391,7 +427,56 @@ const anchorMessage =
   </div>
 
 </div>
+{/* --- OFFENE AUFGABEN --- */}
+<div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+    🧾 Offene Aufgaben
+  </h2>
 
+  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+    <div className="rounded-2xl bg-rose-50 p-3">
+      <p className="text-xl font-black text-rose-700">
+        {overdueObligations.length}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-rose-600">
+        Überfällig
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-amber-50 p-3">
+      <p className="text-xl font-black text-amber-700">
+        {dueSoonObligations.length}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-amber-600">
+        Bald fällig
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-violet-50 p-3">
+      <p className="text-xl font-black text-violet-700">
+        {inkassoObligations.length}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-violet-600">
+        Forderungen
+      </p>
+    </div>
+  </div>
+
+  {openObligations.length === 0 && (
+    <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+      🟢 Alle Verpflichtungen sind erledigt.
+    </p>
+  )}
+
+  {openObligations.length > 0 && (
+    <Link
+      href="/verpflichtungen"
+      className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
+    >
+      Verpflichtungen ansehen
+    </Link>
+  )}
+</div>
         {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
         <div className="space-y-2">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
