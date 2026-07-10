@@ -1039,16 +1039,18 @@ export function FinanceProvider({
       [userId]
     )
 
-  const updateObligation =
-    useCallback(
-      async (
-const finalUpdates = {
-  ...updates,
-  paidAt:
-    updates.status === 'bezahlt'
-      ? new Date().toISOString()
-      : updates.paidAt,
-}
+  const updateObligation = useCallback(
+  async (
+    id: string,
+    updates: Partial<Obligation>
+  ) => {
+    const finalUpdates = {
+      ...updates,
+      paidAt:
+        updates.status === 'bezahlt'
+          ? new Date().toISOString()
+          : updates.paidAt,
+    }
         id: string,
         updates: Partial<Obligation>
       ) => {
@@ -1128,7 +1130,13 @@ const finalUpdates = {
           payload.priority =
             updates.priority
         }
+if (finalUpdates.status !== undefined) {
+  payload.status = finalUpdates.status
+}
 
+if (finalUpdates.paidAt !== undefined) {
+  payload.paid_at = finalUpdates.paidAt
+}
         if (
           updates.dueDate !==
           undefined
