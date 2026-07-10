@@ -117,7 +117,11 @@ function updatePartner(value: string) {
   if (categoryId === 'inkasso') {
     setCategory('⚖️ Inkasso / Forderung')
   } else {
-    setCategory(getCategoryLabel(categoryId))
+    setCategory(
+  categoryId === 'inkasso'
+    ? '⚖️ Inkasso / Forderung'
+    : getCategoryLabel(categoryId)
+)
   }
 
   setNote(
