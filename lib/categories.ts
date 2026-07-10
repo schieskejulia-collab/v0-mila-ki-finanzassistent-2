@@ -39,7 +39,17 @@ export interface Category {
   icon: string
   color: string
 }
-export function getCategoryLabel(categoryId: CategoryId) {
+export function getCategoryLabel(id: string) {
+  if (id === 'inkasso') {
+    return '⚖️ Inkasso / Forderung'
+  }
+
+  return (
+    CATEGORY_MAP[id]?.label ||
+    'Sonstiges'
+  )
+}
+
   return CATEGORIES[categoryId]?.label ?? 'Sonstiges'
 }
 export const CATEGORIES: Partial<Record<CategoryId, Category>> = {
