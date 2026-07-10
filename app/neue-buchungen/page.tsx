@@ -105,24 +105,17 @@ function updatePartner(value: string) {
     )
   )
 
-  const categoryId =
-    scannedData.documentType === 'inkasso' ||
-    scannedData.category === 'inkasso'
-      ? 'inkasso'
-      : scannedData.category ||
-        detectCategory(
-          `${scannedData.title || ''} ${scannedData.vendor || ''}`
-        )
+ const categoryId =
+  scannedData.documentType === 'inkasso' ||
+  scannedData.category === 'inkasso'
+    ? 'inkasso'
+    : detectCategory(
+        `${scannedData.title || ''} ${scannedData.vendor || ''}`
+      )
 
-  if (categoryId === 'inkasso') {
-    setCategory('⚖️ Inkasso / Forderung')
-  } else {
-    setCategory(
-  categoryId === 'inkasso'
-    ? '⚖️ Inkasso / Forderung'
-    : getCategoryLabel(categoryId)
-)
-  }
+const categoryLabel = getCategoryLabel(categoryId)
+
+setCategory(categoryLabel)
 
   setNote(
     scannedData.note ||
