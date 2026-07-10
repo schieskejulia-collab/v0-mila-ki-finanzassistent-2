@@ -115,7 +115,7 @@ function updatePartner(value: string) {
     'Automatisch von Mila ausgelesen 📸'
   )
 
-  if (scannedData.document) {
+    if (scannedData.document) {
     setDocuments([
       ...documents,
       scannedData.document,
@@ -123,6 +123,7 @@ function updatePartner(value: string) {
   }
 }
 
+async function alsVerpflichtungSpeichern() {
   addObligation({
     id: crypto.randomUUID(),
     title: title.trim(),
