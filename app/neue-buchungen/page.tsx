@@ -87,7 +87,10 @@ function updatePartner(value: string) {
     rawData?.data ||
     rawData
 
-  if (!scannedData) return
+  if (!scannedData) {
+    alert('Mila hat keine auswertbaren Daten erhalten.')
+    return
+  }
 
   setType('expense')
   setTitle(String(scannedData.title || '').trim())
@@ -129,6 +132,7 @@ function updatePartner(value: string) {
     ])
   }
 }
+
 async function alsVerpflichtungSpeichern() {
   addObligation({
     id: crypto.randomUUID(),
