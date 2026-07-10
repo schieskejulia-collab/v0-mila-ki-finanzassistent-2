@@ -55,7 +55,6 @@ export interface FinanceContextValue {
   setDocuments: (
     items: MilaDocument[]
 deleteDocument: (id: string) => void
-
   userName: string
   setUserName: (value: string) => void
 
