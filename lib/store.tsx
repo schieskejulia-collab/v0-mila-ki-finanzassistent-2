@@ -964,6 +964,16 @@ export function FinanceProvider({
         if (!userId) {
           setObligations(
             (previous) => [
+const alreadyExists = previous.some(
+  (old) =>
+    old.partner?.toLowerCase() ===
+      normalizedItem.partner?.toLowerCase() &&
+    Number(old.amount) === Number(normalizedItem.amount)
+)
+
+if (alreadyExists) {
+  return previous
+}
               normalizedItem,
               ...previous,
             ]
