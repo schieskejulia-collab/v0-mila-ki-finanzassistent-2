@@ -973,7 +973,14 @@ export function FinanceProvider({
         }
 
         const payload = {
-          user_id: userId,
+  user_id: userId,
+
+  created_at:
+    normalizedItem.createdAt,
+
+  title: item.title,
+  partner:
+    item.partner || '',
           title: item.title,
           partner:
             item.partner || '',
