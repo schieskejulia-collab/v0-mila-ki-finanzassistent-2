@@ -4,8 +4,10 @@ import { useFinance } from '@/lib/store'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import { CATEGORY_LIST, detectCategory, getCategoryLabel } from '@/lib/categories'
 import { saveMerchantMemory } from '@/lib/merchant-memory'
-const categories = CATEGORY_LIST.map((category) => category.label)
-
+const categories = [
+  ...CATEGORY_LIST.map((category) => category.label),
+  '⚖️ Inkasso / Forderung',
+]
 function getTaxHint(category: string) {
   const pruefen = [
     'Reisen & Unterkünfte',
@@ -362,7 +364,9 @@ setCategory('Sonstiges')
         <section className="rounded-2xl bg-violet-50 p-4 text-sm text-slate-700">
           <p className="font-black text-violet-700">Mila Einschätzung</p>
           <p className="mt-1">
-            Kategorie: <strong>{category}</strong>
+            Kategorie: <strong>
+  {category}
+</strong>
           </p>
           <p>
             Steuerlich absetzbar:{' '}
