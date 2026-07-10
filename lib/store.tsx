@@ -195,46 +195,30 @@ function normalizeObligation(item: any): Obligation {
   } as Obligation
 }
   const fetchFinanceData = useCallback(async (uid?: string) => {
-    if (!uid) {
-      setExpenses([])
-      setIncomes([])
-const { data: obligationsData } = await supabase
-  .from('obligations')
-  .select('*')
-  .eq('user_id', uid)
-  .order('created_at', { ascending: false })
+  if (!uid) {
+    setExpenses([])
+    setIncomes([])
+    setObligations([])
+    return
+  }
 
-setObligations((obligationsData || []).map(normalizeObligation))
-
-
-const { data: documentsData } = await supabase
-  .from('documents')
-  .select('*')
-  .eq('user_id', uid)
-  .order('created_at', { ascending: false })
-
-setDocuments(documentsData || [])
-      return
-    }
-
-    const { data: expensesData, error: expensesError } = await supabase
-      .from('expenses')
+  const { data: obligationsData, error: obligationsError } =
+    await supabase
+      .from('obligations')
       .select('*')
       .eq('user_id', uid)
-      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
 
-    const { data: incomesData, error: incomesError } = await supabase
-      .from('incomes')
-      .select('*')
-      .eq('user_id', uid)
-      .order('date', { ascending: false })
-
-    if (expensesError) {
-      console.error('Expenses laden fehlgeschlagen:', expensesError)
-      setExpenses([])
-    } else {
-      setExpenses(expensesData || [])
-    }
+  if (obligationsError) {
+    console.error(
+      'Verpflichtungen laden fehlgeschlagen:',
+      obligationsError
+    )
+  } else {
+    setObligations(
+      (obligationsData || []).map(normalizeObligation)
+    )
+  }
 
     if (incomesError) {
       console.error('Incomes laden fehlgeschlagen:', incomesError)
