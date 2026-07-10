@@ -1217,15 +1217,6 @@ const deleteDocument = useCallback((id: string) => {
       ),
     [incomes, expenses]
   )
-const documentWithId = {
-  ...document,
-  id: document.id || crypto.randomUUID(),
-}
-
-setDocuments((previous) => [
-  documentWithId,
-  ...previous,
-])
   const budgetStatus = useMemo(
     () => [],
     [categories, expenses]
