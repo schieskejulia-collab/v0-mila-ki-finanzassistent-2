@@ -279,7 +279,10 @@ sonstiges: {
 
 },
 inkasso: {
+  id: 'inkasso',
   label: '⚖️ Inkasso / Forderung',
+  icon: 'Scale',
+  color: 'var(--chart-5)',
 },
 }
 export const CATEGORY_LIST = Object.values(CATEGORIES)
