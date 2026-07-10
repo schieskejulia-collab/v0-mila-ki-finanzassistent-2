@@ -51,11 +51,15 @@ interface FinanceContextValue {
     id: string
   ) => Promise<void>
 
-  documents: MilaDocument[]
-  setDocuments: (
-    items: MilaDocument[]
+ documents: MilaDocument[]
+
+setDocuments: (
+  items: MilaDocument[]
+) => void
+
 deleteDocument: (id: string) => void
-  userName: string
+
+userName: string
   setUserName: (value: string) => void
 
   userStatus: any
