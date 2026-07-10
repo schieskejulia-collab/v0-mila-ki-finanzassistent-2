@@ -13,7 +13,7 @@ function formatEuro(value?: number) {
 }
 
 export default function DokumentePage() {
-  const { documents } = useFinance()
+  const { documents, deleteDocument } = useFinance()
 
   return (
     <main className="min-h-screen max-w-md mx-auto p-6 pb-40 space-y-5">
@@ -80,6 +80,12 @@ export default function DokumentePage() {
                 ⏰ Fällig: {doc.dueDate}
               </p>
             )}
+<button
+  onClick={() => deleteDocument(doc.id)}
+  className="text-red-500 font-bold"
+>
+  Löschen
+</button>
 
             <p className="mt-3 text-xs text-slate-400">
               gespeichert bis {doc.keepUntil}
