@@ -82,33 +82,57 @@ function updatePartner(value: string) {
 }
 
  const handleScanSuccess = (rawData: any) => {
-  const scannedData = rawData?.data || rawData
+  const scannedData =
+    rawData?.data?.data ||
+    rawData?.data ||
+    rawData
 
-  if (!scannedData) return
+  if (!scannedData) {
+    alert('Mila hat keine auswertbaren Daten erhalten.')
+    return
+  }
 
-  const categoryId =
-  scannedData.documentType === 'inkasso' ||
-  scannedData.category === 'inkasso'
-    ? 'inkasso'
-    : scannedData.category ||
-      detectCategory(
-        `${scannedData.title || ''} ${scannedData.vendor || ''}`
-      )
+  setType('expense')
+  setTitle(String(scannedData.title || '').trim())
+  setAmount(String(scannedData.amount ?? ''))
+  setPartner(String(scannedData.vendor || '').trim())
 
-setCategory(getCategoryLabel(categoryId))
+  setDueDate(
+    String(
+      scannedData.dueDate ||
+      scannedData.document?.dueDate ||
+      ''
+    )
+  )
+
+  const isInkasso =
+    scannedData.category === 'inkasso' ||
+    scannedData.documentType === 'inkasso' ||
+    scannedData.isObligation === true
+
+  setCategory(
+    isInkasso
+      ? getCategoryLabel('inkasso')
+      : getCategoryLabel(
+          scannedData.category ||
+          detectCategory(
+            `${scannedData.title || ''} ${scannedData.vendor || ''}`
+          )
+        )
+  )
+
   setNote(
     scannedData.note ||
     'Automatisch von Mila ausgelesen 📸'
   )
 
-    if (scannedData.document) {
+  if (scannedData.document) {
     setDocuments([
       ...documents,
       scannedData.document,
     ])
   }
 }
-
 async function alsVerpflichtungSpeichern() {
   addObligation({
     id: crypto.randomUUID(),
