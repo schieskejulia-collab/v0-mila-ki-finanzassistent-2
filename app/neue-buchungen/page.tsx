@@ -87,10 +87,13 @@ function updatePartner(value: string) {
   if (!scannedData) return
 
   const categoryId =
-    scannedData.category ||
-    detectCategory(
-      `${scannedData.title || ''} ${scannedData.vendor || ''}`
-    )
+  scannedData.documentType === 'inkasso' ||
+  scannedData.category === 'inkasso'
+    ? 'Inkasso / Forderung'
+    : scannedData.category ||
+      detectCategory(
+        `${scannedData.title || ''} ${scannedData.vendor || ''}`
+      )
 
   setType('expense')
   setTitle(String(scannedData.title || '').trim())
