@@ -82,20 +82,41 @@ function updatePartner(value: string) {
 }
 
  const handleScanSuccess = (rawData: any) => {
-  const categoryId =
-  scannedData.documentType === 'inkasso' ||
-  scannedData.category === 'inkasso'
-    ? 'inkasso'
-    : scannedData.category ||
-      detectCategory(
-        `${scannedData.title || ''} ${scannedData.vendor || ''}`
-      )
+  const scannedData =
+    rawData?.data?.data ||
+    rawData?.data ||
+    rawData
 
-if (categoryId === 'inkasso') {
-  setCategory('⚖️ Inkasso / Forderung')
-} else {
-  setCategory(getCategoryLabel(categoryId))
-}
+  if (!scannedData) return
+
+  setType('expense')
+  setTitle(String(scannedData.title || '').trim())
+  setAmount(String(scannedData.amount ?? ''))
+  setPartner(String(scannedData.vendor || '').trim())
+
+  setDueDate(
+    String(
+      scannedData.dueDate ||
+      scannedData.document?.dueDate ||
+      ''
+    )
+  )
+
+  const categoryId =
+    scannedData.documentType === 'inkasso' ||
+    scannedData.category === 'inkasso'
+      ? 'inkasso'
+      : scannedData.category ||
+        detectCategory(
+          `${scannedData.title || ''} ${scannedData.vendor || ''}`
+        )
+
+  if (categoryId === 'inkasso') {
+    setCategory('⚖️ Inkasso / Forderung')
+  } else {
+    setCategory(getCategoryLabel(categoryId))
+  }
+
   setNote(
     scannedData.note ||
     'Automatisch von Mila ausgelesen 📸'
