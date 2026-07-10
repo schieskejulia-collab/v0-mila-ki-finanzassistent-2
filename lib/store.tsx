@@ -15,7 +15,7 @@ import { calculateSummary } from '@/lib/calculations'
 import type { Obligation } from './mila-obligations'
 import type { MilaDocument } from './mila-documents'
 
-export interface FinanceContextValue {
+interface FinanceContextValue {
   expenses: any[]
   incomes: any[]
   setIncomes: (items: any[]) => void
