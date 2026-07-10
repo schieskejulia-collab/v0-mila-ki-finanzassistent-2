@@ -7,7 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
-  ReactNode,
+  type ReactNode,
 } from 'react'
 
 import { supabase } from '@/lib/supabase'
@@ -18,82 +18,150 @@ import type { MilaDocument } from './mila-documents'
 export interface FinanceContextValue {
   expenses: any[]
   incomes: any[]
-  setIncomes: (i: any[]) => void
+  setIncomes: (items: any[]) => void
 
   categories: string[]
   milaFeedback: string
   morningBriefing: string
   refreshMorningBriefing: () => Promise<void>
-  triggerMilaFeedback: (cat: string) => void
+  triggerMilaFeedback: (category: string) => void
 
-  addExpense: (e: any) => Promise<void>
+  addExpense: (item: any) => Promise<void>
   deleteExpense: (item: any) => Promise<void>
-  addIncome: (i: any) => Promise<void>
+
+  addIncome: (item: any) => Promise<void>
   deleteIncome: (id: any) => Promise<void>
-  updateIncomeStatus: (id: any, status: string) => Promise<void>
+  updateIncomeStatus: (
+    id: any,
+    status: string
+  ) => Promise<void>
 
   obligations: Obligation[]
-  setObligations: (items: Obligation[]) => void
-  addObligation: (item: Obligation) => Promise<void>
-updateObligation: (id: string, updates: Partial<Obligation>) => Promise<void>
-deleteObligation: (id: string) => Promise<void>
+  setObligations: (
+    items: Obligation[]
+  ) => void
+  addObligation: (
+    item: Obligation
+  ) => Promise<void>
+  updateObligation: (
+    id: string,
+    updates: Partial<Obligation>
+  ) => Promise<void>
+  deleteObligation: (
+    id: string
+  ) => Promise<void>
+
   documents: MilaDocument[]
-  setDocuments: (items: MilaDocument[]) => void
+  setDocuments: (
+    items: MilaDocument[]
+  ) => void
 
   userName: string
-  setUserName: (v: string) => void
+  setUserName: (value: string) => void
+
   userStatus: any
-  setUserStatus: (v: any) => void
+  setUserStatus: (value: any) => void
+
   industry: any
-  setIndustry: (v: any) => void
+  setIndustry: (value: any) => void
 
   taxClass: string
-  setTaxClass: (v: string) => void
+  setTaxClass: (value: string) => void
+
   annualGross: number
-  setAnnualGross: (v: number) => void
+  setAnnualGross: (value: number) => void
+
   annualProfit: number
-  setAnnualProfit: (v: number) => void
+  setAnnualProfit: (value: number) => void
+
   vatStatus: string
-  setVatStatus: (v: string) => void
+  setVatStatus: (value: string) => void
+
   federalState: string
-  setFederalState: (v: string) => void
+  setFederalState: (value: string) => void
+
   churchTax: boolean
-  setChurchTax: (v: boolean) => void
+  setChurchTax: (value: boolean) => void
+
   married: boolean
-  setMarried: (v: boolean) => void
+  setMarried: (value: boolean) => void
+
   children: number
-  setChildren: (v: number) => void
+  setChildren: (value: number) => void
+
   assemblyWork: boolean
-  setAssemblyWork: (v: boolean) => void
+  setAssemblyWork: (value: boolean) => void
 
   isLoggedIn: boolean
-  login: (n: string, s: any) => void
+  login: (
+    name: string,
+    status: any
+  ) => void
   logout: () => void
 
   summary: any
   budgetStatus: any[]
 }
-    const payload: any = {}
 
-  
-    export const FinanceContext = createContext<FinanceContextValue | null>(null)
+export const FinanceContext =
+  createContext<FinanceContextValue | null>(
+    null
+  )
 
 function profileKey(userId?: string) {
-  return userId ? `mila-profile-${userId}` : 'mila-profile-guest'
+  return userId
+    ? `mila-profile-${userId}`
+    : 'mila-profile-guest'
 }
 
-function obligationsKey(userId?: string) {
-  return userId ? `mila-obligations-${userId}` : 'mila-obligations-guest'
+function expensesKey(userId?: string) {
+  return userId
+    ? `mila-expenses-${userId}`
+    : 'mila-expenses-guest'
+}
+
+function incomesKey(userId?: string) {
+  return userId
+    ? `mila-incomes-${userId}`
+    : 'mila-incomes-guest'
+}
+
+function obligationsKey(
+  userId?: string
+) {
+  return userId
+    ? `mila-obligations-${userId}`
+    : 'mila-obligations-guest'
 }
 
 function documentsKey(userId?: string) {
-  return userId ? `mila-documents-${userId}` : 'mila-documents-guest'
+  return userId
+    ? `mila-documents-${userId}`
+    : 'mila-documents-guest'
 }
 
-function normalizeIndustry(value?: string) {
+function safeParse<T>(
+  value: string | null,
+  fallback: T
+): T {
+  if (!value) return fallback
+
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+function normalizeIndustry(
+  value?: string
+) {
   if (!value) return 'sonstiges'
 
-  const oldToNew: Record<string, string> = {
+  const oldToNew: Record<
+    string,
+    string
+  > = {
     berater: 'beratung',
     handwerker: 'handwerk',
     restaurant: 'gastro',
@@ -106,151 +174,410 @@ function normalizeIndustry(value?: string) {
   return oldToNew[value] || value
 }
 
-function normalizeObligation(item: any): Obligation {
+function normalizeObligation(
+  item: any
+): Obligation {
   return {
     ...item,
-    dueDate: item.dueDate || item.due_date || '',
-    due_date: item.due_date || item.dueDate || '',
-    reminderDays: item.reminderDays || [14, 3, 0],
-    reminder_days: item.reminder_days || 3,
+    dueDate:
+      item?.dueDate ||
+      item?.due_date ||
+      '',
+    due_date:
+      item?.due_date ||
+      item?.dueDate ||
+      '',
+    reminderDays:
+      item?.reminderDays ||
+      [14, 3, 0],
+    reminder_days:
+      item?.reminder_days ??
+      3,
   } as Obligation
 }
 
-export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState<string>('')
-
-  const [expenses, setExpenses] = useState<any[]>([])
-  const [incomes, setIncomes] = useState<any[]>([])
-  const [categories] = useState<string[]>([])
-
-  const [milaFeedback] = useState('')
-  const [morningBriefing] = useState('')
-
-  const [userName, setUserName] = useState('')
-  const [userStatus, setUserStatus] = useState<any>('')
-  const [industry, setIndustry] = useState<any>('sonstiges')
-
-  const [taxClass, setTaxClass] = useState('1')
-  const [annualGross, setAnnualGross] = useState(0)
-  const [annualProfit, setAnnualProfit] = useState(0)
-  const [vatStatus, setVatStatus] = useState('')
-  const [federalState, setFederalState] = useState('')
-  const [churchTax, setChurchTax] = useState(false)
-  const [married, setMarried] = useState(false)
-  const [childrenCount, setChildren] = useState(0)
-  const [assemblyWork, setAssemblyWork] = useState(false)
-
-  const [obligations, setObligations] = useState<Obligation[]>([])
-  const [documents, setDocuments] = useState<MilaDocument[]>([])
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [profileLoaded, setProfileLoaded] = useState(false)
-
-  const loadLocalProfile = useCallback((uid?: string) => {
-    const savedProfile = localStorage.getItem(profileKey(uid))
-    const savedObligations = localStorage.getItem(obligationsKey(uid))
-    const savedDocuments = localStorage.getItem(documentsKey(uid))
-
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile)
-
-      setUserName(profile.userName ?? '')
-      setUserStatus(profile.userStatus ?? '')
-      setIndustry(normalizeIndustry(profile.industry))
-      setTaxClass(profile.taxClass ?? '1')
-      setAnnualGross(Number(profile.annualGross ?? 0))
-      setAnnualProfit(Number(profile.annualProfit ?? 0))
-      setVatStatus(profile.vatStatus ?? '')
-      setFederalState(profile.federalState ?? '')
-      setChurchTax(Boolean(profile.churchTax ?? false))
-      setMarried(Boolean(profile.married ?? false))
-      setChildren(Number(profile.children ?? 0))
-      setAssemblyWork(Boolean(profile.assemblyWork ?? false))
-    } else {
-      setUserName('')
-      setUserStatus('')
-      setIndustry('sonstiges')
-      setTaxClass('1')
-      setAnnualGross(0)
-      setAnnualProfit(0)
-      setVatStatus('')
-      setFederalState('')
-      setChurchTax(false)
-      setMarried(false)
-      setChildren(0)
-      setAssemblyWork(false)
-    }
-
-    setObligations(savedObligations ? JSON.parse(savedObligations) : [])
-    setDocuments(savedDocuments ? JSON.parse(savedDocuments) : [])
-    setProfileLoaded(true)
-  }, [])
-
-  const fetchFinanceData = useCallback(async (uid?: string) => {
-  if (!uid) {
-    setExpenses([])
-    setIncomes([])
-    setObligations([])
-    return
+function createLocalId() {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID ===
+      'function'
+  ) {
+    return crypto.randomUUID()
   }
 
-  const { data: obligationsData, error: obligationsError } =
-    await supabase
-      .from('obligations')
-      .select('*')
-      .eq('user_id', uid)
-      .order('created_at', { ascending: false })
+  return `local-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`
+}
 
-  if (obligationsError) {
-    console.error(
-      'Verpflichtungen laden fehlgeschlagen:',
-      obligationsError
-    )
-  } else {
-    setObligations(
-      (obligationsData || []).map(normalizeObligation)
-    )
-  }
+export function FinanceProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const [userId, setUserId] =
+    useState('')
 
-    if (incomesError) {
-      console.error('Incomes laden fehlgeschlagen:', incomesError)
-      setIncomes([])
-    } else {
-      setIncomes(incomesData || [])
-    }
-  }, [])
+  const [expenses, setExpenses] =
+    useState<any[]>([])
+
+  const [incomes, setIncomes] =
+    useState<any[]>([])
+
+  const [categories] = useState<
+    string[]
+  >([])
+
+  const [milaFeedback] =
+    useState('')
+
+  const [morningBriefing] =
+    useState('')
+
+  const [userName, setUserName] =
+    useState('')
+
+  const [
+    userStatus,
+    setUserStatus,
+  ] = useState<any>('')
+
+  const [industry, setIndustry] =
+    useState<any>('sonstiges')
+
+  const [taxClass, setTaxClass] =
+    useState('1')
+
+  const [
+    annualGross,
+    setAnnualGross,
+  ] = useState(0)
+
+  const [
+    annualProfit,
+    setAnnualProfit,
+  ] = useState(0)
+
+  const [vatStatus, setVatStatus] =
+    useState('')
+
+  const [
+    federalState,
+    setFederalState,
+  ] = useState('')
+
+  const [
+    churchTax,
+    setChurchTax,
+  ] = useState(false)
+
+  const [married, setMarried] =
+    useState(false)
+
+  const [
+    childrenCount,
+    setChildren,
+  ] = useState(0)
+
+  const [
+    assemblyWork,
+    setAssemblyWork,
+  ] = useState(false)
+
+  const [
+    obligations,
+    setObligations,
+  ] = useState<Obligation[]>([])
+
+  const [
+    documents,
+    setDocuments,
+  ] = useState<MilaDocument[]>([])
+
+  const [
+    isLoggedIn,
+    setIsLoggedIn,
+  ] = useState(false)
+
+  const [
+    profileLoaded,
+    setProfileLoaded,
+  ] = useState(false)
+
+  const loadLocalProfile =
+    useCallback((uid?: string) => {
+      const savedProfile =
+        safeParse<any>(
+          localStorage.getItem(
+            profileKey(uid)
+          ),
+          null
+        )
+
+      const savedExpenses =
+        safeParse<any[]>(
+          localStorage.getItem(
+            expensesKey(uid)
+          ),
+          []
+        )
+
+      const savedIncomes =
+        safeParse<any[]>(
+          localStorage.getItem(
+            incomesKey(uid)
+          ),
+          []
+        )
+
+      const savedObligations =
+        safeParse<any[]>(
+          localStorage.getItem(
+            obligationsKey(uid)
+          ),
+          []
+        )
+
+      const savedDocuments =
+        safeParse<MilaDocument[]>(
+          localStorage.getItem(
+            documentsKey(uid)
+          ),
+          []
+        )
+
+      if (savedProfile) {
+        setUserName(
+          savedProfile.userName ?? ''
+        )
+
+        setUserStatus(
+          savedProfile.userStatus ?? ''
+        )
+
+        setIndustry(
+          normalizeIndustry(
+            savedProfile.industry
+          )
+        )
+
+        setTaxClass(
+          savedProfile.taxClass ?? '1'
+        )
+
+        setAnnualGross(
+          Number(
+            savedProfile.annualGross ??
+              0
+          )
+        )
+
+        setAnnualProfit(
+          Number(
+            savedProfile.annualProfit ??
+              0
+          )
+        )
+
+        setVatStatus(
+          savedProfile.vatStatus ?? ''
+        )
+
+        setFederalState(
+          savedProfile.federalState ??
+            ''
+        )
+
+        setChurchTax(
+          Boolean(
+            savedProfile.churchTax ??
+              false
+          )
+        )
+
+        setMarried(
+          Boolean(
+            savedProfile.married ??
+              false
+          )
+        )
+
+        setChildren(
+          Number(
+            savedProfile.children ?? 0
+          )
+        )
+
+        setAssemblyWork(
+          Boolean(
+            savedProfile.assemblyWork ??
+              false
+          )
+        )
+      } else {
+        setUserName('')
+        setUserStatus('')
+        setIndustry('sonstiges')
+        setTaxClass('1')
+        setAnnualGross(0)
+        setAnnualProfit(0)
+        setVatStatus('')
+        setFederalState('')
+        setChurchTax(false)
+        setMarried(false)
+        setChildren(0)
+        setAssemblyWork(false)
+      }
+
+      setExpenses(savedExpenses)
+      setIncomes(savedIncomes)
+
+      setObligations(
+        savedObligations.map(
+          normalizeObligation
+        )
+      )
+
+      setDocuments(savedDocuments)
+      setProfileLoaded(true)
+    }, [])
+
+  const fetchFinanceData =
+    useCallback(
+      async (uid?: string) => {
+        // Gastmodus nutzt ausschließlich
+        // die bereits geladenen lokalen Daten.
+        if (!uid) return
+
+        const [
+          expensesResult,
+          incomesResult,
+          obligationsResult,
+        ] = await Promise.all([
+          supabase
+            .from('expenses')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', {
+              ascending: false,
+            }),
+
+          supabase
+            .from('incomes')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', {
+              ascending: false,
+            }),
+
+          supabase
+            .from('obligations')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', {
+              ascending: false,
+            }),
+        ])
+
+        if (expensesResult.error) {
+          console.error(
+            'Ausgaben laden fehlgeschlagen:',
+            expensesResult.error
+          )
+        } else {
+          setExpenses(
+            expensesResult.data || []
+          )
+        }
+
+        if (incomesResult.error) {
+          console.error(
+            'Einnahmen laden fehlgeschlagen:',
+            incomesResult.error
+          )
+        } else {
+          setIncomes(
+            incomesResult.data || []
+          )
+        }
+
+        if (
+          obligationsResult.error
+        ) {
+          console.error(
+            'Verpflichtungen laden fehlgeschlagen:',
+            obligationsResult.error
+          )
+        } else {
+          setObligations(
+            (
+              obligationsResult.data ||
+              []
+            ).map(normalizeObligation)
+          )
+        }
+      },
+      []
+    )
 
   useEffect(() => {
+    let mounted = true
+
     async function init() {
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } =
+        await supabase.auth.getSession()
 
-      const uid = session?.user?.id || ''
+      if (!mounted) return
+
+      const uid =
+        session?.user?.id || ''
 
       setUserId(uid)
       setIsLoggedIn(Boolean(uid))
-      loadLocalProfile(uid || undefined)
-      await fetchFinanceData(uid || undefined)
+
+      loadLocalProfile(
+        uid || undefined
+      )
+
+      await fetchFinanceData(
+        uid || undefined
+      )
     }
 
     init()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const uid = session?.user?.id || ''
+    } =
+      supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          const uid =
+            session?.user?.id || ''
 
-      setUserId(uid)
-      setIsLoggedIn(Boolean(uid))
-      setProfileLoaded(false)
+          setProfileLoaded(false)
+          setUserId(uid)
+          setIsLoggedIn(Boolean(uid))
 
-      loadLocalProfile(uid || undefined)
-      await fetchFinanceData(uid || undefined)
-    })
+          loadLocalProfile(
+            uid || undefined
+          )
 
-    return () => subscription.unsubscribe()
-  }, [fetchFinanceData, loadLocalProfile])
+          await fetchFinanceData(
+            uid || undefined
+          )
+        }
+      )
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [
+    fetchFinanceData,
+    loadLocalProfile,
+  ])
 
   useEffect(() => {
     if (!profileLoaded) return
@@ -293,236 +620,598 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!profileLoaded) return
 
     localStorage.setItem(
-      obligationsKey(userId || undefined),
-      JSON.stringify(obligations)
+      expensesKey(userId || undefined),
+      JSON.stringify(expenses)
     )
-  }, [obligations, profileLoaded, userId])
+  }, [
+    expenses,
+    profileLoaded,
+    userId,
+  ])
 
   useEffect(() => {
     if (!profileLoaded) return
 
     localStorage.setItem(
-      documentsKey(userId || undefined),
+      incomesKey(userId || undefined),
+      JSON.stringify(incomes)
+    )
+  }, [
+    incomes,
+    profileLoaded,
+    userId,
+  ])
+
+  useEffect(() => {
+    if (!profileLoaded) return
+
+    localStorage.setItem(
+      obligationsKey(
+        userId || undefined
+      ),
+      JSON.stringify(obligations)
+    )
+  }, [
+    obligations,
+    profileLoaded,
+    userId,
+  ])
+
+  useEffect(() => {
+    if (!profileLoaded) return
+
+    localStorage.setItem(
+      documentsKey(
+        userId || undefined
+      ),
       JSON.stringify(documents)
     )
-  }, [documents, profileLoaded, userId])
+  }, [
+    documents,
+    profileLoaded,
+    userId,
+  ])
 
-  const login = useCallback((name: string, status: any) => {
-    setUserName(name || '')
-    setUserStatus(status || '')
-    setIsLoggedIn(true)
-  }, [])
+  const login = useCallback(
+    (name: string, status: any) => {
+      setUserName(name || '')
+      setUserStatus(status || '')
+      setIsLoggedIn(true)
+    },
+    []
+  )
 
   const logout = useCallback(() => {
-  setProfileLoaded(false)
-  setIsLoggedIn(false)
-  setUserId('')
-  setExpenses([])
-  setIncomes([])
-  setObligations([])
-  setDocuments([])
-  setUserName('')
-  setUserStatus('')
-  setIndustry('sonstiges')
-  setAnnualGross(0)
-  setAnnualProfit(0)
-  setVatStatus('')
-  setFederalState('')
-  setChurchTax(false)
-  setMarried(false)
-  setChildren(0)
-  setAssemblyWork(false)
-}, [])
+    setProfileLoaded(false)
+    setIsLoggedIn(false)
+    setUserId('')
+
+    setExpenses([])
+    setIncomes([])
+    setObligations([])
+    setDocuments([])
+
+    setUserName('')
+    setUserStatus('')
+    setIndustry('sonstiges')
+    setTaxClass('1')
+    setAnnualGross(0)
+    setAnnualProfit(0)
+    setVatStatus('')
+    setFederalState('')
+    setChurchTax(false)
+    setMarried(false)
+    setChildren(0)
+    setAssemblyWork(false)
+
+    setTimeout(() => {
+      loadLocalProfile()
+    }, 0)
+  }, [loadLocalProfile])
 
   const addExpense = useCallback(
-    async (exp: any) => {
-      if (!userId) throw new Error('Nicht angemeldet.')
+    async (item: any) => {
+      if (!userId) {
+        const localItem = {
+          ...item,
+          id:
+            item?.id ||
+            createLocalId(),
+        }
+
+        setExpenses((previous) => [
+          localItem,
+          ...previous,
+        ])
+
+        return
+      }
 
       const payload = {
-        ...exp,
+        ...item,
         user_id: userId,
       }
 
-      const { data, error } = await supabase
-        .from('expenses')
-        .insert([payload])
-        .select()
-        .single()
+      const { data, error } =
+        await supabase
+          .from('expenses')
+          .insert([payload])
+          .select()
+          .single()
 
       if (error) {
-        console.error('Ausgabe speichern fehlgeschlagen:', error)
+        console.error(
+          'Ausgabe speichern fehlgeschlagen:',
+          error
+        )
+
         throw error
       }
 
-      setExpenses((prev) => [data, ...prev])
+      setExpenses((previous) => [
+        data,
+        ...previous,
+      ])
     },
     [userId]
   )
 
   const addIncome = useCallback(
-    async (inc: any) => {
-      if (!userId) throw new Error('Nicht angemeldet.')
+    async (item: any) => {
+      if (!userId) {
+        const localItem = {
+          ...item,
+          id:
+            item?.id ||
+            createLocalId(),
+        }
+
+        setIncomes((previous) => [
+          localItem,
+          ...previous,
+        ])
+
+        return
+      }
 
       const payload = {
-        ...inc,
+        ...item,
         user_id: userId,
       }
 
-      const { data, error } = await supabase
-        .from('incomes')
-        .insert([payload])
-        .select()
-        .single()
+      const { data, error } =
+        await supabase
+          .from('incomes')
+          .insert([payload])
+          .select()
+          .single()
 
       if (error) {
-        console.error('Einnahme speichern fehlgeschlagen:', error)
+        console.error(
+          'Einnahme speichern fehlgeschlagen:',
+          error
+        )
+
         throw error
       }
 
-      setIncomes((prev) => [data, ...prev])
+      setIncomes((previous) => [
+        data,
+        ...previous,
+      ])
     },
     [userId]
   )
 
-  const deleteExpense = useCallback(async (item: any) => {
-    const id = item?.id
+  const deleteExpense =
+    useCallback(
+      async (item: any) => {
+        const id = item?.id
 
-    if (!id) {
-      alert('Diese Ausgabe hat keine ID und konnte nicht gelöscht werden.')
-      return
-    }
+        if (!id) {
+          throw new Error(
+            'Diese Ausgabe hat keine ID.'
+          )
+        }
 
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
+        if (!userId) {
+          setExpenses((previous) =>
+            previous.filter(
+              (expense) =>
+                expense.id !== id
+            )
+          )
 
-    if (error) {
-      console.error('Ausgabe löschen fehlgeschlagen:', error)
-      alert(`Ausgabe konnte nicht gelöscht werden: ${error.message}`)
-      throw error
-    }
+          return
+        }
 
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
-  }, [])
-const updateObligation = useCallback(
-  async (id: string, updates: Partial<Obligation>) => {
-    if (!userId) throw new Error('Nicht angemeldet.')
+        const { error } =
+          await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', id)
 
-    const payload: any = {}
+        if (error) {
+          console.error(
+            'Ausgabe löschen fehlgeschlagen:',
+            error
+          )
 
-    if (updates.title !== undefined) payload.title = updates.title
-    if (updates.partner !== undefined) payload.partner = updates.partner
-    if ((updates as any).creditor !== undefined)
-      payload.creditor = (updates as any).creditor
-    if (updates.amount !== undefined)
-      payload.amount = Number(updates.amount || 0)
-    if (updates.type !== undefined) payload.type = updates.type
-    if (updates.area !== undefined) payload.area = updates.area
-    if (updates.status !== undefined) payload.status = updates.status
-    if (updates.priority !== undefined) payload.priority = updates.priority
-    if (updates.dueDate !== undefined)
-      payload.due_date = updates.dueDate
+          throw error
+        }
 
-    const { data, error } = await supabase
-      .from('obligations')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Verpflichtung aktualisieren fehlgeschlagen:', error)
-      throw error
-    }
-
-    setObligations((prev) =>
-      prev.map((item) =>
-        item.id === id ? normalizeObligation(data) : item
-      )
+        setExpenses((previous) =>
+          previous.filter(
+            (expense) =>
+              expense.id !== id
+          )
+        )
+      },
+      [userId]
     )
-  },
-  [userId]
-)
-  const deleteIncome = useCallback(async (id: any) => {
-    const { error } = await supabase.from('incomes').delete().eq('id', id)
 
-    if (error) {
-      console.error('Einnahme löschen fehlgeschlagen:', error)
-      throw error
-    }
+  const deleteIncome =
+    useCallback(
+      async (id: any) => {
+        if (!userId) {
+          setIncomes((previous) =>
+            previous.filter(
+              (income) =>
+                income.id !== id
+            )
+          )
 
-    setIncomes((prev) => prev.filter((income) => income.id !== id))
-  }, [])
+          return
+        }
 
-  const updateIncomeStatus = useCallback(async (id: any, status: string) => {
-    const normalizedStatus = status.toLowerCase()
+        const { error } =
+          await supabase
+            .from('incomes')
+            .delete()
+            .eq('id', id)
 
-    const { data, error } = await supabase
-      .from('incomes')
-      .update({ status: normalizedStatus })
-      .eq('id', id)
-      .select()
-      .single()
+        if (error) {
+          console.error(
+            'Einnahme löschen fehlgeschlagen:',
+            error
+          )
 
-    if (error) {
-      console.error('Status ändern fehlgeschlagen:', error)
-      throw error
-    }
+          throw error
+        }
 
-    setIncomes((prev) =>
-      prev.map((income) => (income.id === id ? data : income))
+        setIncomes((previous) =>
+          previous.filter(
+            (income) =>
+              income.id !== id
+          )
+        )
+      },
+      [userId]
     )
-  }, [])
 
-  const addObligation = useCallback(async (item: Obligation) => {
-  if (!userId) throw new Error('Nicht angemeldet.')
+  const updateIncomeStatus =
+    useCallback(
+      async (
+        id: any,
+        status: string
+      ) => {
+        const normalizedStatus =
+          status.toLowerCase()
 
-  const payload = {
-    user_id: userId,
-    title: item.title,
-    partner: item.partner || '',
-    creditor: (item as any).creditor || item.partner || '',
-    amount: Number(item.amount || 0),
-    type: item.type || 'rechnung',
-    area: item.area || 'privat',
-    due_date: item.dueDate || (item as any).due_date || null,
-    status: item.status || 'offen',
-    priority: item.priority || 'normal',
-    reminder_days: Number((item as any).reminder_days || 3),
-  }
+        if (!userId) {
+          setIncomes((previous) =>
+            previous.map((income) =>
+              income.id === id
+                ? {
+                    ...income,
+                    status:
+                      normalizedStatus,
+                  }
+                : income
+            )
+          )
 
-  const { data, error } = await supabase
-    .from('obligations')
-    .insert([payload])
-    .select()
-    .single()
+          return
+        }
 
-  if (error) {
-    console.error('Verpflichtung speichern fehlgeschlagen:', error)
-    throw error
-  }
+        const { data, error } =
+          await supabase
+            .from('incomes')
+            .update({
+              status:
+                normalizedStatus,
+            })
+            .eq('id', id)
+            .select()
+            .single()
 
-  setObligations((prev) => [normalizeObligation(data), ...prev])
-}, [userId])
-const deleteObligation = useCallback(async (id: string) => {
-  if (!userId) throw new Error('Nicht angemeldet.')
+        if (error) {
+          console.error(
+            'Status ändern fehlgeschlagen:',
+            error
+          )
 
-  const { error } = await supabase
-    .from('obligations')
-    .delete()
-    .eq('id', id)
+          throw error
+        }
 
-  if (error) {
-    console.error('Verpflichtung löschen fehlgeschlagen:', error)
-    throw error
-  }
+        setIncomes((previous) =>
+          previous.map((income) =>
+            income.id === id
+              ? data
+              : income
+          )
+        )
+      },
+      [userId]
+    )
 
-  setObligations((prev) => prev.filter((item) => item.id !== id))
-}, [userId])
+  const addObligation =
+    useCallback(
+      async (item: Obligation) => {
+        const normalizedItem =
+          normalizeObligation({
+            ...item,
+            id:
+              item?.id ||
+              createLocalId(),
+          })
 
-  const summary = useMemo(() => {
-    return calculateSummary(incomes, expenses)
-  }, [incomes, expenses])
+        if (!userId) {
+          setObligations(
+            (previous) => [
+              normalizedItem,
+              ...previous,
+            ]
+          )
 
-  const budgetStatus = useMemo(() => [], [categories, expenses])
+          return
+        }
+
+        const payload = {
+          user_id: userId,
+          title: item.title,
+          partner:
+            item.partner || '',
+          creditor:
+            (item as any).creditor ||
+            item.partner ||
+            '',
+          amount: Number(
+            item.amount || 0
+          ),
+          type:
+            item.type ||
+            'rechnung',
+          area:
+            item.area ||
+            'privat',
+          due_date:
+            item.dueDate ||
+            (item as any).due_date ||
+            null,
+          status:
+            item.status ||
+            'offen',
+          priority:
+            item.priority ||
+            'normal',
+          reminder_days: Number(
+            (item as any)
+              .reminder_days || 3
+          ),
+        }
+
+        const { data, error } =
+          await supabase
+            .from('obligations')
+            .insert([payload])
+            .select()
+            .single()
+
+        if (error) {
+          console.error(
+            'Verpflichtung speichern fehlgeschlagen:',
+            error
+          )
+
+          throw error
+        }
+
+        setObligations(
+          (previous) => [
+            normalizeObligation(data),
+            ...previous,
+          ]
+        )
+      },
+      [userId]
+    )
+
+  const updateObligation =
+    useCallback(
+      async (
+        id: string,
+        updates: Partial<Obligation>
+      ) => {
+        if (!userId) {
+          setObligations(
+            (previous) =>
+              previous.map((item) =>
+                item.id === id
+                  ? normalizeObligation({
+                      ...item,
+                      ...updates,
+                    })
+                  : item
+              )
+          )
+
+          return
+        }
+
+        const payload: any = {}
+
+        if (
+          updates.title !== undefined
+        ) {
+          payload.title =
+            updates.title
+        }
+
+        if (
+          updates.partner !==
+          undefined
+        ) {
+          payload.partner =
+            updates.partner
+        }
+
+        if (
+          (updates as any)
+            .creditor !== undefined
+        ) {
+          payload.creditor = (
+            updates as any
+          ).creditor
+        }
+
+        if (
+          updates.amount !== undefined
+        ) {
+          payload.amount = Number(
+            updates.amount || 0
+          )
+        }
+
+        if (
+          updates.type !== undefined
+        ) {
+          payload.type = updates.type
+        }
+
+        if (
+          updates.area !== undefined
+        ) {
+          payload.area = updates.area
+        }
+
+        if (
+          updates.status !== undefined
+        ) {
+          payload.status =
+            updates.status
+        }
+
+        if (
+          updates.priority !==
+          undefined
+        ) {
+          payload.priority =
+            updates.priority
+        }
+
+        if (
+          updates.dueDate !==
+          undefined
+        ) {
+          payload.due_date =
+            updates.dueDate
+        }
+
+        if (
+          (updates as any)
+            .due_date !== undefined
+        ) {
+          payload.due_date = (
+            updates as any
+          ).due_date
+        }
+
+        const { data, error } =
+          await supabase
+            .from('obligations')
+            .update(payload)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) {
+          console.error(
+            'Verpflichtung aktualisieren fehlgeschlagen:',
+            error
+          )
+
+          throw error
+        }
+
+        setObligations(
+          (previous) =>
+            previous.map((item) =>
+              item.id === id
+                ? normalizeObligation(
+                    data
+                  )
+                : item
+            )
+        )
+      },
+      [userId]
+    )
+
+  const deleteObligation =
+    useCallback(
+      async (id: string) => {
+        if (!userId) {
+          setObligations(
+            (previous) =>
+              previous.filter(
+                (item) =>
+                  item.id !== id
+              )
+          )
+
+          return
+        }
+
+        const { error } =
+          await supabase
+            .from('obligations')
+            .delete()
+            .eq('id', id)
+
+        if (error) {
+          console.error(
+            'Verpflichtung löschen fehlgeschlagen:',
+            error
+          )
+
+          throw error
+        }
+
+        setObligations(
+          (previous) =>
+            previous.filter(
+              (item) =>
+                item.id !== id
+            )
+        )
+      },
+      [userId]
+    )
+
+  const summary = useMemo(
+    () =>
+      calculateSummary(
+        incomes,
+        expenses
+      ),
+    [incomes, expenses]
+  )
+
+  const budgetStatus = useMemo(
+    () => [],
+    [categories, expenses]
+  )
 
   const value = useMemo(
     () => ({
@@ -533,11 +1222,16 @@ const deleteObligation = useCallback(async (id: string) => {
       categories,
       milaFeedback,
       morningBriefing,
-      refreshMorningBriefing: async () => {},
-      triggerMilaFeedback: (_cat: string) => {},
+
+      refreshMorningBriefing:
+        async () => {},
+
+      triggerMilaFeedback:
+        (_category: string) => {},
 
       addExpense,
       deleteExpense,
+
       addIncome,
       deleteIncome,
       updateIncomeStatus,
@@ -545,34 +1239,45 @@ const deleteObligation = useCallback(async (id: string) => {
       obligations,
       setObligations,
       addObligation,
-updateObligation,
-deleteObligation,
+      updateObligation,
+      deleteObligation,
 
       documents,
       setDocuments,
 
       userName,
       setUserName,
+
       userStatus,
       setUserStatus,
+
       industry,
       setIndustry,
+
       taxClass,
       setTaxClass,
+
       annualGross,
       setAnnualGross,
+
       annualProfit,
       setAnnualProfit,
+
       vatStatus,
       setVatStatus,
+
       federalState,
       setFederalState,
+
       churchTax,
       setChurchTax,
+
       married,
       setMarried,
+
       children: childrenCount,
       setChildren,
+
       assemblyWork,
       setAssemblyWork,
 
@@ -589,19 +1294,25 @@ deleteObligation,
       categories,
       milaFeedback,
       morningBriefing,
+
       addExpense,
       deleteExpense,
+
       addIncome,
       deleteIncome,
       updateIncomeStatus,
+
       obligations,
       addObligation,
-updateObligation,
-deleteObligation,
+      updateObligation,
+      deleteObligation,
+
       documents,
+
       userName,
       userStatus,
       industry,
+
       taxClass,
       annualGross,
       annualProfit,
@@ -611,25 +1322,34 @@ deleteObligation,
       married,
       childrenCount,
       assemblyWork,
+
       isLoggedIn,
       login,
       logout,
+
       summary,
       budgetStatus,
     ]
   )
 
   return (
-    <FinanceContext.Provider value={value}>
+    <FinanceContext.Provider
+      value={value}
+    >
       {children}
     </FinanceContext.Provider>
   )
 }
 
 export function useFinance() {
-  const ctx = useContext(FinanceContext)
+  const context =
+    useContext(FinanceContext)
 
-  if (!ctx) throw new Error('useFinance must be used within FinanceProvider')
+  if (!context) {
+    throw new Error(
+      'useFinance must be used within FinanceProvider'
+    )
+  }
 
-  return ctx
+  return context
 }
