@@ -36,10 +36,12 @@ export type Obligation = {
   area: ObligationArea
 
   dueDate: string
-  status: ObligationStatus
+status: ObligationStatus
 
-  priority: ObligationPriority
+createdAt?: string
+paidAt?: string
 
+priority: ObligationPriority
   reminderDays: number[]
 
   note?: string
