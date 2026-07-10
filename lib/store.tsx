@@ -951,14 +951,16 @@ export function FinanceProvider({
   const addObligation =
     useCallback(
       async (item: Obligation) => {
-        const normalizedItem =
-          normalizeObligation({
-            ...item,
-            id:
-              item?.id ||
-              createLocalId(),
-          })
-
+       const normalizedItem =
+  normalizeObligation({
+    ...item,
+    id:
+      item?.id ||
+      createLocalId(),
+    createdAt:
+      item.createdAt ||
+      new Date().toISOString(),
+  })
         if (!userId) {
           setObligations(
             (previous) => [
