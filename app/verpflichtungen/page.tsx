@@ -134,12 +134,7 @@ export default function VerpflichtungenPage() {
       note:
         `${note}
         
-Angelegt: ${dateDE(
-new Date().toISOString().slice(0,10)
-)} um ${timeNow()} Uhr` as any,
-    }
-
-
+note: note.trim() || undefined,
     try {
       await addObligation(item)
     } catch(error:any) {
