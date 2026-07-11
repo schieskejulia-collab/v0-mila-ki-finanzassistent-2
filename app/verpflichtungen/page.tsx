@@ -378,11 +378,12 @@ note: note.trim() || undefined,
                               status: 'bezahlt',
                             }
                           )
-                        } catch (error: any) {
-                          alert(
-  'Verpflichtung konnte nicht gelöscht werden: ' +
-    (error?.message || 'Unbekannter Fehler')
-)
+                       } catch (error: any) {
+  alert(
+    'Verpflichtung konnte nicht gelöscht werden: ' +
+      (error?.message || 'Unbekannter Fehler')
+  )
+}
                         }
                       }}
                       className="font-black text-emerald-600"
