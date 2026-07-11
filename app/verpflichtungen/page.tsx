@@ -380,11 +380,9 @@ note: note.trim() || undefined,
                           )
                         } catch (error: any) {
                           alert(
-                            `Status konnte nicht geändert werden: ${
-                              error?.message ||
-                              'Unbekannter Fehler'
-                            }`
-                          )
+  'Status konnte nicht geändert werden: ' +
+    (error?.message || 'Unbekannter Fehler')
+)
                         }
                       }}
                       className="font-black text-emerald-600"
