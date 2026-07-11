@@ -258,34 +258,36 @@ note: note.trim() || undefined,
           </div>
         ) : (
           obligations.map((item: any) => {
-            const status = String(
-              item.status || 'offen'
-            ).toLowerCase()
+  const status = String(
+    item.status || 'offen'
+  ).toLowerCase()
 
-            const isPaid = status === 'bezahlt'
+  const isPaid = status === 'bezahlt'
 
-            const itemDueDate =
-              item.dueDate ||
-              item.due_date ||
-              ''
+  const itemDueDate =
+    item.dueDate ||
+    item.due_date ||
+    ''
 
-            const createdAt =
-              item.createdAt ||
-              item.created_at ||
-              ''
+  const createdAt =
+    item.createdAt ||
+    item.created_at ||
+    ''
 
-            const paidAt =
-              item.paidAt ||
-              item.paid_at ||
-              ''
+  const paidAt =
+    item.paidAt ||
+    item.paid_at ||
+    ''
 
-            return (
-              <article
-                key={item.id}
-                className={`rounded-3xl bg-white p-5 shadow ${
-                  isPaid ? 'opacity-80' : ''
-                }`}
-              >
+  return (
+    <article
+      key={item.id}
+      className={
+        isPaid
+          ? 'rounded-3xl bg-white p-5 shadow opacity-80'
+          : 'rounded-3xl bg-white p-5 shadow'
+      }
+    >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="break-words text-xl font-black">
