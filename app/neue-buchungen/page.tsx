@@ -51,14 +51,15 @@ function formatEuro(value: number) {
 
 export default function NeueBuchungPage() {
   const {
-    documents,
-    setDocuments,
-    addExpense,
-    addIncome,
-    addObligation,
-    incomes,
-    expenses,
-  } = useFinance()
+  documents,
+  setDocuments,
+  addExpense,
+  addIncome,
+  addObligation,
+  incomes,
+  expenses,
+  obligations,
+} = useFinance()
 
   const [type, setType] =
     useState<'expense' | 'income'>('expense')
@@ -165,45 +166,85 @@ const isInkasso =
 }
 
   async function alsVerpflichtungSpeichern() {
-    if (!title.trim() || !amount || !partner.trim() || !dueDate) {
-      alert(
-        'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
-      )
-      return
-    }
-
-    try {
-      await addObligation({
-        id: crypto.randomUUID(),
-        title: title.trim(),
-        partner: partner.trim(),
-        creditor: partner.trim(),
-        amount: numericAmount,
-        type:
-          category === INKASSO_LABEL
-            ? 'inkasso'
-            : 'rechnung',
-        area: 'privat',
-        dueDate,
-        due_date: dueDate as any,
-        status: 'offen',
-        priority:
-          category === INKASSO_LABEL
-            ? 'wichtig'
-            : 'normal',
-        reminderDays: [14, 3, 0],
-        reminder_days: 3 as any,
-      })
-
-      alert('Als Verpflichtung gespeichert ✅')
-    } catch (error: any) {
-      alert(
-        `Verpflichtung konnte nicht gespeichert werden: ${
-          error?.message || 'Unbekannter Fehler'
-        }`
-      )
-    }
+  if (!title.trim() || !amount || !partner.trim() || !dueDate) {
+    alert(
+      'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
+    )
+    return
   }
+
+  const normalizedPartner =
+    partner.trim().toLowerCase()
+
+  const normalizedAmount =
+    Number(String(amount).replace(',', '.'))
+
+  const duplicate = (obligations || []).some(
+    (item: any) => {
+      const itemPartner = String(
+        item.partner ||
+        item.creditor ||
+        ''
+      )
+        .trim()
+        .toLowerCase()
+
+      const itemAmount =
+        Number(item.amount || 0)
+
+      const itemDueDate =
+        item.dueDate ||
+        item.due_date ||
+        ''
+
+      return (
+        itemPartner === normalizedPartner &&
+        itemAmount === normalizedAmount &&
+        itemDueDate === dueDate
+      )
+    }
+  )
+
+  if (duplicate) {
+    alert(
+      'Diese Verpflichtung kennt Mila bereits 🧾'
+    )
+    return
+  }
+
+  try {
+    await addObligation({
+      id: crypto.randomUUID(),
+      title: title.trim(),
+      partner: partner.trim(),
+      creditor: partner.trim(),
+      amount: normalizedAmount,
+      type:
+        category === INKASSO_LABEL
+          ? 'inkasso'
+          : 'rechnung',
+      area: 'privat',
+      dueDate,
+      due_date: dueDate as any,
+      status: 'offen',
+      priority:
+        category === INKASSO_LABEL
+          ? 'wichtig'
+          : 'normal',
+      reminderDays: [14, 3, 0],
+      reminder_days: 3 as any,
+    })
+
+    alert('Als Verpflichtung gespeichert ✅')
+  } catch (error: any) {
+    alert(
+      `Verpflichtung konnte nicht gespeichert werden: ${
+        error?.message ||
+        'Unbekannter Fehler'
+      }`
+    )
+  }
+}
 
   async function speichern() {
     if (isSaving) return
