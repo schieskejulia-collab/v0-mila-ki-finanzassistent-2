@@ -380,7 +380,7 @@ note: note.trim() || undefined,
                           )
                         } catch (error: any) {
                           alert(
-  'Status konnte nicht geändert werden: ' +
+  'Verpflichtung konnte nicht gelöscht werden: ' +
     (error?.message || 'Unbekannter Fehler')
 )
                         }
