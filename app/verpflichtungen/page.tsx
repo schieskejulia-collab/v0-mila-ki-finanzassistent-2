@@ -130,9 +130,15 @@ export default function VerpflichtungenPage() {
 
       reminderDays: [14,3,0],
       reminder_days: 3 as any,
-
-      note:
-        `${note}
+const item = {
+  title: title.trim(),
+  partner: partner.trim(),
+  amount: parsedAmount,
+  dueDate,
+  priority,
+  status: 'offen',
+  note: note.trim() || undefined,
+}
         
 note: note.trim() || undefined,
     try {
