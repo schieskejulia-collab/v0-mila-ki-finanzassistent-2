@@ -329,13 +329,13 @@ note: note.trim() || undefined,
                     </span>
                   )}
 
-                  <span
-                    className={`rounded-full px-3 py-1 ${
-                      isPaid
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-amber-50 text-amber-700'
-                    }`}
-                  >
+             <span
+  className={
+    isPaid
+      ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
+      : 'rounded-full bg-amber-50 px-3 py-1 text-amber-700'
+  }
+>
                     {isPaid
                       ? '🟢 Bezahlt'
                       : '🟡 Offen'}
