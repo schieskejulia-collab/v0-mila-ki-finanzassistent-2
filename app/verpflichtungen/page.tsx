@@ -389,7 +389,6 @@ export default function VerpflichtungenPage() {
   )
 }
                         }
-                      }}
                       className="font-black text-emerald-600"
                     >
                       ✅ Bezahlt
