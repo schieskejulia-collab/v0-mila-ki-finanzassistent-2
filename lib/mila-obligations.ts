@@ -4,7 +4,7 @@ export type ObligationType =
   | 'vertrag'
   | 'abo'
   | 'miete'
-| 'inkasso'
+  | 'inkasso'
   | 'sonstiges'
 
 export type ObligationArea =
@@ -12,6 +12,7 @@ export type ObligationArea =
   | 'business'
 
 export type ObligationStatus =
+  | 'offen'
   | 'geplant'
   | 'bezahlt'
   | 'verschoben'
@@ -22,51 +23,150 @@ export type ObligationPriority =
   | 'wichtig'
   | 'normal'
 
-
 export type Obligation = {
   id: string
 
   title: string
   partner: string
+  creditor?: string
+
   amount: number
+
   caseNumber?: string
   originalCreditor?: string
   installmentAmount?: number
+
   type: ObligationType
   area: ObligationArea
 
   dueDate: string
-status: ObligationStatus
+  due_date?: string
 
-createdAt?: string
-paidAt?: string
+  status: ObligationStatus
+  priority: ObligationPriority
 
-priority: ObligationPriority
   reminderDays: number[]
+  reminder_days?: number
+
+  createdAt?: string
+  created_at?: string
+
+  paidAt?: string
+  paid_at?: string
 
   note?: string
 }
 
+export function getObligationDueDate(
+  obligation: Obligation
+) {
+  return (
+    obligation.dueDate ||
+    obligation.due_date ||
+    ''
+  )
+}
+
+export function isObligationPaid(
+  obligation: Obligation
+) {
+  return (
+    String(obligation.status)
+      .trim()
+      .toLowerCase() === 'bezahlt'
+  )
+}
+
+export function isObligationOpen(
+  obligation: Obligation
+) {
+  return !isObligationPaid(obligation)
+}
+
+export function getDaysUntilObligation(
+  obligation: Obligation
+) {
+  const dueDate =
+    getObligationDueDate(obligation)
+
+  if (!dueDate) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  if (Number.isNaN(due.getTime())) {
+    return null
+  }
+
+  return Math.ceil(
+    (due.getTime() - today.getTime()) /
+      (1000 * 60 * 60 * 24)
+  )
+}
 
 export function getUpcomingObligations(
   obligations: Obligation[]
 ) {
-  const today = new Date()
-
   return obligations
     .filter((item) => {
+      const days =
+        getDaysUntilObligation(item)
+
       return (
-        item.status === 'geplant' &&
-        new Date(item.dueDate) >= today
+        isObligationOpen(item) &&
+        days !== null &&
+        days >= 0
       )
     })
-    .sort(
-      (a, b) =>
-        new Date(a.dueDate).getTime() -
-        new Date(b.dueDate).getTime()
-    )
+    .sort((a, b) => {
+      const dateA =
+        new Date(
+          getObligationDueDate(a)
+        ).getTime()
+
+      const dateB =
+        new Date(
+          getObligationDueDate(b)
+        ).getTime()
+
+      return dateA - dateB
+    })
 }
 
+export function getOverdueObligations(
+  obligations: Obligation[]
+) {
+  return obligations.filter((item) => {
+    const days =
+      getDaysUntilObligation(item)
+
+    return (
+      isObligationOpen(item) &&
+      days !== null &&
+      days < 0
+    )
+  })
+}
+
+export function getDueSoonObligations(
+  obligations: Obligation[],
+  withinDays = 3
+) {
+  return obligations.filter((item) => {
+    const days =
+      getDaysUntilObligation(item)
+
+    return (
+      isObligationOpen(item) &&
+      days !== null &&
+      days >= 0 &&
+      days <= withinDays
+    )
+  })
+}
 
 export function getCriticalObligations(
   obligations: Obligation[]
@@ -74,13 +174,38 @@ export function getCriticalObligations(
   return obligations.filter(
     (item) =>
       item.priority === 'existenz' &&
-      item.status !== 'bezahlt'
+      isObligationOpen(item)
   )
 }
 
+export function getInkassoObligations(
+  obligations: Obligation[]
+) {
+  return obligations.filter((item) => {
+    const text = `
+      ${item.type || ''}
+      ${item.title || ''}
+      ${item.partner || ''}
+      ${item.creditor || ''}
+    `.toLowerCase()
+
+    return (
+      isObligationOpen(item) &&
+      (
+        text.includes('inkasso') ||
+        text.includes('forderung')
+      )
+    )
+  })
+}
 
 export function createDelaySuggestion(
   obligation: Obligation
 ) {
-  return `Du könntest ${obligation.partner} kontaktieren und um eine Anpassung der Zahlung bitten.`
+  const partner =
+    obligation.partner ||
+    obligation.creditor ||
+    'den Anbieter'
+
+  return `Du könntest ${partner} kontaktieren und um eine Anpassung der Zahlung bitten.`
 }
