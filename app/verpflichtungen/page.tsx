@@ -139,7 +139,6 @@ export default function VerpflichtungenPage() {
   note: note.trim() || undefined,
 }
         
-note: note.trim() || undefined,
     try {
       await addObligation(item)
     } catch(error:any) {
