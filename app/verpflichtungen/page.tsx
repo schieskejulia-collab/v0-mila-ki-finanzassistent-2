@@ -382,14 +382,14 @@ export default function VerpflichtungenPage() {
                               status: 'bezahlt',
                             }
                           )
-                       } catch (error: any) {
-  alert(
-    'Verpflichtung konnte nicht gelöscht werden: ' +
-      (error?.message || 'Unbekannter Fehler')
-  )
-}
-                        }
-                      className="font-black text-emerald-600"
+                          } catch (error: any) {
+        alert(
+          'Verpflichtung konnte nicht als bezahlt markiert werden: ' +
+            (error?.message || 'Unbekannter Fehler')
+        )
+      }
+    }}
+    className="font-black text-emerald-600"
                     >
                       ✅ Bezahlt
                     </button>
