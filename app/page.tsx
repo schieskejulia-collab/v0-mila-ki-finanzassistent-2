@@ -501,20 +501,41 @@ const anchorMessage =
 </div>
 
 {/* --- KI-ERKENNTNISSE --- */}
-<div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+
+  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
     📊 KI-Erkenntnisse
   </h2>
 
-  <div className="flex gap-2.5 text-xs leading-relaxed text-slate-700">
-    <span>📊</span>
+  {milaPatterns.length === 0 ? (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+      <p className="text-xs font-semibold text-slate-600">
+        Mila sammelt noch Daten. Mit weiteren Buchungen erkennt sie automatisch
+        wiederkehrende Rechnungen, Versicherungen und dein persönliches
+        Kaufverhalten.
+      </p>
+    </div>
+  ) : (
+    <div className="space-y-3">
 
-    <span>
-      {recurringExpenses.length === 0 && softwareExpenses.length === 0
-        ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Software-Abonnements erkannt.'
-        : `Mila hat ${recurringExpenses.length} regelmäßige Ausgabe(n) und ${softwareExpenses.length} Software- oder Tool-Kosten erkannt.`}
-    </span>
-  </div>
+      {milaPatterns.map((pattern) => (
+        <div
+          key={pattern.id}
+          className="rounded-2xl border border-violet-100 bg-violet-50 p-4"
+        >
+          <p className="font-black text-violet-800">
+            🧠 {pattern.title}
+          </p>
+
+          <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
+            {pattern.message}
+          </p>
+        </div>
+      ))}
+
+    </div>
+  )}
+
 </div>
 
 {/* --- CHAT-ANKER --- */}
