@@ -500,13 +500,9 @@ const anchorMessage =
     <li className="flex gap-2.5">
       <span>📊</span>
       <span>
-      {recurringExpenses.length === 0 && softwareExpenses.length === 0
+    {recurringExpenses.length === 0 && softwareExpenses.length === 0
   ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Tool-Kosten gefunden.'
   : `Mila hat ${recurringExpenses.length} regelmäßige Ausgabe(n) und ${softwareExpenses.length} Software- oder Tool-Kosten erkannt.`}
-      recurringExpenses.length === 1 ? '' : 'n'
-    } und ${softwareExpenses.length} Tool-Koste${
-      softwareExpenses.length === 1 ? '' : 'n'
-    } erkannt.`}
       </span>
     </li>
   </ul>
