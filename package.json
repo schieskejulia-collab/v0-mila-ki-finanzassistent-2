@@ -54,13 +54,13 @@
     "react-day-picker": "9.13.2",
     "react-dom": "^19",
     "react-hook-form": "^7.54.1",
+     "unpdf": "^1.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
-    "unpdf": "^1.4.0",
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
