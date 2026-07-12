@@ -289,13 +289,13 @@ const anchorMessage =
           </div>
 </section>
 
-{/* --- MILA HAT ETWAS GEFUNDEN --- */}
+{/* --- HEUTE WICHTIG --- */}
 
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
 
   <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5">
 
-    🚨 Mila hat etwas gefunden
+    💜 HEUTE WICHTIG
 
   </h2>
 
