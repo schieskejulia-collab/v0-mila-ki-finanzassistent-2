@@ -579,13 +579,6 @@ bekleidung: [
     'edeka',
     'privat',
     'lebensmittel',
-'kita',
-'kindergarten',
-'hort',
-'kindertagesstätte',
-'kindertagesstaette',
-'kinderbetreuung',
-'nordspatzen',
 'netto',
 
 'rewe',
@@ -600,7 +593,21 @@ bekleidung: [
 
 'rossmann',
   ],
-
+kinder: [
+  'kita',
+  'kindergarten',
+  'hort',
+  'kindertagesstätte',
+  'kindertagesstaette',
+  'kinderbetreuung',
+  'essengeld',
+  'mittagessen kita',
+  'verpflegung kita',
+  'verpflegung kindergarten',
+  'schulessen',
+  'besseressen',
+  'nordspatzen',
+],
 dekoration: [
   'butlers',
   'depot',
