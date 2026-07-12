@@ -28,6 +28,7 @@ export type CategoryId =
   | 'material'
   | 'steuern'
   | 'privat'
+| 'kinder'
   | 'sonstiges'
 | 'inkasso'
   | 'bekleidung'
@@ -267,6 +268,10 @@ bekleidung: {
   color: 'var(--chart-4)',
 },
 
+kinder: {
+  id: 'kinder',
+  label: '👶 Kinder & Betreuung',
+},
 dekoration: {
   id: 'dekoration',
   label: 'Dekoration',
