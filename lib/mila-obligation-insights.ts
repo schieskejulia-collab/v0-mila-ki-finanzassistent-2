@@ -25,6 +25,18 @@ function money(value: number) {
   })
 }
 
+function formatDateDE(value?: string) {
+  if (!value) return 'dem vereinbarten Termin'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString('de-DE')
+}
+
 export function getObligationInsights(
   obligations: Obligation[] = [],
   availableMonthlyAmount = 0
@@ -37,9 +49,9 @@ export function getObligationInsights(
     return [
       {
         id: 'no-obligations',
-        title: '🧾 Keine Verpflichtungen hinterlegt',
+        title: '🧾 Noch keine Verpflichtungen hinterlegt',
         message:
-          'Wenn du Rechnungen, Raten oder Fristen einträgst, kann Mila dich rechtzeitig erinnern.',
+          'Trage Rechnungen, Raten oder Fristen ein. Mila behält die Termine für dich im Blick.',
         level: 'info',
         action: 'none',
       },
@@ -50,9 +62,9 @@ export function getObligationInsights(
     return [
       {
         id: 'all-obligations-paid',
-        title: '🟢 Alle Verpflichtungen erledigt',
+        title: '🟢 Alles erledigt',
         message:
-          'Aktuell ist keine offene Zahlung oder Frist hinterlegt.',
+          'Aktuell sind keine offenen Verpflichtungen oder Fristen hinterlegt.',
         level: 'info',
         action: 'none',
       },
@@ -61,45 +73,39 @@ export function getObligationInsights(
 
   const overdue = getOverdueObligations(openObligations)
 
-  const dueSoon = getDueSoonObligations(
-    openObligations,
-    14
-  ).sort((a, b) => {
-    const daysA =
-      getDaysUntilObligation(a) ??
-      Number.MAX_SAFE_INTEGER
+  const dueSoon = getDueSoonObligations(openObligations, 14).sort(
+    (a, b) => {
+      const daysA =
+        getDaysUntilObligation(a) ?? Number.MAX_SAFE_INTEGER
 
-    const daysB =
-      getDaysUntilObligation(b) ??
-      Number.MAX_SAFE_INTEGER
+      const daysB =
+        getDaysUntilObligation(b) ?? Number.MAX_SAFE_INTEGER
 
-    return daysA - daysB
-  })
+      return daysA - daysB
+    }
+  )
 
-  const critical =
-    getCriticalObligations(openObligations)
+  const critical = getCriticalObligations(openObligations)
 
-  const upcoming = getUpcomingObligations(
-    openObligations
-  ).slice(0, 5)
+  const upcoming = getUpcomingObligations(openObligations).slice(0, 5)
 
   if (overdue.length > 0) {
     const total = overdue.reduce(
-      (sum, item) =>
-        sum + Number(item.amount || 0),
+      (sum, item) => sum + Number(item.amount || 0),
       0
     )
 
     insights.push({
       id: 'overdue-obligations',
-      title: '🔴 Überfällige Fristen',
-      message: `${overdue.length} Zahlung${
+      title: '🔴 Überfällige Verpflichtungen',
+      message:
         overdue.length === 1
-          ? ' ist'
-          : 'en sind'
-      } überfällig (${money(
-        total
-      )}). Mila würde zuerst prüfen, ob bereits bezahlt wurde oder eine Rückmeldung nötig ist.`,
+          ? `Eine Zahlung über ${money(
+              total
+            )} ist überfällig. Mila würde zuerst prüfen, ob sie bereits erledigt wurde oder du reagieren solltest.`
+          : `${overdue.length} Zahlungen über insgesamt ${money(
+              total
+            )} sind überfällig. Mila würde zuerst prüfen, welche davon bereits erledigt wurden und wo du reagieren solltest.`,
       level: 'important',
       action: 'review',
     })
@@ -107,21 +113,21 @@ export function getObligationInsights(
 
   if (critical.length > 0) {
     const total = critical.reduce(
-      (sum, item) =>
-        sum + Number(item.amount || 0),
+      (sum, item) => sum + Number(item.amount || 0),
       0
     )
 
     insights.push({
       id: 'critical-obligations',
-      title: '🟡 Existenzwichtige Zahlungen',
-      message: `${critical.length} wichtige Verpflichtung${
+      title: '🟡 Wichtige Zahlungen im Blick',
+      message:
         critical.length === 1
-          ? ''
-          : 'en'
-      } über ${money(
-        total
-      )} sind offen. Diese sollten nicht still liegen bleiben.`,
+          ? `Eine wichtige Verpflichtung über ${money(
+              total
+            )} ist noch offen. Diese sollte nicht aus dem Blick geraten.`
+          : `${critical.length} wichtige Verpflichtungen über insgesamt ${money(
+              total
+            )} sind noch offen. Diese sollten nicht aus dem Blick geraten.`,
       level: 'important',
       action: 'review',
     })
@@ -129,28 +135,25 @@ export function getObligationInsights(
 
   if (dueSoon.length > 0) {
     const next = dueSoon[0]
-
-    const days =
-      getDaysUntilObligation(next)
+    const days = getDaysUntilObligation(next)
 
     if (days !== null) {
       insights.push({
         id: `due-soon-${next.id}`,
-        title: '📅 Bald fällig',
+        title: days === 0 ? '📅 Heute fällig' : '📅 Bald fällig',
         message:
           days === 0
-            ? `${next.title} ist heute fällig (${money(
+            ? `Heute wird „${next.title}“ über ${money(
                 next.amount
-              )}).`
-            : `${next.title} ist in ${days} Tag${
-                days === 1 ? '' : 'en'
-              } fällig (${money(
+              )} fällig.`
+            : days === 1
+            ? `Morgen wird „${next.title}“ über ${money(
                 next.amount
-              )}).`,
-        level:
-          days <= 3
-            ? 'reminder'
-            : 'info',
+              )} fällig.`
+            : `In ${days} Tagen wird „${next.title}“ über ${money(
+                next.amount
+              )} fällig.`,
+        level: days <= 3 ? 'reminder' : 'info',
         action: 'remind',
         obligationId: next.id,
       })
@@ -158,51 +161,43 @@ export function getObligationInsights(
   }
 
   if (availableMonthlyAmount > 0) {
-    const monthlyOpenTotal =
-      openObligations.reduce(
-        (sum, item) =>
-          sum + Number(item.amount || 0),
-        0
-      )
+    const monthlyOpenTotal = openObligations.reduce(
+      (sum, item) => sum + Number(item.amount || 0),
+      0
+    )
 
-    if (
-      monthlyOpenTotal >
-      availableMonthlyAmount
-    ) {
+    if (monthlyOpenTotal > availableMonthlyAmount) {
       insights.push({
         id: 'payment-pressure',
         title: '🪬 Zahlungsplan prüfen',
-        message: `Die offenen Verpflichtungen (${money(
+        message: `Deine offenen Verpflichtungen liegen bei ${money(
           monthlyOpenTotal
-        )}) liegen über deinem geplanten Spielraum (${money(
+        )}. Das ist mehr als dein geplanter Spielraum von ${money(
           availableMonthlyAmount
-        )}). Mila würde prüfen, ob eine Rate angepasst oder um Aufschub gebeten werden sollte.`,
+        )}. Mila würde prüfen, ob eine Rate angepasst oder ein Aufschub angefragt werden sollte.`,
         level: 'reminder',
         action: 'ask_delay',
       })
     }
   }
 
-  if (
-    upcoming.length > 0 &&
-    insights.length < 3
-  ) {
+  if (upcoming.length > 0 && insights.length < 3) {
     const total = upcoming.reduce(
-      (sum, item) =>
-        sum + Number(item.amount || 0),
+      (sum, item) => sum + Number(item.amount || 0),
       0
     )
 
     insights.push({
       id: 'upcoming-summary',
       title: '🧾 Kommende Verpflichtungen',
-      message: `In nächster Zeit stehen ${upcoming.length} Zahlung${
+      message:
         upcoming.length === 1
-          ? ''
-          : 'en'
-      } über ${money(
-        total
-      )} an. Mila kann dich rechtzeitig daran erinnern.`,
+          ? `In nächster Zeit steht eine Zahlung über ${money(
+              total
+            )} an. Mila kann dich rechtzeitig daran erinnern.`
+          : `In nächster Zeit stehen ${upcoming.length} Zahlungen über insgesamt ${money(
+              total
+            )} an. Mila kann dich rechtzeitig daran erinnern.`,
       level: 'info',
       action: 'remind',
     })
@@ -211,19 +206,18 @@ export function getObligationInsights(
   return insights.slice(0, 4)
 }
 
-export function createDelayMessage(
-  obligation: Obligation
-) {
-  const dueDate =
-    getObligationDueDate(obligation)
+export function createDelayMessage(obligation: Obligation) {
+  const dueDate = formatDateDE(getObligationDueDate(obligation))
 
   return `Guten Tag,
 
-aufgrund einer unerwarteten Ausgabe bitte ich darum, die Zahlung zu "${obligation.title}" über ${money(
+ich möchte höflich anfragen, ob die Zahlung zu „${obligation.title}“ über ${money(
     obligation.amount
-  )} nicht wie ursprünglich geplant am ${dueDate}, sondern etwas später leisten zu dürfen.
+  )} statt am ${dueDate} zu einem späteren Termin erfolgen kann.
 
-Bitte teilen Sie mir mit, ob ein Zahlungsaufschub oder eine angepasste Rate möglich ist.
+Bitte teilen Sie mir mit, ob ein Zahlungsaufschub oder alternativ eine angepasste Ratenzahlung möglich ist.
 
-Vielen Dank.`
+Vielen Dank für Ihre Rückmeldung.
+
+Freundliche Grüße`
 }
