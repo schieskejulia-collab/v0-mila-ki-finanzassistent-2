@@ -128,15 +128,9 @@ export default function VerpflichtungenPage() {
 
       priority,
 
-      reminderDays: [14,3,0],
-      reminder_days: 3 as any,
-  title: title.trim(),
-  partner: partner.trim(),
-  amount: parsedAmount,
-  dueDate,
-  priority,
-  status: 'offen',
-  note: note.trim() || undefined,
+      reminderDays: [14, 3, 0],
+reminder_days: 3 as any,
+note: note.trim() || undefined,
 }
         
     try {
