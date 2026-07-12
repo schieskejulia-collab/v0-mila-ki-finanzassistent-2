@@ -109,7 +109,11 @@ documents,
   assemblyWork,
 } = useFinance()
 const [isClient, setIsClient] = useState(false)
-
+const milaPatterns = getMilaPatterns(
+  expenses,
+  incomes,
+  obligations
+)
 const router = useRouter()
 
 useEffect(() => {
