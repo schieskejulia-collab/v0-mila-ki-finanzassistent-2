@@ -434,7 +434,7 @@ const isInkasso =
           placeholder={
             type === 'expense'
               ? 'Händler / Laden'
-              : 'Kunde / Client'
+              : 'Zahlungsquelle (optional)'
           }
           value={partner}
           onChange={(event) =>
