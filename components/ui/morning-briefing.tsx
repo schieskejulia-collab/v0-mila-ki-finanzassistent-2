@@ -125,9 +125,8 @@ if (overdueIncomes.length > 0) {
   )} als Orientierung für Rücklagen einplanen.`
 
 } else if (softwareExpenses.length > 0) {
-  title = 'Digitale Kosten erkannt'
-  message = `Mila sieht ${softwareExpenses.length} digitale Ausgabe(n). Tools können Investitionen sein — wichtig ist, ob sie dir Nutzen bringen.`
-
+  title = '💻 Digitale Tools im Blick'
+message = `Mila hat ${softwareExpenses.length} digitale Ausgabe(n) erkannt. Nicht jede Ausgabe ist ein Kostenpunkt – viele Tools sparen Zeit oder helfen dir bei deiner Arbeit.`
 } else if (balance > 0) {
   title = 'Mila lernt dein Muster kennen'
   message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mila erkennt mit jeder Buchung besser deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte.`
