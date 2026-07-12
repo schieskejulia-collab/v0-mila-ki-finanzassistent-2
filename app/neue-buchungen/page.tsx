@@ -450,13 +450,13 @@ const isInkasso =
             }
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
           >
-            <option value="offen">
-              🟡 Offen
-            </option>
+          <option value="offen">
+🟡 Erwartet
+</option>
 
-            <option value="bezahlt">
-              🟢 Bezahlt
-            </option>
+<option value="bezahlt">
+🟢 Eingegangen
+</option>
 
             <option value="ueberfaellig">
               🔴 Überfällig
