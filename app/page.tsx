@@ -479,46 +479,56 @@ const anchorMessage =
     </Link>
   )}
 </div>
-        {/* --- MILA-AMPEL --- */}
-        <div className="space-y-2">
-          <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
-            🟢 Mila-Ampel
-          </h2>
-          <div className={`p-4 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2.5 transition-all ${trafficLight.color}`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${trafficLight.dot} animate-pulse`}></span>
-            {trafficLight.status}
-          </div>
-        </div>
+      {/* --- MILA-AMPEL --- */}
+<div className="space-y-2">
+  <h2 className="px-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+    Mila-Ampel
+  </h2>
 
-        {/* --- KI-ERKENNTNISSE --- */}
-<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
-  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+  <div
+    className={`flex items-center gap-2.5 rounded-xl border p-4 text-xs font-bold shadow-sm transition-all ${trafficLight.color}`}
+  >
+    <span
+      className={`h-2.5 w-2.5 rounded-full ${trafficLight.dot} animate-pulse`}
+    />
+    {trafficLight.status}
+  </div>
+</div>
+
+{/* --- KI-ERKENNTNISSE --- */}
+<div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
     📊 KI-Erkenntnisse
   </h2>
 
-  <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
-    <li className="flex gap-2.5">
-      <span>📊</span>
-      <span>
-  {recurringExpenses.length === 0 && softwareExpenses.length === 0
-    ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Software-Abonnements erkannt.'
-    : `Mila erkennt aktuell ${recurringExpenses.length} regelmäßige Ausgabe${
-        recurringExpenses.length === 1 ? '' : 'n'
-      } und ${softwareExpenses.length} Software- oder Tool-Kosten.`}
-</span>
-    </li>
-  </ul>
+  <div className="flex gap-2.5 text-xs leading-relaxed text-slate-700">
+    <span>📊</span>
+
+    <span>
+      {recurringExpenses.length === 0 && softwareExpenses.length === 0
+        ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Software-Abonnements erkannt.'
+        : `Mila hat ${recurringExpenses.length} regelmäßige Ausgabe(n) und ${softwareExpenses.length} Software- oder Tool-Kosten erkannt.`}
+    </span>
+  </div>
 </div>
 
-        {/* Chat-Anker Link */}
-        <Link href="/chat" className="block bg-purple-600 hover:bg-purple-700 text-white font-medium text-center py-4 rounded-xl text-sm shadow-md shadow-purple-100 transition active:scale-95">
-          💬 Mit Mila sprechen (Dein Anker)
-        </Link>
+{/* --- CHAT-ANKER --- */}
+<Link
+  href="/chat"
+  className="block rounded-xl bg-purple-600 py-4 text-center text-white shadow-md shadow-purple-100 transition active:scale-95 hover:bg-purple-700"
+>
+  <span className="block text-sm font-bold">
+    💬 Mit Mila sprechen
+  </span>
 
-        <p className="text-[10px] text-center leading-relaxed text-slate-400 pt-2">
-          Mila gibt dir Orientierung für bessere Entscheidungen. Keine Steuerberatung.
-        </p>
+  <span className="mt-1 block text-[10px] font-semibold text-white/75">
+    Dein persönlicher Finanzanker
+  </span>
+</Link>
 
+<p className="pt-2 text-center text-[10px] leading-relaxed text-slate-400">
+  Mila gibt dir Orientierung für bessere Entscheidungen. Keine Steuerberatung.
+</p>
       </div>
     </div>
   )
