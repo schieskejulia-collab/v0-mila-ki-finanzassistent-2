@@ -103,40 +103,39 @@ const reserveSuggestion =
 
 
 if (overdueIncomes.length > 0) {
-  title = 'Zuerst offene Zahlungen sichern'
-  message = `Du hast ${overdueIncomes.length} überfällige Zahlung(en). Mila würde heute zuerst Eingänge, Fristen und deine Planung sortieren.`
+  title = '⚠️ Offene Einnahmen zuerst klären'
+  message = `Du wartest auf ${overdueIncomes.length} überfällige Zahlung(en). Mila würde heute zuerst prüfen, welche Zahlung fehlt und ob du nachfassen solltest.`
 
 } else if (openIncomes.length > 0) {
-  title = 'Einnahmen im Blick behalten'
-  message = `Du wartest noch auf ${openIncomes.length} Zahlung(en). Dein Geld ist geplant — Mila hilft dir nur, den Überblick zu behalten.`
+  title = '💰 Einnahmen im Blick behalten'
+  message = `Du wartest noch auf ${openIncomes.length} Zahlung(en). Mila behält für dich im Blick, wann das Geld eingehen sollte.`
 
 } else if (balance < 0) {
-  title = 'Heute Stabilität schaffen'
-  message = `Dein Stand liegt bei ${money(balance)}. Mila würde zuerst feste Kosten, offene Beträge und mögliche Spielräume ansehen.`
+  title = '🧭 Heute Stabilität schaffen'
+  message = `Dein aktueller Stand liegt bei ${money(balance)}. Mila würde heute zuerst feste Kosten, offene Beträge und mögliche Spielräume sortieren.`
 
 } else if (dataQuality < 3) {
   title = '🌱 Mila lernt dich kennen'
-  message = 'Die ersten Daten sind da. Nach weiteren Buchungen erkennt Mila Gewohnheiten, wiederkehrende Kosten und bessere Empfehlungen.'
+  message = 'Die ersten Daten sind da. Mit jeder weiteren Buchung erkennt Mila deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte besser.'
 
 } else if (isBusiness && profit > 0) {
-  title = 'Dein Geschäft wirkt stabil'
-  message = `Du hast ${money(profit)} Überschuss. Mila würde davon etwa ${money(
+  title = '🌿 Dein Geschäft wirkt stabil'
+  message = `Du hast aktuell ${money(profit)} Überschuss. Mila würde davon etwa ${money(
     reserveSuggestion
   )} als Orientierung für Rücklagen einplanen.`
 
 } else if (softwareExpenses.length > 0) {
   title = '💻 Digitale Tools im Blick'
-message = `Mila hat ${softwareExpenses.length} digitale Ausgabe(n) erkannt. Nicht jede Ausgabe ist ein Kostenpunkt – viele Tools sparen Zeit oder helfen dir bei deiner Arbeit.`
+  message = `Mila hat ${softwareExpenses.length} digitale Ausgabe(n) erkannt. Viele Tools sparen Zeit oder unterstützen deine Arbeit – wichtig ist, dass sie dir weiterhin Nutzen bringen.`
+
 } else if (balance > 0) {
-  title = '🌸 Gemeinsam schaffen wir Überblick'
-  message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mila erkennt mit jeder Buchung besser deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte.`
+  title = '✨ Dein finanzieller Spielraum'
+  message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mit jeder weiteren Buchung erkennt Mila besser, welche nächsten Schritte für dich sinnvoll sind.`
 
 } else {
-  title = 'Mila baut dein Finanzbild auf'
-  message =
-    'Trage weiter Einnahmen und Ausgaben ein. Mila erkennt mit der Zeit Muster und zeigt dir die wichtigsten nächsten Schritte.'
+  title = '🌸 Gemeinsam schaffen wir Überblick'
+  message = 'Trage deine ersten Einnahmen und Ausgaben ein. Mila erkennt mit der Zeit Muster und zeigt dir, was für dich gerade wichtig ist.'
 }
-
   return (
     <section className="rounded-[2rem] bg-white p-6 shadow-sm space-y-5">
       <div>
