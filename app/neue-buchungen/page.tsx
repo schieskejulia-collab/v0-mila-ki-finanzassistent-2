@@ -285,31 +285,44 @@ const isInkasso =
         type === 'expense' ? expenses : incomes
 
       const duplicate = existingItems.find(
-        (item: any) => {
-          const sameTitle =
-            String(item.title || '')
-              .trim()
-              .toLowerCase() ===
-            String(payload.title || '')
-              .trim()
-              .toLowerCase()
+  (item: any) => {
+    const normalize = (value: unknown) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
 
-          const sameAmount =
-            Number(item.amount) ===
-            Number(payload.amount)
+    const sameTitle =
+      normalize(item.title) ===
+      normalize(payload.title)
 
-          const sameDate =
-            String(item.date || '').slice(0, 10) ===
-            String(payload.date || '').slice(0, 10)
-
-          return (
-            sameTitle &&
-            sameAmount &&
-            sameDate
-          )
-        }
+    const samePartner =
+      normalize(
+        item.partner ||
+          item.vendor ||
+          item.client
+      ) ===
+      normalize(
+        payload.partner ||
+          payload.vendor ||
+          payload.client
       )
 
+    const sameAmount =
+      Number(item.amount) ===
+      Number(payload.amount)
+
+    const sameDate =
+      String(item.date || '').slice(0, 10) ===
+      String(payload.date || '').slice(0, 10)
+
+    return (
+      sameTitle &&
+      samePartner &&
+      sameAmount &&
+      sameDate
+    )
+  }
+)
       if (duplicate) {
         alert(
           '⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.'
