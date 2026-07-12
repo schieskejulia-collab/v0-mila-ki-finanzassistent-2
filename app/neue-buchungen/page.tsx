@@ -350,14 +350,6 @@ const isInkasso =
         await addIncome(payload)
       }
 
-      alert(
-        `${
-          type === 'expense'
-            ? 'Ausgabe'
-            : 'Einnahme'
-        } erfolgreich gespeichert! ✅`
-      )
-
       setTitle('')
       setAmount('')
       setPartner('')
