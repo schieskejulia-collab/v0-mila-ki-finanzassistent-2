@@ -284,8 +284,8 @@ const anchorMessage =
             <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100">
               <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
               <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
-             <p className="mt-0.5 text-xs font-bold text-slate-600">
-  Empfohlene Rücklage
+            <p className="mt-0.5 text-xs font-bold text-slate-600">
+  Empfohlene Steuer-Rücklage
 </p>
             </div>
           </div>
@@ -500,10 +500,12 @@ const anchorMessage =
     <li className="flex gap-2.5">
       <span>📊</span>
       <span>
-    {recurringExpenses.length === 0 && softwareExpenses.length === 0
-  ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Tool-Kosten gefunden.'
-  : `Mila hat ${recurringExpenses.length} regelmäßige Ausgabe(n) und ${softwareExpenses.length} Software- oder Tool-Kosten erkannt.`}
-      </span>
+  {recurringExpenses.length === 0 && softwareExpenses.length === 0
+    ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Software-Abonnements erkannt.'
+    : `Mila erkennt aktuell ${recurringExpenses.length} regelmäßige Ausgabe${
+        recurringExpenses.length === 1 ? '' : 'n'
+      } und ${softwareExpenses.length} Software- oder Tool-Kosten.`}
+</span>
     </li>
   </ul>
 </div>
