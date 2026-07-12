@@ -115,7 +115,7 @@ if (overdueIncomes.length > 0) {
   message = `Dein Stand liegt bei ${money(balance)}. Mila würde zuerst feste Kosten, offene Beträge und mögliche Spielräume ansehen.`
 
 } else if (dataQuality < 3) {
-  title = 'Mila lernt dein Muster kennen'
+  title = '🌱 Mila lernt dich kennen'
   message = 'Die ersten Daten sind da. Nach weiteren Buchungen erkennt Mila Gewohnheiten, wiederkehrende Kosten und bessere Empfehlungen.'
 
 } else if (isBusiness && profit > 0) {
@@ -128,7 +128,7 @@ if (overdueIncomes.length > 0) {
   title = '💻 Digitale Tools im Blick'
 message = `Mila hat ${softwareExpenses.length} digitale Ausgabe(n) erkannt. Nicht jede Ausgabe ist ein Kostenpunkt – viele Tools sparen Zeit oder helfen dir bei deiner Arbeit.`
 } else if (balance > 0) {
-  title = 'Mila lernt dein Muster kennen'
+  title = '🌸 Gemeinsam schaffen wir Überblick'
   message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mila erkennt mit jeder Buchung besser deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte.`
 
 } else {
