@@ -991,9 +991,6 @@ export function FinanceProvider({
   created_at:
     normalizedItem.createdAt,
 
-  title: item.title,
-  partner:
-    item.partner || '',
           title: item.title,
           partner:
             item.partner || '',
