@@ -300,7 +300,7 @@ const anchorMessage =
   </h2>
 
   <div className="space-y-3 text-xs text-slate-700 leading-relaxed">
-{assistantFindings.map((item) => (
+{assistantFindings.slice(0, 1).map((item) => (
   <div
     key={item.id}
     className={`rounded-2xl border p-3 ${
