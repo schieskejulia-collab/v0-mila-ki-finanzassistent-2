@@ -213,37 +213,36 @@ const isInkasso =
   }
 
   try {
-    await addObligation({
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      partner: partner.trim(),
-      creditor: partner.trim(),
-      amount: normalizedAmount,
-      type:
-        category === INKASSO_LABEL
-          ? 'inkasso'
-          : 'rechnung',
-      area: 'privat',
-      dueDate,
-      due_date: dueDate as any,
-      status: 'offen',
-      priority:
-        category === INKASSO_LABEL
-          ? 'wichtig'
-          : 'normal',
-      reminderDays: [14, 3, 0],
-      reminder_days: 3 as any,
-    })
+  await addObligation({
+    id: crypto.randomUUID(),
+    title: title.trim(),
+    partner: partner.trim(),
+    creditor: partner.trim(),
+    amount: normalizedAmount,
+    type:
+      category === INKASSO_LABEL
+        ? 'inkasso'
+        : 'rechnung',
+    area: 'privat',
+    dueDate,
+    due_date: dueDate as any,
+    status: 'offen',
+    priority:
+      category === INKASSO_LABEL
+        ? 'wichtig'
+        : 'normal',
+    reminderDays: [14, 3, 0],
+    reminder_days: 3 as any,
+  })
 
-    alert('Als Verpflichtung gespeichert ✅')
-  } catch (error: any) {
-    alert(
-      `Verpflichtung konnte nicht gespeichert werden: ${
-        error?.message ||
-        'Unbekannter Fehler'
-      }`
-    )
-  }
+  console.log('Als Verpflichtung gespeichert')
+} catch (error: any) {
+  alert(
+    `Verpflichtung konnte nicht gespeichert werden: ${
+      error?.message || 'Unbekannter Fehler'
+    }`
+  )
+}
 }
 
   async function speichern() {
