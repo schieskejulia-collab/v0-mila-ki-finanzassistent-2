@@ -284,7 +284,9 @@ const anchorMessage =
             <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100">
               <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
               <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
-              <p className="mt-0.5 text-xs font-bold text-slate-600">Orientierung</p>
+             <p className="mt-0.5 text-xs font-bold text-slate-600">
+  Empfohlene Rücklage
+</p>
             </div>
           </div>
 </section>
@@ -473,14 +475,14 @@ const anchorMessage =
       href="/verpflichtungen"
       className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
     >
-      Verpflichtungen ansehen
+      Alle Verpflichtungen öffnen →
     </Link>
   )}
 </div>
-        {/* --- PRIORITÄT 2: MILA-AMPEL --- */}
+        {/* --- MILA-AMPEL --- */}
         <div className="space-y-2">
           <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400 px-1">
-            🥈 Priorität 2 – Mila-Ampel
+            🟢 Mila-Ampel
           </h2>
           <div className={`p-4 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2.5 transition-all ${trafficLight.color}`}>
             <span className={`w-2.5 h-2.5 rounded-full ${trafficLight.dot} animate-pulse`}></span>
@@ -488,18 +490,23 @@ const anchorMessage =
           </div>
         </div>
 
-        {/* --- PRIORITÄT 3: KI-ERKENNTNISSE --- */}
+        {/* --- KI-ERKENNTNISSE --- */}
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-3">
   <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
-    🥉 Priorität 3 – KI-Erkenntnisse
+    📊 KI-Erkenntnisse
   </h2>
 
   <ul className="space-y-3 text-xs text-slate-700 leading-relaxed">
     <li className="flex gap-2.5">
       <span>📊</span>
       <span>
-        Mila erkennt aktuell {recurringExpenses.length} wiederkehrende Ausgabe(n)
-        und {softwareExpenses.length} Software-/Tool-Kosten.
+      {recurringExpenses.length === 0 && softwareExpenses.length === 0
+  ? 'Bisher hat Mila keine regelmäßigen Ausgaben oder Tool-Kosten gefunden.'
+  : `Mila hat ${recurringExpenses.length} regelmäßige Ausgabe(n) und ${softwareExpenses.length} Software- oder Tool-Kosten erkannt.`}
+      recurringExpenses.length === 1 ? '' : 'n'
+    } und ${softwareExpenses.length} Tool-Koste${
+      softwareExpenses.length === 1 ? '' : 'n'
+    } erkannt.`}
       </span>
     </li>
   </ul>
