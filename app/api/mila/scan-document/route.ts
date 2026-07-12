@@ -314,10 +314,29 @@ ${pdfText}
         )}`,
       })
 
-    const finalCategory =
-      categoryResult.category ||
-      documentClassification.category ||
-      'sonstiges'
+    const classificationText = `
+${title}
+${detectedVendor}
+${parsed.note || ''}
+${documentType}
+${pdfText.slice(0, 2500)}
+`.toLowerCase()
+
+const isChildcareDocument =
+  classificationText.includes('kita') ||
+  classificationText.includes('kindergarten') ||
+  classificationText.includes('hort') ||
+  classificationText.includes('betreuung') ||
+  classificationText.includes('essengeld') ||
+  classificationText.includes('mittagessen') ||
+  classificationText.includes('schulessen') ||
+  classificationText.includes('besseressen')
+
+const finalCategory = isChildcareDocument
+  ? 'Kinder & Betreuung'
+  : categoryResult.category ||
+    documentClassification.category ||
+    'sonstiges'
 
     return NextResponse.json({
       success: true,
