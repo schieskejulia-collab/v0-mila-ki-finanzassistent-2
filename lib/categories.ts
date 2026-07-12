@@ -271,7 +271,10 @@ bekleidung: {
 kinder: {
   id: 'kinder',
   label: '👶 Kinder & Betreuung',
+  icon: 'Baby',
+  color: 'var(--chart-5)',
 },
+
 dekoration: {
   id: 'dekoration',
   label: 'Dekoration',
