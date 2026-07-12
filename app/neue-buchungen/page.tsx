@@ -324,11 +324,14 @@ const isInkasso =
   }
 )
       if (duplicate) {
-        alert(
-          '⚠️ Mögliche Doppelbuchung erkannt. Diese Buchung existiert heute bereits.'
-        )
-        return
-      }
+  const trotzdemSpeichern = window.confirm(
+    '⚠️ Eine sehr ähnliche Buchung existiert bereits.\n\nMöchtest du sie trotzdem speichern?'
+  )
+
+  if (!trotzdemSpeichern) {
+    return
+  }
+}
 
       if (partner && type === 'expense') {
         saveMerchantMemory({
