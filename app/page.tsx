@@ -524,11 +524,11 @@ const anchorMessage =
           className="rounded-2xl border border-violet-100 bg-violet-50 p-4"
         >
           <p className="font-black text-violet-800">
-            🧠 {pattern.title}
+            {pattern.title}
           </p>
 
           <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
-            {pattern.message}
+           {pattern.description}
           </p>
         </div>
       ))}
