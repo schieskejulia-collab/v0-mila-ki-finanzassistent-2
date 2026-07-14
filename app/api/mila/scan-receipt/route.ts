@@ -186,7 +186,9 @@ const document = {
   installmentAmount,
   note: 'Automatisch von Mila aus Belegscan erstellt 📸',
 }
-
+console.log("KI Kategorie:", classification.category)
+console.log("Keyword Kategorie:", detectedCategory)
+console.log("Finale Kategorie:", finalCategory)
 return NextResponse.json({
   success: true,
   data: {
