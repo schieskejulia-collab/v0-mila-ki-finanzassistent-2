@@ -9,7 +9,7 @@ import {
   getCategoryLabel,
 } from '@/lib/categories'
 import { saveMerchantMemory } from '@/lib/merchant-memory'
-
+import { MilaScanReview } from '@/components/ui/mila-scan-review'
 const INKASSO_LABEL = '⚖️ Inkasso / Forderung'
 
 const categories = Array.from(
