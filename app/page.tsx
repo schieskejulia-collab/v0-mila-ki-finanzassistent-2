@@ -156,6 +156,14 @@ const totalOverdueAmount = payments.overdueAmount
 const openObligations = (obligations || []).filter(
   (item: any) => String(item.status || '').toLowerCase() !== 'bezahlt'
 )
+const openObligationAmount = openObligations.reduce(
+  (sum: number, item: any) =>
+    sum + Number(item.amount || 0),
+  0
+)
+
+const availableAfterObligations =
+  summary.balance - openObligationAmount
 const today = new Date()
 today.setHours(0, 0, 0, 0)
 
