@@ -288,163 +288,169 @@ note: note.trim() || undefined,
       </section>
 
       <section className="space-y-3">
-        {obligations.length === 0 ? (
-          <div className="rounded-3xl bg-purple-50 p-5 font-bold text-slate-700">
-            Noch keine Verpflichtungen hinterlegt.
+  {obligations.length === 0 ? (
+    <div className="rounded-3xl bg-purple-50 p-5 font-bold text-slate-700">
+      Noch keine Verpflichtungen hinterlegt.
+    </div>
+  ) : (
+    obligations.map((item: any) => {
+      const status = String(
+        item.status || 'offen'
+      ).toLowerCase()
+
+      const isPaid = status === 'bezahlt'
+
+      const itemDueDate =
+        item.dueDate ||
+        item.due_date ||
+        ''
+
+      const createdAt =
+        item.createdAt ||
+        item.created_at ||
+        ''
+
+      const paidAt =
+        item.paidAt ||
+        item.paid_at ||
+        ''
+
+      return (
+        <article
+          key={item.id}
+          className={
+            isPaid
+              ? 'rounded-3xl bg-white p-5 shadow opacity-80'
+              : 'rounded-3xl bg-white p-5 shadow'
+          }
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="break-words text-xl font-black">
+                {item.title}
+              </p>
+
+              <p className="break-words text-sm font-semibold text-slate-500">
+                {item.partner ||
+                  item.creditor ||
+                  'Kein Anbieter angegeben'}
+              </p>
+            </div>
+
+            {isPaid && (
+              <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                ✅ Erledigt
+              </span>
+            )}
           </div>
-        ) : (
-          obligations.map((item: any) => {
-  const status = String(
-    item.status || 'offen'
-  ).toLowerCase()
 
-  const isPaid = status === 'bezahlt'
+          <p className="mt-2 text-2xl font-black text-purple-700">
+            {money(item.amount)}
+          </p>
 
-  const itemDueDate =
-    item.dueDate ||
-    item.due_date ||
-    ''
+          <p className="text-sm text-slate-500">
+            Fällig: {dateDE(itemDueDate)}
+          </p>
 
-  const createdAt =
-    item.createdAt ||
-    item.created_at ||
-    ''
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+              {priorityLabel(item.priority)}
+            </span>
 
-  const paidAt =
-    item.paidAt ||
-    item.paid_at ||
-    ''
+            {!isPaid && itemDueDate && (
+              <span className="rounded-full bg-purple-50 px-3 py-1 text-purple-700">
+                {dueLabel(daysUntil(itemDueDate))}
+              </span>
+            )}
 
-  return (
-    <article
-      key={item.id}
-      className={
-        isPaid
-          ? 'rounded-3xl bg-white p-5 shadow opacity-80'
-          : 'rounded-3xl bg-white p-5 shadow'
-      }
-    >
-               <div className="flex items-start justify-between gap-3">
-  <div className="min-w-0">
-    <p className="break-words text-xl font-black">
-      {item.title}
-    </p>
+            <span
+              className={
+                isPaid
+                  ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
+                  : 'rounded-full bg-amber-50 px-3 py-1 text-amber-700'
+              }
+            >
+              {isPaid ? '🟢 Bezahlt' : '🟡 Offen'}
+            </span>
+          </div>
 
-    <p className="break-words text-sm font-semibold text-slate-500">
-      {item.partner ||
-        item.creditor ||
-        'Kein Anbieter angegeben'}
-    </p>
-  </div>
+          {(createdAt || paidAt) && (
+            <div className="mt-4 space-y-1 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">
+              {createdAt && (
+                <p>
+                  🕒 Erfasst: {dateTimeDE(createdAt)}
+                </p>
+              )}
 
-  {isPaid && (
-    <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
-      ✅ Erledigt
-    </span>
-  )}
-</div>
+              {paidAt && (
+                <p className="text-emerald-700">
+                  ✅ Bezahlt: {dateTimeDE(paidAt)}
+                </p>
+              )}
+            </div>
+          )}
 
-<p className="mt-2 text-2xl font-black text-purple-700">
-  {money(item.amount)}
-</p>
+          {item.note && (
+            <p className="mt-4 whitespace-pre-line rounded-2xl bg-violet-50 p-3 text-sm text-slate-700">
+              {item.note}
+            </p>
+          )}
 
-<p className="text-sm text-slate-500">
-  Fällig: {dateDE(itemDueDate)}
-</p>
+          <div className="mt-4 flex flex-wrap gap-5">
+            {!isPaid && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await finance.updateObligation(
+                      item.id,
+                      {
+                        status: 'bezahlt',
+                      }
+                    )
+                  } catch (error: any) {
+                    alert(
+                      'Verpflichtung konnte nicht als bezahlt markiert werden: ' +
+                        (error?.message ||
+                          'Unbekannter Fehler')
+                    )
+                  }
+                }}
+                className="font-black text-emerald-600"
+              >
+                ✅ Bezahlt
+              </button>
+            )}
 
-<div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
-    {priorityLabel(item.priority)}
-  </span>
+            <button
+              type="button"
+              onClick={async () => {
+                const confirmed =
+                  window.confirm(
+                    'Diese Verpflichtung wirklich löschen?'
+                  )
 
-  {!isPaid && itemDueDate && (
-    <span className="rounded-full bg-purple-50 px-3 py-1 text-purple-700">
-      {dueLabel(daysUntil(itemDueDate))}
-    </span>
-  )}
+                if (!confirmed) return
 
-  <span
-    className={
-      isPaid
-        ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
-        : 'rounded-full bg-amber-50 px-3 py-1 text-amber-700'
-    }
-  >
-    {isPaid ? '🟢 Bezahlt' : '🟡 Offen'}
-  </span>
-</div>
-
-{(createdAt || paidAt) && (
-  <div className="mt-4 space-y-1 rounded-2xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">
-    {createdAt && (
-      <p>
-        🕒 Erfasst: {dateTimeDE(createdAt)}
-      </p>
-    )}
-
-    {paidAt && (
-      <p className="text-emerald-700">
-        ✅ Bezahlt: {dateTimeDE(paidAt)}
-      </p>
-    )}
-  </div>
-)}
-
-{item.note && (
-  <p className="mt-4 whitespace-pre-line rounded-2xl bg-violet-50 p-3 text-sm text-slate-700">
-    {item.note}
-  </p>
-)}
-
-<div className="mt-4 flex flex-wrap gap-5">
-  {!isPaid && (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await finance.updateObligation(item.id, {
-            status: 'bezahlt',
-          })
-        } catch (error: any) {
-          alert(
-            'Verpflichtung konnte nicht als bezahlt markiert werden: ' +
-              (error?.message || 'Unbekannter Fehler')
-          )
-        }
-      }}
-      className="font-black text-emerald-600"
-    >
-      ✅ Bezahlt
-    </button>
-  )}
-
-  <button
-    type="button"
-    onClick={async () => {
-      const confirmed = window.confirm(
-        'Diese Verpflichtung wirklich löschen?'
+                try {
+                  await deleteObligation(item.id)
+                } catch (error: any) {
+                  alert(
+                    'Verpflichtung konnte nicht gelöscht werden: ' +
+                      (error?.message ||
+                        'Unbekannter Fehler')
+                  )
+                }
+              }}
+              className="font-black text-red-500"
+            >
+              Löschen
+            </button>
+          </div>
+        </article>
       )
-
-      if (!confirmed) return
-
-      try {
-        await deleteObligation(item.id)
-      } catch (error: any) {
-        alert(
-          'Verpflichtung konnte nicht gelöscht werden: ' +
-            (error?.message || 'Unbekannter Fehler')
-        )
-      }
-    }}
-    className="font-black text-red-500"
-  >
-    Löschen
-  </button>
-</div>
-</article>
-)
-})
-)}
+    })
+  )}
 </section>
 </main>
 )
