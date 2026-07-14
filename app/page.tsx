@@ -392,26 +392,21 @@ const anchorMessage =
 
     )}
 
-    {recurringExpenses.length > 0 && (
+   {recurringExpenses.length >= 2 && (
+  <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3">
+    <p className="font-black text-blue-700">
+      {recurringExpenses.length >= 3
+        ? '🔁 Wiederkehrende Ausgaben'
+        : '💡 Möglicherweise wiederkehrend'}
+    </p>
 
-      <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3">
-
-        <p className="font-black text-blue-700">
-
-          💡 Wiederkehrende Ausgabe
-
-        </p>
-
-        <p className="mt-1 font-semibold text-slate-700">
-
-          Mila erkennt {recurringExpenses.length} wiederkehrende Kosten. Prüfe, ob du sie wirklich noch brauchst.
-
-        </p>
-
-      </div>
-
-    )}
-
+    <p className="mt-1 font-semibold text-slate-700">
+      {recurringExpenses.length >= 3
+        ? `Mila erkennt ${recurringExpenses.length} regelmäßige Kosten. Prüfe, ob du sie weiterhin brauchst.`
+        : 'Diese Ausgabe wurde mehrfach erkannt. Mila beobachtet, ob daraus eine regelmäßige Zahlung wird.'}
+    </p>
+  </div>
+)}
     {softwareExpenses.length > 0 && (
 
       <div className="rounded-2xl bg-violet-50 border border-violet-100 p-3">
