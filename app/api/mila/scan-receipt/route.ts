@@ -155,6 +155,18 @@ const documentClassification = classifyDocument({
   note: parsed.note || '',
 })
 
+const detectedCategory = detectCategory(
+  `${title} ${vendor} ${parsed.note || ''} ${parsed.category || ''}`
+)
+
+const finalCategory =
+  documentClassification.type === 'inkasso'
+    ? 'inkasso'
+    : classification.category &&
+      classification.category !== 'sonstiges'
+      ? classification.category
+      : detectedCategory
+
 const document = {
   title,
   partner: vendor,
@@ -178,29 +190,13 @@ const document = {
 return NextResponse.json({
   success: true,
   data: {
-    data: {
-      amount,
-      vendor,
-      title,
-      dueDate,
-      caseNumber,
-      originalCreditor,
-      installmentAmount,
-     const detectedCategory = detectCategory(
-  `${title} ${vendor} ${note || ''}`
-)
-
-const finalCategory =
-  documentClassification.type === 'inkasso'
-    ? 'inkasso'
-    : classification.category &&
-        classification.category !== 'sonstiges'
-      ? classification.category
-      : detectedCategory
-
-return NextResponse.json({
-  success: true,
-  data: {
+    amount,
+    vendor,
+    title,
+    dueDate,
+    caseNumber,
+    originalCreditor,
+    installmentAmount,
     category: finalCategory,
     documentType: documentClassification.type,
     taxHint:
@@ -212,11 +208,3 @@ return NextResponse.json({
     document,
   },
 })
-  } catch (error) {
-    console.error('Scan Fehler:', error)
-    return NextResponse.json(
-      { success: false, error: 'Serverfehler beim Belegscan.' },
-      { status: 500 }
-    )
-  }
-}
