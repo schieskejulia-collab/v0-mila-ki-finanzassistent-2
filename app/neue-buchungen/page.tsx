@@ -49,17 +49,54 @@ function formatEuro(value: number) {
   })
 }
 
+function normalizeCategoryText(value: string) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+function resolveCategoryLabel(value: string) {
+  const normalized = normalizeCategoryText(value)
+
+  if (
+    normalized === 'inkasso' ||
+    normalized.includes('forderung')
+  ) {
+    return INKASSO_LABEL
+  }
+
+  const exactCategory = categories.find(
+    (category) =>
+      normalizeCategoryText(category) === normalized
+  )
+
+  if (exactCategory) {
+    return exactCategory
+  }
+
+  const detected = detectCategory(value)
+  return getCategoryLabel(detected)
+}
+
+function displayConfidence(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return null
+  }
+
+  const percent = value <= 1 ? value * 100 : value
+  return Math.max(0, Math.min(100, Math.round(percent)))
+}
+
 export default function NeueBuchungPage() {
   const {
-  documents,
-  setDocuments,
-  addExpense,
-  addIncome,
-  addObligation,
-  incomes,
-  expenses,
-  obligations,
-} = useFinance()
+    addExpense,
+    addIncome,
+    addObligation,
+    incomes,
+    expenses,
+    obligations,
+  } = useFinance()
 
   const [type, setType] =
     useState<'expense' | 'income'>('expense')
@@ -72,11 +109,24 @@ export default function NeueBuchungPage() {
   const [status, setStatus] = useState('offen')
   const [dueDate, setDueDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-const [scanSuggestion, setScanSuggestion] = useState('')
-const [scanConfidence, setScanConfidence] = useState<number | null>(null)
-const [scanNeedsConfirmation, setScanNeedsConfirmation] = useState(false)
-const [scanReviewReason, setScanReviewReason] = useState('')
-const [scanAlternatives, setScanAlternatives] = useState<string[]>([])
+
+  const [scanSuggestion, setScanSuggestion] =
+    useState('')
+
+  const [scanConfidence, setScanConfidence] =
+    useState<number | null>(null)
+
+  const [
+    scanNeedsConfirmation,
+    setScanNeedsConfirmation,
+  ] = useState(false)
+
+  const [scanReviewReason, setScanReviewReason] =
+    useState('')
+
+  const [scanAlternatives, setScanAlternatives] =
+    useState<string[]>([])
+
   const numericAmount = Number(
     String(amount || 0).replace(',', '.')
   )
@@ -88,12 +138,25 @@ const [scanAlternatives, setScanAlternatives] = useState<string[]>([])
     taxStatus === 'wahrscheinlich ja'
 
   const taxReserve = 0
-  const taxHint = deductible ? numericAmount * 0.3 : 0
+  const taxHint = deductible
+    ? numericAmount * 0.3
+    : 0
+
+  const confidencePercent =
+    displayConfidence(scanConfidence)
+
+  function resetScanReview() {
+    setScanSuggestion('')
+    setScanConfidence(null)
+    setScanNeedsConfirmation(false)
+    setScanReviewReason('')
+    setScanAlternatives([])
+  }
 
   function updateTitle(value: string) {
     setTitle(value)
 
-    if (type === 'expense') {
+    if (type === 'expense' && !scanNeedsConfirmation) {
       const detected = detectCategory(value)
       setCategory(getCategoryLabel(detected))
     }
@@ -103,57 +166,30 @@ const [scanAlternatives, setScanAlternatives] = useState<string[]>([])
     setPartner(value)
   }
 
-  const handleScanSuccess = (data: {
-  amount?: number
-  vendor?: string
-  category?: string
-  suggestedCategory?: string
-  title?: string
-  dueDate?: string
-  confidence?: number
-  needsConfirmation?: boolean
-  reviewReason?: string
-  alternatives?: string[]
-}) => {
-  setType('expense')
-  setAmount(String(data.amount || ''))
-  setTitle(data.vendor || data.title || '')
-  setDueDate(data.dueDate || '')
+  function chooseScanCategory(option: string) {
+    const selectedCategory =
+      resolveCategoryLabel(option)
 
-  const suggested =
-    data.suggestedCategory ||
-    data.category ||
-    'Sonstiges'
-
-  setScanSuggestion(suggested)
-  setScanConfidence(
-    typeof data.confidence === 'number'
-      ? data.confidence
-      : null
-  )
-  setScanNeedsConfirmation(
-    Boolean(data.needsConfirmation)
-  )
-  setScanReviewReason(
-    data.reviewReason || ''
-  )
-  setScanAlternatives(
-    Array.isArray(data.alternatives)
-      ? data.alternatives
-      : []
-  )
-
-  if (data.needsConfirmation) {
-    setCategory('')
-  } else {
-    const matchedLabel =
-      findLabelByNormalized(suggested)
-
-    setCategory(
-      matchedLabel || suggested
+    setCategory(selectedCategory)
+    setScanSuggestion(selectedCategory)
+    setScanNeedsConfirmation(false)
+    setScanReviewReason(
+      'Danke – ich übernehme deine Auswahl.'
     )
   }
-}
+
+  const handleScanSuccess = (rawData: any) => {
+    const scannedData =
+      rawData?.data?.data ||
+      rawData?.data ||
+      rawData
+
+    if (!scannedData) {
+      alert(
+        'Mila hat keine auswertbaren Daten erhalten.'
+      )
+      return
+    }
 
     const scannedTitle = String(
       scannedData.title || ''
@@ -163,45 +199,93 @@ const [scanAlternatives, setScanAlternatives] = useState<string[]>([])
       scannedData.vendor || ''
     ).trim()
 
+    const scannedNote = String(
+      scannedData.note || ''
+    ).trim()
+
+    const documentType = String(
+      scannedData.documentType || ''
+    ).toLowerCase()
+
+    const scannedCategory = String(
+      scannedData.category || ''
+    ).trim()
+
+    const suggestedCategory = String(
+      scannedData.suggestedCategory ||
+        scannedCategory ||
+        ''
+    ).trim()
+
     const scanText = `
-${scannedData.title || ''}
-${scannedData.vendor || ''}
-${scannedData.note || ''}
-${scannedData.category || ''}
-${scannedData.documentType || ''}
-`.toLowerCase()
+      ${scannedTitle}
+      ${scannedVendor}
+      ${scannedNote}
+      ${suggestedCategory}
+      ${documentType}
+    `.toLowerCase()
 
-const isInkasso =
-  scanText.includes('inkasso') ||
-  scanText.includes('forderung') ||
-  scanText.includes('klarna') ||
-  scannedData.isObligation === true
+    const isInkasso =
+      documentType === 'inkasso' ||
+      suggestedCategory.toLowerCase() ===
+        'inkasso' ||
+      scanText.includes('inkasso') ||
+      scanText.includes('forderung') ||
+      scanText.includes('aktenzeichen')
 
-   const detectedCategory = detectCategory(
-  `
-  ${scannedTitle}
-  ${scannedVendor}
-  ${scannedData.note || ''}
-  ${scannedData.documentType || ''}
-  `
-)
+    const detectedCategory = detectCategory(
+      `
+        ${scannedTitle}
+        ${scannedVendor}
+        ${scannedNote}
+        ${suggestedCategory}
+      `
+    )
 
-const scannedCategory = String(
-  scannedData.category || ''
-).toLowerCase()
+    const fallbackCategory =
+      getCategoryLabel(detectedCategory)
 
-const finalCategory =
-  scannedCategory &&
-  scannedCategory !== 'sonstiges'
-    ? scannedCategory
-    : detectedCategory
+    const proposedCategory = isInkasso
+      ? INKASSO_LABEL
+      : suggestedCategory &&
+          suggestedCategory.toLowerCase() !==
+            'unklar'
+        ? resolveCategoryLabel(
+            suggestedCategory
+          )
+        : fallbackCategory
 
-const categoryLabel = isInkasso
-  ? INKASSO_LABEL
-  : getCategoryLabel(finalCategory)
+    const needsConfirmation =
+      !isInkasso &&
+      Boolean(scannedData.needsConfirmation)
+
+    const alternatives = Array.isArray(
+      scannedData.alternatives
+    )
+      ? Array.from(
+          new Set(
+            scannedData.alternatives
+              .map((item: unknown) =>
+                String(item || '').trim()
+              )
+              .filter(Boolean)
+          )
+        )
+      : []
+
     setType('expense')
-    setTitle(scannedTitle)
-    setAmount(String(scannedData.amount ?? ''))
+
+    setTitle(
+      scannedTitle ||
+        (scannedVendor
+          ? `Beleg von ${scannedVendor}`
+          : 'Beleg')
+    )
+
+    setAmount(
+      String(scannedData.amount ?? '')
+    )
+
     setPartner(scannedVendor)
 
     setDueDate(
@@ -214,93 +298,140 @@ const categoryLabel = isInkasso
       )
     )
 
-    setCategory(categoryLabel)
-
     setNote(
-      scannedData.note ||
+      scannedNote ||
         'Automatisch von Mila ausgelesen 📸'
     )
-}
+
+    setScanSuggestion(
+      isInkasso
+        ? INKASSO_LABEL
+        : proposedCategory || 'Unklar'
+    )
+
+    setScanConfidence(
+      typeof scannedData.confidence ===
+        'number'
+        ? scannedData.confidence
+        : null
+    )
+
+    setScanNeedsConfirmation(
+      needsConfirmation
+    )
+
+    setScanReviewReason(
+      String(
+        scannedData.reviewReason || ''
+      )
+    )
+
+    setScanAlternatives(alternatives)
+
+    if (isInkasso) {
+      setCategory(INKASSO_LABEL)
+      return
+    }
+
+    if (needsConfirmation) {
+      setCategory('Sonstiges')
+      return
+    }
+
+    setCategory(
+      proposedCategory || 'Sonstiges'
+    )
+  }
 
   async function alsVerpflichtungSpeichern() {
-  if (!title.trim() || !amount || !partner.trim() || !dueDate) {
-    alert(
-      'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
-    )
-    return
-  }
-
-  const normalizedPartner =
-    partner.trim().toLowerCase()
-
-  const normalizedAmount =
-    Number(String(amount).replace(',', '.'))
-
-  const duplicate = (obligations || []).some(
-    (item: any) => {
-      const itemPartner = String(
-        item.partner ||
-        item.creditor ||
-        ''
+    if (
+      !title.trim() ||
+      !amount ||
+      !partner.trim() ||
+      !dueDate
+    ) {
+      alert(
+        'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
       )
-        .trim()
-        .toLowerCase()
+      return
+    }
 
-      const itemAmount =
-        Number(item.amount || 0)
+    const normalizedPartner =
+      partner.trim().toLowerCase()
 
-      const itemDueDate =
-        item.dueDate ||
-        item.due_date ||
-        ''
+    const normalizedAmount = Number(
+      String(amount).replace(',', '.')
+    )
 
-      return (
-        itemPartner === normalizedPartner &&
-        itemAmount === normalizedAmount &&
-        itemDueDate === dueDate
+    const duplicate = (obligations || []).some(
+      (item: any) => {
+        const itemPartner = String(
+          item.partner ||
+            item.creditor ||
+            ''
+        )
+          .trim()
+          .toLowerCase()
+
+        const itemAmount = Number(
+          item.amount || 0
+        )
+
+        const itemDueDate =
+          item.dueDate ||
+          item.due_date ||
+          ''
+
+        return (
+          itemPartner === normalizedPartner &&
+          itemAmount === normalizedAmount &&
+          itemDueDate === dueDate
+        )
+      }
+    )
+
+    if (duplicate) {
+      alert(
+        'Diese Verpflichtung kennt Mila bereits 🧾'
+      )
+      return
+    }
+
+    try {
+      await addObligation({
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        partner: partner.trim(),
+        creditor: partner.trim(),
+        amount: normalizedAmount,
+        type:
+          category === INKASSO_LABEL
+            ? 'inkasso'
+            : 'rechnung',
+        area: 'privat',
+        dueDate,
+        due_date: dueDate as any,
+        status: 'offen',
+        priority:
+          category === INKASSO_LABEL
+            ? 'wichtig'
+            : 'normal',
+        reminderDays: [14, 3, 0],
+        reminder_days: 3 as any,
+      })
+
+      console.log(
+        'Als Verpflichtung gespeichert'
+      )
+    } catch (error: any) {
+      alert(
+        `Verpflichtung konnte nicht gespeichert werden: ${
+          error?.message ||
+          'Unbekannter Fehler'
+        }`
       )
     }
-  )
-
-  if (duplicate) {
-    alert(
-      'Diese Verpflichtung kennt Mila bereits 🧾'
-    )
-    return
   }
-
-  try {
-  await addObligation({
-    id: crypto.randomUUID(),
-    title: title.trim(),
-    partner: partner.trim(),
-    creditor: partner.trim(),
-    amount: normalizedAmount,
-    type:
-      category === INKASSO_LABEL
-        ? 'inkasso'
-        : 'rechnung',
-    area: 'privat',
-    dueDate,
-    due_date: dueDate as any,
-    status: 'offen',
-    priority:
-      category === INKASSO_LABEL
-        ? 'wichtig'
-        : 'normal',
-    reminderDays: [14, 3, 0],
-    reminder_days: 3 as any,
-  })
-
-  console.log('Als Verpflichtung gespeichert')
-} catch (error: any) {
-  alert(
-    `Verpflichtung konnte nicht gespeichert werden: ${
-      error?.message || 'Unbekannter Fehler'
-    }`
-  )
-}
-}
 
   async function speichern() {
     if (isSaving) return
@@ -312,18 +443,31 @@ const categoryLabel = isInkasso
       return
     }
 
+    if (
+      type === 'expense' &&
+      scanNeedsConfirmation
+    ) {
+      alert(
+        'Bitte beantworte zuerst Milas kurze Rückfrage zur Kategorie. 🧠'
+      )
+      return
+    }
+
     setIsSaving(true)
 
     const payload: any = {
       title: title.trim(),
       amount: numericAmount,
       note: note || '',
-      date: new Date().toISOString().slice(0, 10),
+      date: new Date()
+        .toISOString()
+        .slice(0, 10),
     }
 
     if (type === 'expense') {
       payload.vendor = partner || ''
-      payload.category = category || 'Sonstiges'
+      payload.category =
+        category || 'Sonstiges'
       payload.hasReceipt = true
       payload.vat = 19
       payload.source = 'manuell'
@@ -331,150 +475,132 @@ const categoryLabel = isInkasso
       payload.client = partner || ''
       payload.tax_reserve = taxReserve
       payload.status = status
-      payload.due_date = dueDate || null
+      payload.due_date =
+        dueDate || null
       payload.source = 'manuell'
       payload.vat = 19
     }
 
     try {
       const existingItems =
-        type === 'expense' ? expenses : incomes
+        type === 'expense'
+          ? expenses
+          : incomes
 
       const duplicate = existingItems.find(
-  (item: any) => {
-    const normalize = (value: unknown) =>
-      String(value || '')
-        .trim()
-        .toLowerCase()
+        (item: any) => {
+          const normalize = (
+            value: unknown
+          ) =>
+            String(value || '')
+              .trim()
+              .toLowerCase()
 
-    const sameTitle =
-      normalize(item.title) ===
-      normalize(payload.title)
+          const sameTitle =
+            normalize(item.title) ===
+            normalize(payload.title)
 
-    const samePartner =
-      normalize(
-        item.partner ||
-          item.vendor ||
-          item.client
-      ) ===
-      normalize(
-        payload.partner ||
-          payload.vendor ||
-          payload.client
+          const samePartner =
+            normalize(
+              item.partner ||
+                item.vendor ||
+                item.client
+            ) ===
+            normalize(
+              payload.partner ||
+                payload.vendor ||
+                payload.client
+            )
+
+          const sameAmount =
+            Number(item.amount) ===
+            Number(payload.amount)
+
+          const sameDate =
+            String(item.date || '').slice(
+              0,
+              10
+            ) ===
+            String(payload.date || '').slice(
+              0,
+              10
+            )
+
+          return (
+            sameTitle &&
+            samePartner &&
+            sameAmount &&
+            sameDate
+          )
+        }
       )
 
-    const sameAmount =
-      Number(item.amount) ===
-      Number(payload.amount)
-
-    const sameDate =
-      String(item.date || '').slice(0, 10) ===
-      String(payload.date || '').slice(0, 10)
-
-    return (
-      sameTitle &&
-      samePartner &&
-      sameAmount &&
-      sameDate
-    )
-  }
-)
       if (duplicate) {
-  const trotzdemSpeichern = window.confirm(
-    '⚠️ Eine sehr ähnliche Buchung existiert bereits.\n\nMöchtest du sie trotzdem speichern?'
-  )
+        const trotzdemSpeichern =
+          window.confirm(
+            '⚠️ Eine sehr ähnliche Buchung existiert bereits.\n\nMöchtest du sie trotzdem speichern?'
+          )
 
-  if (!trotzdemSpeichern) {
-    return
+        if (!trotzdemSpeichern) {
+          return
+        }
+      }
+
+      if (
+        partner &&
+        type === 'expense'
+      ) {
+        saveMerchantMemory({
+          merchant: partner,
+          category:
+            category === INKASSO_LABEL
+              ? 'inkasso'
+              : detectCategory(category),
+          taxHint: taxStatus,
+        })
+      }
+
+      if (type === 'expense') {
+        await addExpense(payload)
+      } else {
+        await addIncome(payload)
+      }
+
+      setTitle('')
+      setAmount('')
+      setPartner('')
+      setNote('')
+      setStatus('offen')
+      setDueDate('')
+      setCategory('Sonstiges')
+      resetScanReview()
+    } catch (error: any) {
+      alert(
+        `Netzwerkfehler: ${
+          error?.message ||
+          'Unbekannter Fehler'
+        } ❌`
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
 
-   {type === 'expense' && amount && scanSuggestion && (
-  <section className="rounded-[2rem] bg-violet-50 p-5">
-    <p className="font-black text-violet-700">
-      {scanNeedsConfirmation
-        ? '🧠 Mila denkt nach'
-        : '✨ Mila Einschätzung'}
-    </p>
+  return (
+    <main className="mx-auto min-h-screen max-w-md space-y-4 p-6 pb-40">
+      <h1 className="text-3xl font-black text-slate-950">
+        Neue Buchung
+      </h1>
 
-    <div className="mt-3 space-y-2 text-slate-700">
-      <p>
-        Meine Vermutung:{' '}
-        <span className="font-black text-slate-800">
-          {scanSuggestion}
-        </span>
-      </p>
+      <ReceiptUpload
+        onScanSuccess={handleScanSuccess}
+      />
 
-      {scanConfidence !== null && (
-        <p>
-          Sicherheit:{' '}
-          <span className="font-black text-slate-800">
-            {Math.round(scanConfidence * 100)} %
-          </span>
+      <div className="border-t border-gray-100 pt-4">
+        <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-400">
+          Oder manuell eintragen
         </p>
-      )}
-
-      {scanNeedsConfirmation && scanAlternatives.length > 0 ? (
-  <div className="mt-4">
-    <p className="mb-3 font-black text-slate-800">
-      Was passt wirklich?
-    </p>
-
-    <div className="grid gap-2">
-      {scanAlternatives.map((option: string) => {
-        return (
-          <button
-            key={option}
-            type="button"
-            className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
-            onClick={() => {
-              const matchedLabel =
-                findLabelByNormalized(option)
-
-              setCategory(matchedLabel || option)
-              setScanSuggestion(option)
-              setScanNeedsConfirmation(false)
-              setScanReviewReason(
-                'Danke – ich übernehme deine Auswahl.'
-              )
-            }}
-          >
-            {option}
-          </button>
-        )
-      })}
-    </div>
-  </div>
-) : null}
-    {!scanNeedsConfirmation && category && (
-      <p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold text-slate-700">
-        Kategorie übernommen:{' '}
-        <span className="text-violet-700">
-          {category}
-        </span>
-      </p>
-    )}
-  </section>
-)}
-                className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-    {!scanNeedsConfirmation && category && (
-      <p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold text-slate-700">
-        Kategorie übernommen:{' '}
-        <span className="text-violet-700">
-          {category}
-        </span>
-      </p>
-    )}
-  </section>
-)}
+      </div>
 
       <div className="relative z-50 grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-2">
         <button
@@ -497,6 +623,7 @@ const categoryLabel = isInkasso
           onPointerDown={(event) => {
             event.preventDefault()
             setType('income')
+            resetScanReview()
           }}
           className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
             type === 'income'
@@ -550,13 +677,13 @@ const categoryLabel = isInkasso
             }
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
           >
-          <option value="offen">
-🟡 Erwartet
-</option>
+            <option value="offen">
+              🟡 Erwartet
+            </option>
 
-<option value="bezahlt">
-🟢 Eingegangen
-</option>
+            <option value="bezahlt">
+              🟢 Eingegangen
+            </option>
 
             <option value="ueberfaellig">
               🔴 Überfällig
@@ -580,7 +707,8 @@ const categoryLabel = isInkasso
 
           <p className="text-xs text-slate-500">
             Optional – Mila nutzt das für
-            Rechnungen, Fristen und Erinnerungen 🧾
+            Rechnungen, Fristen und
+            Erinnerungen 🧾
           </p>
         </div>
 
@@ -588,9 +716,25 @@ const categoryLabel = isInkasso
           <select
             className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
             value={category}
-            onChange={(event) =>
-              setCategory(event.target.value)
-            }
+            onChange={(event) => {
+              setCategory(
+                event.target.value
+              )
+
+              if (
+                scanNeedsConfirmation
+              ) {
+                setScanSuggestion(
+                  event.target.value
+                )
+                setScanNeedsConfirmation(
+                  false
+                )
+                setScanReviewReason(
+                  'Danke – ich übernehme deine Auswahl.'
+                )
+              }
+            }}
           >
             {categories.map((cat) => (
               <option
@@ -613,32 +757,128 @@ const categoryLabel = isInkasso
         />
       </div>
 
-      {type === 'expense' && amount && (
-        <section className="rounded-2xl bg-violet-50 p-4 text-sm text-slate-700">
-          <p className="font-black text-violet-700">
-            Mila Einschätzung
-          </p>
-
-          <p className="mt-1">
-            Kategorie:{' '}
-            <strong>{category}</strong>
-          </p>
-
-          <p>
-            Steuerlich absetzbar:{' '}
-            <strong>{taxStatus}</strong>
-          </p>
-
-          {deductible && (
-            <p>
-              Grobe Steuerwirkung bei 30%:{' '}
-              <strong>
-                {formatEuro(taxHint)}
-              </strong>
+      {type === 'expense' &&
+        amount &&
+        scanSuggestion && (
+          <section className="rounded-[2rem] bg-violet-50 p-5 text-sm text-slate-700">
+            <p className="font-black text-violet-700">
+              {scanNeedsConfirmation
+                ? '🧠 Mila denkt nach'
+                : '✨ Mila Einschätzung'}
             </p>
-          )}
-        </section>
-      )}
+
+            <div className="mt-3 space-y-2">
+              <p>
+                Meine Vermutung:{' '}
+                <strong>
+                  {scanSuggestion}
+                </strong>
+              </p>
+
+              {confidencePercent !== null && (
+                <p>
+                  Sicherheit:{' '}
+                  <strong>
+                    {confidencePercent} %
+                  </strong>
+                </p>
+              )}
+
+              {scanReviewReason && (
+                <p className="leading-relaxed">
+                  {scanReviewReason}
+                </p>
+              )}
+            </div>
+
+            {scanNeedsConfirmation &&
+            scanAlternatives.length > 0 ? (
+              <div className="mt-4">
+                <p className="mb-3 font-black text-slate-800">
+                  Was passt wirklich?
+                </p>
+
+                <div className="grid gap-2">
+                  {scanAlternatives.map(
+                    (option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() =>
+                          chooseScanCategory(
+                            option
+                          )
+                        }
+                        className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
+                      >
+                        {option}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {!scanNeedsConfirmation &&
+              category && (
+                <div className="mt-4 rounded-2xl bg-white px-4 py-3">
+                  <p>
+                    Kategorie übernommen:{' '}
+                    <strong className="text-violet-700">
+                      {category}
+                    </strong>
+                  </p>
+
+                  <p className="mt-1">
+                    Steuerlich:{' '}
+                    <strong>
+                      {taxStatus}
+                    </strong>
+                  </p>
+
+                  {deductible && (
+                    <p className="mt-1">
+                      Geschätzte Steuerwirkung
+                      bei 30 %:{' '}
+                      <strong>
+                        {formatEuro(taxHint)}
+                      </strong>
+                    </p>
+                  )}
+                </div>
+              )}
+          </section>
+        )}
+
+      {type === 'expense' &&
+        amount &&
+        !scanSuggestion && (
+          <section className="rounded-2xl bg-violet-50 p-4 text-sm text-slate-700">
+            <p className="font-black text-violet-700">
+              Mila Einschätzung
+            </p>
+
+            <p className="mt-1">
+              Kategorie:{' '}
+              <strong>{category}</strong>
+            </p>
+
+            <p>
+              Steuerlich absetzbar:{' '}
+              <strong>{taxStatus}</strong>
+            </p>
+
+            {deductible && (
+              <p>
+                Grobe Steuerwirkung bei
+                30 %:{' '}
+                <strong>
+                  {formatEuro(taxHint)}
+                </strong>
+              </p>
+            )}
+          </section>
+        )}
 
       {type === 'income' && amount && (
         <section className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
@@ -647,7 +887,8 @@ const categoryLabel = isInkasso
           </p>
 
           <p>
-            Empfohlene Rücklage fürs Finanzamt:{' '}
+            Empfohlene Rücklage fürs
+            Finanzamt:{' '}
             <strong>
               {formatEuro(taxReserve)}
             </strong>
@@ -658,7 +899,9 @@ const categoryLabel = isInkasso
       {type === 'expense' && title && (
         <button
           type="button"
-          onClick={alsVerpflichtungSpeichern}
+          onClick={
+            alsVerpflichtungSpeichern
+          }
           className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white shadow-md"
         >
           🧾 Als Verpflichtung speichern
@@ -668,7 +911,11 @@ const categoryLabel = isInkasso
       <button
         type="button"
         onClick={speichern}
-        disabled={isSaving}
+        disabled={
+          isSaving ||
+          (type === 'expense' &&
+            scanNeedsConfirmation)
+        }
         className={`w-full rounded-2xl py-4 font-black text-white shadow-md disabled:opacity-50 ${
           type === 'expense'
             ? 'bg-slate-900'
@@ -677,9 +924,12 @@ const categoryLabel = isInkasso
       >
         {isSaving
           ? 'Speichere...'
-          : type === 'expense'
-            ? 'Ausgabe speichern'
-            : 'Einnahme speichern'}
+          : type === 'expense' &&
+              scanNeedsConfirmation
+            ? 'Bitte Kategorie bestätigen'
+            : type === 'expense'
+              ? 'Ausgabe speichern'
+              : 'Einnahme speichern'}
       </button>
     </main>
   )
