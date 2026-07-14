@@ -132,16 +132,28 @@ const isInkasso =
   scanText.includes('klarna') ||
   scannedData.isObligation === true
 
-    const detectedCategory = detectCategory(
-      `${scannedTitle} ${scannedVendor}`
-    )
+   const detectedCategory = detectCategory(
+  `
+  ${scannedTitle}
+  ${scannedVendor}
+  ${scannedData.note || ''}
+  ${scannedData.documentType || ''}
+  `
+)
 
-    const categoryLabel = isInkasso
-      ? INKASSO_LABEL
-      : getCategoryLabel(
-          scannedData.category || detectedCategory
-        )
+const scannedCategory = String(
+  scannedData.category || ''
+).toLowerCase()
 
+const finalCategory =
+  scannedCategory &&
+  scannedCategory !== 'sonstiges'
+    ? scannedCategory
+    : detectedCategory
+
+const categoryLabel = isInkasso
+  ? INKASSO_LABEL
+  : getCategoryLabel(finalCategory)
     setType('expense')
     setTitle(scannedTitle)
     setAmount(String(scannedData.amount ?? ''))
