@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useFinance } from '@/lib/store'
 import type { Obligation } from '@/lib/mila-obligations'
 
@@ -65,6 +66,7 @@ function dueLabel(days: number | null) {
 }
 
 export default function VerpflichtungenPage() {
+const searchParams = useSearchParams()
   const finance = useFinance()
 
   const obligations = finance.obligations || []
@@ -77,7 +79,38 @@ export default function VerpflichtungenPage() {
   const [amount, setAmount] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [note, setNote] = useState('')
+useEffect(() => {
+  const scannedTitle = searchParams.get('title') || ''
+  const scannedCreditor = searchParams.get('creditor') || ''
+  const scannedAmount = searchParams.get('amount') || ''
+  const scannedDueDate = searchParams.get('dueDate') || ''
+  const scannedNote = searchParams.get('note') || ''
+  const source = searchParams.get('source') || ''
 
+  if (source !== 'document-scan') return
+
+  if (scannedTitle) {
+    setTitle(scannedTitle)
+  }
+
+  if (scannedCreditor) {
+    setPartner(scannedCreditor)
+  }
+
+  if (scannedAmount) {
+    setAmount(scannedAmount.replace('.', ','))
+  }
+
+  if (scannedDueDate) {
+    setDueDate(scannedDueDate.slice(0, 10))
+  }
+
+  if (scannedNote) {
+    setNote(scannedNote)
+  }
+
+  setPriority('wichtig')
+}, [searchParams])
   const [priority, setPriority] =
     useState<Obligation['priority']>('normal')
 
@@ -421,5 +454,10 @@ note: note.trim() || undefined,
         )}
       </section>
     </main>
+{searchParams.get('source') === 'document-scan' && (
+  <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4 text-sm font-bold text-violet-700">
+    📄 Mila hat Daten aus deinem Dokument übernommen. Bitte kurz prüfen und anschließend speichern.
+  </div>
+)}
   )
 }
