@@ -332,11 +332,40 @@ const isChildcareDocument =
   classificationText.includes('schulessen') ||
   classificationText.includes('besseressen')
 
-const finalCategory = isChildcareDocument
-  ? 'Kinder & Betreuung'
-  : categoryResult.category ||
-    documentClassification.category ||
-    'sonstiges'
+const keywordCategory = detectCategory(
+  `
+  ${title}
+  ${detectedVendor}
+  ${parsed.note || ''}
+  ${documentType}
+  ${pdfText}
+  `
+)
+
+const vendorCategory = String(
+  categoryResult.category || ''
+)
+  .trim()
+  .toLowerCase()
+
+const classifiedCategory = String(
+  documentClassification.category || ''
+)
+  .trim()
+  .toLowerCase()
+
+const finalCategory =
+  documentClassification.type === 'inkasso'
+    ? 'inkasso'
+    : keywordCategory !== 'sonstiges'
+      ? keywordCategory
+      : vendorCategory &&
+          vendorCategory !== 'sonstiges'
+        ? vendorCategory
+        : classifiedCategory &&
+            classifiedCategory !== 'sonstiges'
+          ? classifiedCategory
+          : 'sonstiges'
 
     return NextResponse.json({
       success: true,
