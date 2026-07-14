@@ -103,7 +103,20 @@ export function matchVendorFuzzy(
     }
   }
 
-  return bestDistance <= 2 ? bestVendor : null
+  if (!bestVendor) return null
+
+const shortestKeywordLength = Math.min(
+  ...bestVendor.keywords
+    .map((keyword) => normalizeVendorText(keyword).length)
+    .filter((length) => length > 0)
+)
+
+const allowedDistance =
+  shortestKeywordLength <= 5 ? 1 : 2
+
+return bestDistance <= allowedDistance
+  ? bestVendor
+  : null
 }
 
 export function vendorConfidence(
