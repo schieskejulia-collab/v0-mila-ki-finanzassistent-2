@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { extractText, getDocumentProxy } from 'unpdf'
-
+import { detectCategory } from '@/lib/categories'
 import { classifyDocument } from '@/lib/document-classifier'
 import { detectVendor } from '@/lib/mila-vendor-detection'
 import { autoCategorizeVendor } from '@/lib/mila-vendor-category'
