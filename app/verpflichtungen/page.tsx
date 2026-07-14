@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useFinance } from '@/lib/store'
 import type { Obligation } from '@/lib/mila-obligations'
 
@@ -66,7 +65,6 @@ function dueLabel(days: number | null) {
 }
 
 export default function VerpflichtungenPage() {
-const searchParams = useSearchParams()
   const finance = useFinance()
 
   const obligations = finance.obligations || []
@@ -80,14 +78,25 @@ const searchParams = useSearchParams()
   const [dueDate, setDueDate] = useState('')
   const [note, setNote] = useState('')
 useEffect(() => {
+const [isDocumentScan, setIsDocumentScan] = useState(false)
   const scannedTitle = searchParams.get('title') || ''
   const scannedCreditor = searchParams.get('creditor') || ''
   const scannedAmount = searchParams.get('amount') || ''
   const scannedDueDate = searchParams.get('dueDate') || ''
   const scannedNote = searchParams.get('note') || ''
-  const source = searchParams.get('source') || ''
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+
+  const scannedTitle = params.get('title') || ''
+  const scannedCreditor = params.get('creditor') || ''
+  const scannedAmount = params.get('amount') || ''
+  const scannedDueDate = params.get('dueDate') || ''
+  const scannedNote = params.get('note') || ''
+  const source = params.get('source') || ''
 
   if (source !== 'document-scan') return
+
+  setIsDocumentScan(true)
 
   if (scannedTitle) {
     setTitle(scannedTitle)
@@ -110,11 +119,7 @@ useEffect(() => {
   }
 
   setPriority('wichtig')
-}, [searchParams])
-  const [priority, setPriority] =
-    useState<Obligation['priority']>('normal')
-
-
+}, [])
   async function speichern() {
 
     if (!title.trim() || !amount.trim() || !dueDate) {
