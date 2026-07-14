@@ -492,11 +492,22 @@ const anchorMessage =
     </div>
   </div>
 
-  {openObligations.length === 0 && (
-    <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
-      🟢 Alle Verpflichtungen sind erledigt.
-    </p>
-  )}
+ {obligations.length === 0 ? (
+  <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-600">
+    📝 Noch keine Verpflichtungen angelegt.
+  </p>
+) : openObligations.length === 0 ? (
+  <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+    🟢 Alle Verpflichtungen sind erledigt.
+  </p>
+) : (
+  <Link
+    href="/verpflichtungen"
+    className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
+  >
+    Alle Verpflichtungen öffnen →
+  </Link>
+)}
 
   {openObligations.length > 0 && (
     <Link
