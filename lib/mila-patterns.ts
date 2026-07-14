@@ -128,18 +128,24 @@ export function getMilaPatterns(
   --------------------------------------------------------- */
 
   for (const group of vendorGroups.values()) {
-    if (group.count < 2) continue
+  if (group.count < 2) continue
 
-    patterns.push({
-      id: `vendor-${safeId(group.name)}`,
-      title: `🔁 ${group.name} taucht regelmäßig auf`,
-      description: `${group.name} wurde ${group.count} Mal mit insgesamt ${money(
-        group.total
-      )} erkannt. Mila behält im Blick, ob daraus ein regelmäßiger Vertrag oder ein Abo entsteht.`,
-      severity: 'info',
-      confidence: Math.round(group.confidence * 100),
-    })
-  }
+  const isConfirmedRecurring = group.count >= 3
+
+  patterns.push({
+    id: `vendor-${safeId(group.name)}`,
+    title: isConfirmedRecurring
+      ? `🔁 ${group.name} taucht regelmäßig auf`
+      : `💡 ${group.name} wurde mehrfach erkannt`,
+    description: isConfirmedRecurring
+      ? `${group.name} wurde ${group.count} Mal mit insgesamt ${money(
+          group.total
+        )} erkannt. Mila behält im Blick, ob ein regelmäßiger Vertrag oder ein Abo besteht.`
+      : `${group.name} wurde bisher ${group.count} Mal erkannt. Mila beobachtet, ob daraus eine regelmäßige Zahlung wird.`,
+    severity: 'info',
+    confidence: Math.round(group.confidence * 100),
+  })
+}
 
   /* ---------------------------------------------------------
      Software und digitale Tools
