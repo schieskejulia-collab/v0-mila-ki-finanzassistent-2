@@ -185,17 +185,30 @@ return NextResponse.json({
       caseNumber,
       originalCreditor,
       installmentAmount,
-      category: documentClassification.type === 'inkasso'
-  ? 'inkasso'
-  : classification.category,
-      documentType: documentClassification.type,
-      taxHint: documentClassification.type === 'inkasso'
-  ? 'nicht steuerlich relevant / private Verpflichtung'
-  : classification.taxHint,
-      confidence: classification.confidence,
-      needsReview: classification.needsReview,
-      document,
-    },
+     const detectedCategory = detectCategory(
+  `${title} ${vendor} ${note || ''}`
+)
+
+const finalCategory =
+  documentClassification.type === 'inkasso'
+    ? 'inkasso'
+    : classification.category &&
+        classification.category !== 'sonstiges'
+      ? classification.category
+      : detectedCategory
+
+return NextResponse.json({
+  success: true,
+  data: {
+    category: finalCategory,
+    documentType: documentClassification.type,
+    taxHint:
+      documentClassification.type === 'inkasso'
+        ? 'nicht steuerlich relevant / private Verpflichtung'
+        : classification.taxHint,
+    confidence: classification.confidence,
+    needsReview: classification.needsReview,
+    document,
   },
 })
   } catch (error) {
