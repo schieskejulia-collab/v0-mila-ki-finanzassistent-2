@@ -212,7 +212,9 @@ return NextResponse.json({
 })
   } catch (error) {
     console.error('Scan Fehler:', error)
-
+console.log("classification.category:", classification.category)
+console.log("detectedCategory:", detectedCategory)
+console.log("finalCategory:", finalCategory)
     return NextResponse.json(
       {
         success: false,
