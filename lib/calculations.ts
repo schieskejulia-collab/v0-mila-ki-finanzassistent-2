@@ -118,7 +118,7 @@ export function calculateTrafficLight(score: number, balance: number) {
 
   if (score < 85) {
     return {
-      status: '🟢 Stabil',
+      status: 'Finanzlage aktuell stabil',
       level: 'success',
     }
   }
