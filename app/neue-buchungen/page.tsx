@@ -268,8 +268,9 @@ const rememberedCategory =
         )
       : fallbackCategory
     const needsConfirmation =
-      !isInkasso &&
-      Boolean(scannedData.needsConfirmation)
+  !isInkasso &&
+  !rememberedMerchant &&
+  Boolean(scannedData.needsConfirmation)
 
     const alternatives = Array.isArray(
       scannedData.alternatives
@@ -322,22 +323,25 @@ const rememberedCategory =
     )
 
     setScanConfidence(
-      typeof scannedData.confidence ===
+  rememberedMerchant
+    ? rememberedMerchant.confidence
+    : typeof scannedData.confidence ===
         'number'
-        ? scannedData.confidence
-        : null
-    )
+      ? scannedData.confidence
+      : null
+)
 
     setScanNeedsConfirmation(
       needsConfirmation
     )
 
     setScanReviewReason(
-      String(
+  rememberedMerchant
+    ? `Ich kenne ${scannedVendor} bereits aus deiner letzten Auswahl.`
+    : String(
         scannedData.reviewReason || ''
       )
-    )
-
+)
     setScanAlternatives(alternatives)
 
     if (isInkasso) {
