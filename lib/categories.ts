@@ -1,15 +1,18 @@
-// Mila Zentrale Kategorien
-// -----------------------------
-// CATEGORY TYPES
-// -----------------------------
+// Mila – zentrale Kategorien
+
+// ---------------------------------------------------------
+// Kategorie-Typen
+// ---------------------------------------------------------
 
 export type CategoryId =
   | 'software'
   | 'hardware'
   | 'werkzeug'
   | 'arbeitskleidung'
+  | 'bekleidung'
   | 'telefon'
   | 'marketing'
+  | 'kinder'
   | 'bewirtung'
   | 'reisen'
   | 'fahrzeug'
@@ -28,11 +31,9 @@ export type CategoryId =
   | 'material'
   | 'steuern'
   | 'privat'
-| 'kinder'
-  | 'sonstiges'
-| 'inkasso'
-  | 'bekleidung'
   | 'dekoration'
+  | 'inkasso'
+  | 'sonstiges'
 
 export interface Category {
   id: CategoryId
@@ -40,14 +41,12 @@ export interface Category {
   icon: string
   color: string
 }
-export function getCategoryLabel(categoryId: string) {
-  if (categoryId === 'inkasso') {
-    return '⚖️ Inkasso / Forderung'
-  }
 
-  return CATEGORIES[categoryId as CategoryId]?.label ?? 'Sonstiges'
-}
-export const CATEGORIES: Partial<Record<CategoryId, Category>> = {
+// ---------------------------------------------------------
+// Kategorien
+// ---------------------------------------------------------
+
+export const CATEGORIES: Record<CategoryId, Category> = {
   software: {
     id: 'software',
     label: 'Software & KI',
@@ -55,254 +54,233 @@ export const CATEGORIES: Partial<Record<CategoryId, Category>> = {
     color: 'var(--chart-1)',
   },
 
-hardware: {
-
-  id: 'hardware',
-  label: 'Hardware & Technik',
-  icon: 'Monitor',
-  color: 'var(--chart-2)',
-
-},
-
-werkzeug: {
-
-  id: 'werkzeug',
-  label: 'Werkzeug & Material',
-  icon: 'Wrench',
-  color: 'var(--chart-3)',
-
-},
-
-arbeitskleidung: {
-
-  id: 'arbeitskleidung',
-  label: 'Arbeitskleidung',
-  icon: 'Shirt',
-  color: 'var(--chart-4)',
-
-},
-
-telefon: {
-
-  id: 'telefon',
-  label: 'Telefon & Internet',
-  icon: 'Smartphone',
-  color: 'var(--chart-5)',
-
-},
-
-marketing: {
-
-  id: 'marketing',
-  label: 'Marketing & Werbung',
-  icon: 'Megaphone',
-  color: 'var(--chart-1)',
-
-},
-
-bewirtung: {
-
-  id: 'bewirtung',
-  label: 'Bewirtung',
-  icon: 'Utensils',
-  color: 'var(--chart-2)',
-
-},
-
-reisen: {
-
-  id: 'reisen',
-  label: 'Reisen & Unterkünfte',
-  icon: 'Plane',
-  color: 'var(--chart-3)',
-
-},
-
-fahrzeug: {
-
-  id: 'fahrzeug',
-  label: 'Fahrtkosten & Fahrzeuge',
-  icon: 'Car',
-  color: 'var(--chart-4)',
-
-},
-
-weiterbildung: {
-
-  id: 'weiterbildung',
-  label: 'Weiterbildung',
-  icon: 'GraduationCap',
-  color: 'var(--chart-5)',
-
-},
-
-fachliteratur: {
-
-  id: 'fachliteratur',
-  label: 'Fachliteratur',
-  icon: 'BookOpen',
-  color: 'var(--chart-1)',
-
-},
-
-miete: {
-
-  id: 'miete',
-  label: 'Miete & Räume',
-  icon: 'Building',
-  color: 'var(--chart-2)',
-
-},
-
-homeoffice: {
-
-  id: 'homeoffice',
-  label: 'Homeoffice',
-  icon: 'Home',
-  color: 'var(--chart-3)',
-
-},
-
-dienstleister: {
-
-  id: 'dienstleister',
-  label: 'Leistungen Dritter',
-  icon: 'Users',
-  color: 'var(--chart-4)',
-
-},
-
-recht: {
-
-  id: 'recht',
-  label: 'Rechtsberatung',
-  icon: 'Scale',
-  color: 'var(--chart-5)',
-
-},
-
-versicherung: {
-
-  id: 'versicherung',
-  label: 'Versicherungen',
-  icon: 'Shield',
-  color: 'var(--chart-1)',
-
-},
-
-bank: {
-
-  id: 'bank',
-  label: 'Bankgebühren & Finanzen',
-  icon: 'Landmark',
-  color: 'var(--chart-2)',
-
-},
-
-mitgliedschaften: {
-
-  id: 'mitgliedschaften',
-  label: 'Mitgliedschaften & Beiträge',
-  icon: 'BadgeCheck',
-  color: 'var(--chart-3)',
-
-},
-
-geschenke: {
-
-  id: 'geschenke',
-  label: 'Geschenke & Aufmerksamkeiten',
-  icon: 'Gift',
-  color: 'var(--chart-4)',
-
-},
-
-versand: {
-
-  id: 'versand',
-  label: 'Versand & Porto',
-  icon: 'Package',
-  color: 'var(--chart-5)',
-
-},
-
-gesundheit: {
-
-  id: 'gesundheit',
-  label: 'Gesundheit & Arbeitsschutz',
-  icon: 'HeartPulse',
-  color: 'var(--chart-1)',
-
-},
-
-material: {
-
-  id: 'material',
-  label: 'Material & Verbrauch',
-  icon: 'Hammer',
-  color: 'var(--chart-2)',
-
-},
-
-steuern: {
-
-  id: 'steuern',
-  label: 'Steuern & Abgaben',
-  icon: 'Receipt',
-  color: 'var(--chart-3)',
-
-},
-
-privat: {
-
-  id: 'privat',
-  label: 'Privat / Nicht absetzbar',
-  icon: 'User',
-  color: 'var(--chart-4)',
-
-},
-bekleidung: {
-  id: 'bekleidung',
-  label: 'Bekleidung / Privat',
-  icon: 'Shirt',
-  color: 'var(--chart-4)',
-},
-
-kinder: {
-  id: 'kinder',
-  label: '👶 Kinder & Betreuung',
-  icon: 'Baby',
-  color: 'var(--chart-5)',
-},
-
-dekoration: {
-  id: 'dekoration',
-  label: 'Dekoration',
-  icon: 'Sparkles',
-  color: 'var(--chart-5)',
-},
-
-sonstiges: {
-
-  id: 'sonstiges',
-  label: 'Sonstiges',
-  icon: 'Tag',
-  color: 'var(--chart-5)',
-
-},
-inkasso: {
-  id: 'inkasso',
-  label: '⚖️ Inkasso / Forderung',
-  icon: 'Scale',
-  color: 'var(--chart-5)',
-},
+  hardware: {
+    id: 'hardware',
+    label: 'Hardware & Technik',
+    icon: 'Monitor',
+    color: 'var(--chart-2)',
+  },
+
+  werkzeug: {
+    id: 'werkzeug',
+    label: 'Werkzeug & Material',
+    icon: 'Wrench',
+    color: 'var(--chart-3)',
+  },
+
+  arbeitskleidung: {
+    id: 'arbeitskleidung',
+    label: 'Arbeitskleidung',
+    icon: 'Shirt',
+    color: 'var(--chart-4)',
+  },
+
+  bekleidung: {
+    id: 'bekleidung',
+    label: 'Bekleidung / Privat',
+    icon: 'Shirt',
+    color: 'var(--chart-4)',
+  },
+
+  telefon: {
+    id: 'telefon',
+    label: 'Telefon & Internet',
+    icon: 'Smartphone',
+    color: 'var(--chart-5)',
+  },
+
+  marketing: {
+    id: 'marketing',
+    label: 'Marketing & Werbung',
+    icon: 'Megaphone',
+    color: 'var(--chart-1)',
+  },
+
+  kinder: {
+    id: 'kinder',
+    label: '👶 Kinder & Betreuung',
+    icon: 'Baby',
+    color: 'var(--chart-5)',
+  },
+
+  bewirtung: {
+    id: 'bewirtung',
+    label: 'Bewirtung',
+    icon: 'Utensils',
+    color: 'var(--chart-2)',
+  },
+
+  reisen: {
+    id: 'reisen',
+    label: 'Reisen & Unterkünfte',
+    icon: 'Plane',
+    color: 'var(--chart-3)',
+  },
+
+  fahrzeug: {
+    id: 'fahrzeug',
+    label: 'Fahrtkosten & Fahrzeuge',
+    icon: 'Car',
+    color: 'var(--chart-4)',
+  },
+
+  weiterbildung: {
+    id: 'weiterbildung',
+    label: 'Weiterbildung',
+    icon: 'GraduationCap',
+    color: 'var(--chart-5)',
+  },
+
+  fachliteratur: {
+    id: 'fachliteratur',
+    label: 'Fachliteratur',
+    icon: 'BookOpen',
+    color: 'var(--chart-1)',
+  },
+
+  miete: {
+    id: 'miete',
+    label: 'Miete & Räume',
+    icon: 'Building',
+    color: 'var(--chart-2)',
+  },
+
+  homeoffice: {
+    id: 'homeoffice',
+    label: 'Homeoffice',
+    icon: 'Home',
+    color: 'var(--chart-3)',
+  },
+
+  dienstleister: {
+    id: 'dienstleister',
+    label: 'Leistungen Dritter',
+    icon: 'Users',
+    color: 'var(--chart-4)',
+  },
+
+  recht: {
+    id: 'recht',
+    label: 'Rechtsberatung',
+    icon: 'Scale',
+    color: 'var(--chart-5)',
+  },
+
+  versicherung: {
+    id: 'versicherung',
+    label: 'Versicherungen',
+    icon: 'Shield',
+    color: 'var(--chart-1)',
+  },
+
+  bank: {
+    id: 'bank',
+    label: 'Bankgebühren & Finanzen',
+    icon: 'Landmark',
+    color: 'var(--chart-2)',
+  },
+
+  mitgliedschaften: {
+    id: 'mitgliedschaften',
+    label: 'Mitgliedschaften & Beiträge',
+    icon: 'BadgeCheck',
+    color: 'var(--chart-3)',
+  },
+
+  geschenke: {
+    id: 'geschenke',
+    label: 'Geschenke & Aufmerksamkeiten',
+    icon: 'Gift',
+    color: 'var(--chart-4)',
+  },
+
+  versand: {
+    id: 'versand',
+    label: 'Versand & Porto',
+    icon: 'Package',
+    color: 'var(--chart-5)',
+  },
+
+  gesundheit: {
+    id: 'gesundheit',
+    label: 'Gesundheit & Arbeitsschutz',
+    icon: 'HeartPulse',
+    color: 'var(--chart-1)',
+  },
+
+  material: {
+    id: 'material',
+    label: 'Material & Verbrauch',
+    icon: 'Hammer',
+    color: 'var(--chart-2)',
+  },
+
+  steuern: {
+    id: 'steuern',
+    label: 'Steuern & Abgaben',
+    icon: 'Receipt',
+    color: 'var(--chart-3)',
+  },
+
+  privat: {
+    id: 'privat',
+    label: 'Privat / Nicht absetzbar',
+    icon: 'User',
+    color: 'var(--chart-4)',
+  },
+
+  dekoration: {
+    id: 'dekoration',
+    label: 'Dekoration',
+    icon: 'Sparkles',
+    color: 'var(--chart-5)',
+  },
+
+  inkasso: {
+    id: 'inkasso',
+    label: '⚖️ Inkasso / Forderung',
+    icon: 'Scale',
+    color: 'var(--chart-5)',
+  },
+
+  sonstiges: {
+    id: 'sonstiges',
+    label: 'Sonstiges',
+    icon: 'Tag',
+    color: 'var(--chart-5)',
+  },
 }
+
+// ---------------------------------------------------------
+// Hilfsfunktionen
+// ---------------------------------------------------------
+
+export function getCategoryLabel(categoryId: string) {
+  const normalizedId = String(categoryId || '')
+    .trim()
+    .toLowerCase()
+
+  return (
+    CATEGORIES[normalizedId as CategoryId]?.label ??
+    CATEGORIES.sonstiges.label
+  )
+}
+
 export const CATEGORY_LIST = Object.values(CATEGORIES)
-export const CATEGORY_KEYWORDS = {
+
+// ---------------------------------------------------------
+// Schlüsselwörter für automatische Erkennung
+// Reihenfolge ist wichtig:
+// Spezifische Kategorien stehen vor allgemeinen Kategorien.
+// ---------------------------------------------------------
+
+export const CATEGORY_KEYWORDS: Record<CategoryId, string[]> = {
   software: [
     'adobe',
     'openai',
     'chatgpt',
+    'claude',
+    'anthropic',
     'hosting',
     'domain',
     'hetzner',
@@ -328,6 +306,7 @@ export const CATEGORY_KEYWORDS = {
     'webcam',
     'iphone',
     'samsung',
+    'tablet',
   ],
 
   werkzeug: [
@@ -335,6 +314,7 @@ export const CATEGORY_KEYWORDS = {
     'obi',
     'hornbach',
     'toom',
+    'bauhaus',
     'werkzeug',
     'schrauben',
     'bohrer',
@@ -349,24 +329,29 @@ export const CATEGORY_KEYWORDS = {
     'schutzkleidung',
   ],
 
-bekleidung: [
-  'kik',
-  'deichmann',
-  'c&a',
-  'h&m',
-  'zara',
-  'new yorker',
-  'takko',
-  'ernstings family'
-],
+  bekleidung: [
+    'kik',
+    'deichmann',
+    'c&a',
+    'h&m',
+    'zara',
+    'new yorker',
+    'takko',
+    'ernstings family',
+  ],
 
   telefon: [
     'vodafone',
     'telekom',
     'o2',
+    'telefonica',
+    '1&1',
+    '1und1',
+    'congstar',
     'telefon',
     'internet',
     'mobilfunk',
+    'dsl',
   ],
 
   marketing: [
@@ -374,45 +359,68 @@ bekleidung: [
     'instagram',
     'linkedin',
     'google ads',
+    'meta ads',
     'werbung',
     'marketing',
   ],
+
+  // Muss vor "bewirtung" stehen, weil Essengeld
+  // und Kita-Verpflegung ebenfalls "essen" enthalten können.
+  kinder: [
+    'kita',
+    'kindergarten',
+    'hort',
+    'kindertagesstätte',
+    'kindertagesstaette',
+    'kinderbetreuung',
+    'essengeld',
+    'mittagessen kita',
+    'verpflegung kita',
+    'verpflegung kindergarten',
+    'schulessen',
+    'besseressen',
+    'besser essen',
+    'nordspatzen',
+    'mischka',
+    'tagesstätte',
+    'tagesstaette',
+  ],
+
   bewirtung: [
     'restaurant',
     'café',
     'cafe',
     'bistro',
-    'essen',
-    'mittagessen',
     'abendessen',
     'bewirtung',
     'lieferando',
+    'geschäftsessen',
+    'geschaeftsessen',
   ],
 
   reisen: [
-  'hotel',
-  'airbnb',
-  'booking',
-  'bahn',
-  'deutsche bahn',
-  'db',
-  'flug',
-  'reise',
-  'übernachtung',
-
-  'fahrkarte',
-  'fahrticket',
-  'ticket',
-  'dticket',
-  'd-ticket',
-  'deutschlandticket',
-  'nahverkehr',
-  'bus',
-  'tram',
-  'zug',
-  'öpnv',
-  'oepnv',
-],
+    'hotel',
+    'airbnb',
+    'booking',
+    'bahn',
+    'deutsche bahn',
+    'db vertrieb',
+    'flug',
+    'reise',
+    'übernachtung',
+    'uebernachtung',
+    'fahrkarte',
+    'fahrticket',
+    'deutschlandticket',
+    'd-ticket',
+    'dticket',
+    'nahverkehr',
+    'bus',
+    'tram',
+    'zug',
+    'öpnv',
+    'oepnv',
+  ],
 
   fahrzeug: [
     'aral',
@@ -420,13 +428,14 @@ bekleidung: [
     'total',
     'esso',
     'jet',
-    'star',
+    'star tankstelle',
     'tankstelle',
     'diesel',
     'benzin',
     'reifen',
     'werkstatt',
     'parken',
+    'parkhaus',
   ],
 
   weiterbildung: [
@@ -440,30 +449,32 @@ bekleidung: [
   ],
 
   fachliteratur: [
-    'buch',
-    'ebook',
     'fachbuch',
+    'ebook',
+    'e-book',
     'zeitschrift',
+    'fachzeitschrift',
     'magazin',
     'report',
   ],
 
   miete: [
     'miete',
-    'büro',
+    'büromiete',
+    'bueromiete',
     'coworking',
     'lager',
-    'raum',
-    'praxis',
+    'praxisraum',
     'studio',
   ],
+
   homeoffice: [
     'homeoffice',
     'arbeitszimmer',
     'schreibtisch',
     'bürostuhl',
-    'lampe',
-    'strom',
+    'buerostuhl',
+    'schreibtischlampe',
   ],
 
   dienstleister: [
@@ -479,11 +490,10 @@ bekleidung: [
   recht: [
     'anwalt',
     'rechtsanwalt',
-    'vertrag',
-    'agb',
-    'datenschutz',
-    'dsgvo',
+    'kanzlei',
     'notar',
+    'rechtsberatung',
+    'dsgvo beratung',
   ],
 
   versicherung: [
@@ -493,18 +503,25 @@ bekleidung: [
     'rechtsschutz',
     'krankenversicherung',
     'unfallversicherung',
+    'krankenkasse',
+    'aok',
+    'barmer',
+    'techniker krankenkasse',
   ],
 
   bank: [
-   'paypal',
-'stripe',
-'sumup',
-'visa',
-'mastercard',
-'kontoführung',
-'gebühr',
-'transaktion',
-'zinsen',
+    'paypal',
+    'stripe',
+    'sumup',
+    'visa',
+    'mastercard',
+    'kontoführung',
+    'kontofuehrung',
+    'bankgebühr',
+    'bankgebuehr',
+    'transaktionsgebühr',
+    'transaktionsgebuehr',
+    'zinsen',
   ],
 
   mitgliedschaften: [
@@ -513,51 +530,57 @@ bekleidung: [
     'kammer',
     'mitgliedschaft',
     'verband',
-    'verein',
+    'vereinsbeitrag',
   ],
 
+  geschenke: [
+    'nanu-nana',
+    'nanu nana',
+    'geschenk',
+    'geschenkartikel',
+    'souvenir',
+    'accessoire',
+    'accessoires',
+    'gutschein',
+    'aufmerksamkeit',
+    'präsent',
+    'praesent',
+    'spielwaren',
+    'spielzeug',
+  ],
 
   versand: [
     'dhl',
     'hermes',
     'ups',
     'dpd',
+    'gls',
+    'deutsche post',
     'porto',
     'briefmarke',
     'paket',
-'ups',
-
-'gls',
-
-'post',
-
-'porto',
-
-'brief',
-
-'paket',
-
-'sendung',
+    'sendung',
   ],
+
   gesundheit: [
     'erste hilfe',
     'verbandskasten',
     'schutzbrille',
     'gehörschutz',
+    'gehoerschutz',
     'arbeitsschutz',
     'ergonomie',
     'bildschirmbrille',
+    'apotheke',
   ],
 
   material: [
-    'material',
     'verbrauchsmaterial',
+    'baustoff',
     'holz',
     'farbe',
     'kabel',
-    'schrauben',
     'kleinteile',
-    'baustoff',
   ],
 
   steuern: [
@@ -566,17 +589,14 @@ bekleidung: [
     'gewerbesteuer',
     'lohnsteuer',
     'steuerberater',
-    'steuer',
-'mahnung',
-'bescheid',
-'hansestadt',
-'stadt',
-'landkreis',
-'amt',
-'behörde',
-'behoerde',
-'gebühr',
-'gebuehr',
+    'steuerbescheid',
+    'steuerzahlung',
+    'hansestadt',
+    'landkreis',
+    'behörde',
+    'behoerde',
+    'verwaltungsgebühr',
+    'verwaltungsgebuehr',
   ],
 
   privat: [
@@ -585,67 +605,61 @@ bekleidung: [
     'lidl',
     'rewe',
     'edeka',
-    'privat',
+    'penny',
+    'norma',
+    'kaufland',
+    'rossmann',
     'lebensmittel',
-'netto',
-
-'rewe',
-
-'edeka',
-
-'penny',
-
-'norma',
-
-'kaufland',
-
-'rossmann',
+    'privat',
   ],
-kinder: [
-  'kita',
-  'kindergarten',
-  'hort',
-  'kindertagesstätte',
-  'kindertagesstaette',
-  'kinderbetreuung',
-  'essengeld',
-  'mittagessen kita',
-  'verpflegung kita',
-  'verpflegung kindergarten',
-  'schulessen',
-  'besseressen',
-  'nordspatzen',
-],
-dekoration: [
-  'butlers',
-  'depot',
-  'idee',
-],
 
-geschenke: [
-  'nanu-nana',
-  'geschenk',
-  'geschenkartikel',
-  'souvenir',
-  'accessoire',
-  'accessoires',
-  'gutschein',
-  'aufmerksamkeit',
-  'präsent',
-'spielwaren',
-'spielzeug',
-],
+  dekoration: [
+    'butlers',
+    'depot',
+    'dekoration',
+    'dekoartikel',
+  ],
+
+  inkasso: [
+    'inkasso',
+    'inkassoforderung',
+    'forderungsschreiben',
+    'forderungen management',
+    'mahnverfahren',
+    'vollstreckung',
+    'gerichtsvollzieher',
+    'coeo inkasso',
+  ],
 
   sonstiges: [],
 }
 
-export function detectCategory(text: string): CategoryId {
-  const lower = text.toLowerCase()
+// ---------------------------------------------------------
+// Automatische Kategorie-Erkennung
+// ---------------------------------------------------------
 
-  for (const categoryId of Object.keys(CATEGORY_KEYWORDS) as CategoryId[]) {
+export function detectCategory(text: string): CategoryId {
+  const lower = String(text || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!lower) {
+    return 'sonstiges'
+  }
+
+  const categoryIds = Object.keys(
+    CATEGORY_KEYWORDS
+  ) as CategoryId[]
+
+  for (const categoryId of categoryIds) {
     const keywords = CATEGORY_KEYWORDS[categoryId]
 
-    if (keywords.some((keyword) => lower.includes(keyword.toLowerCase()))) {
+    const match = keywords.some((keyword) =>
+      lower.includes(keyword.toLowerCase())
+    )
+
+    if (match) {
       return categoryId
     }
   }
