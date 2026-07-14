@@ -500,6 +500,7 @@ const anchorMessage =
       <p className="text-xl font-black text-rose-700">
         {overdueObligations.length}
       </p>
+
       <p className="mt-1 text-[10px] font-bold text-rose-600">
         Überfällig
       </p>
@@ -509,6 +510,7 @@ const anchorMessage =
       <p className="text-xl font-black text-amber-700">
         {dueSoonObligations.length}
       </p>
+
       <p className="mt-1 text-[10px] font-bold text-amber-600">
         Bald fällig
       </p>
@@ -518,30 +520,30 @@ const anchorMessage =
       <p className="text-xl font-black text-violet-700">
         {inkassoObligations.length}
       </p>
+
       <p className="mt-1 text-[10px] font-bold text-violet-600">
         Forderungen
       </p>
     </div>
   </div>
 
- {obligations.length === 0 ? (
-  <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-600">
-    📝 Noch keine Verpflichtungen angelegt.
-  </p>
-) : openObligations.length === 0 ? (
-  <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
-    🟢 Alle Verpflichtungen sind erledigt.
-  </p>
-) : (
-  <Link
-    href="/verpflichtungen"
-    className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
-  >
-    Alle Verpflichtungen öffnen →
-  </Link>
-)}
-
-  
+  {obligations.length === 0 ? (
+    <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-600">
+      📝 Noch keine Verpflichtungen angelegt.
+    </p>
+  ) : openObligations.length === 0 ? (
+    <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+      🟢 Alle Verpflichtungen sind erledigt.
+    </p>
+  ) : (
+    <Link
+      href="/verpflichtungen"
+      className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
+    >
+      Alle Verpflichtungen öffnen →
+    </Link>
+  )}
+</div>
       {/* --- MILA-AMPEL --- */}
 <div className="space-y-2">
   <h2 className="px-1 text-xs font-bold uppercase tracking-wider text-slate-400">
