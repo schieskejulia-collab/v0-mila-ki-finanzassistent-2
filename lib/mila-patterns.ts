@@ -359,11 +359,13 @@ export function getMilaPatterns(
   /* ---------------------------------------------------------
      Positive Entwicklung
   --------------------------------------------------------- */
-
-  if (
-    totalIncome > 0 &&
-    totalExpenses < totalIncome * 0.7
-  ) {
+if (
+  incomes.length >= 3 &&
+  expenses.length >= 5 &&
+  totalIncome > 0 &&
+  totalExpenses < totalIncome * 0.7
+)
+   {
     patterns.push({
       id: 'healthy-spending',
       title: '🌱 Finanzieller Spielraum',
