@@ -72,7 +72,11 @@ export default function NeueBuchungPage() {
   const [status, setStatus] = useState('offen')
   const [dueDate, setDueDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-
+const [scanSuggestion, setScanSuggestion] = useState('')
+const [scanConfidence, setScanConfidence] = useState<number | null>(null)
+const [scanNeedsConfirmation, setScanNeedsConfirmation] = useState(false)
+const [scanReviewReason, setScanReviewReason] = useState('')
+const [scanAlternatives, setScanAlternatives] = useState<string[]>([])
   const numericAmount = Number(
     String(amount || 0).replace(',', '.')
   )
@@ -99,16 +103,57 @@ export default function NeueBuchungPage() {
     setPartner(value)
   }
 
-  const handleScanSuccess = (rawData: any) => {
-    const scannedData =
-      rawData?.data?.data ||
-      rawData?.data ||
-      rawData
+  const handleScanSuccess = (data: {
+  amount?: number
+  vendor?: string
+  category?: string
+  suggestedCategory?: string
+  title?: string
+  dueDate?: string
+  confidence?: number
+  needsConfirmation?: boolean
+  reviewReason?: string
+  alternatives?: string[]
+}) => {
+  setType('expense')
+  setAmount(String(data.amount || ''))
+  setTitle(data.vendor || data.title || '')
+  setDueDate(data.dueDate || '')
 
-    if (!scannedData) {
-      alert('Mila hat keine auswertbaren Daten erhalten.')
-      return
-    }
+  const suggested =
+    data.suggestedCategory ||
+    data.category ||
+    'Sonstiges'
+
+  setScanSuggestion(suggested)
+  setScanConfidence(
+    typeof data.confidence === 'number'
+      ? data.confidence
+      : null
+  )
+  setScanNeedsConfirmation(
+    Boolean(data.needsConfirmation)
+  )
+  setScanReviewReason(
+    data.reviewReason || ''
+  )
+  setScanAlternatives(
+    Array.isArray(data.alternatives)
+      ? data.alternatives
+      : []
+  )
+
+  if (data.needsConfirmation) {
+    setCategory('')
+  } else {
+    const matchedLabel =
+      findLabelByNormalized(suggested)
+
+    setCategory(
+      matchedLabel || suggested
+    )
+  }
+}
 
     const scannedTitle = String(
       scannedData.title || ''
@@ -344,56 +389,83 @@ const categoryLabel = isInkasso
   }
 }
 
-      if (partner && type === 'expense') {
-        saveMerchantMemory({
-          merchant: partner,
-          category:
-            category === INKASSO_LABEL
-              ? 'inkasso'
-              : detectCategory(category),
-          taxHint: taxStatus,
-        })
-      }
+     {type === 'expense' && amount && scanSuggestion && (
+  <section className="rounded-[2rem] bg-violet-50 p-5">
+    <p className="font-black text-violet-700">
+      {scanNeedsConfirmation
+        ? '🧠 Mila denkt nach'
+        : '✨ Mila Einschätzung'}
+    </p>
 
-      if (type === 'expense') {
-        await addExpense(payload)
-      } else {
-        await addIncome(payload)
-      }
+    <div className="mt-3 space-y-2 text-slate-700">
+      <p>
+        Meine Vermutung:{' '}
+        <span className="font-black text-slate-800">
+          {scanSuggestion}
+        </span>
+      </p>
 
-      setTitle('')
-      setAmount('')
-      setPartner('')
-      setNote('')
-      setStatus('offen')
-      setDueDate('')
-      setCategory('Sonstiges')
-    } catch (error: any) {
-      alert(
-        `Netzwerkfehler: ${
-          error?.message || 'Unbekannter Fehler'
-        } ❌`
-      )
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  return (
-    <main className="min-h-screen max-w-md mx-auto p-6 pb-40 space-y-4">
-      <h1 className="text-3xl font-black text-slate-950">
-        Neue Buchung
-      </h1>
-
-      <ReceiptUpload
-        onScanSuccess={handleScanSuccess}
-      />
-
-      <div className="border-t border-gray-100 pt-4">
-        <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-400">
-          Oder manuell eintragen
+      {scanConfidence !== null && (
+        <p>
+          Sicherheit:{' '}
+          <span className="font-black text-slate-800">
+            {Math.round(scanConfidence * 100)} %
+          </span>
         </p>
-      </div>
+      )}
+
+      {scanReviewReason && (
+        <p className="leading-relaxed">
+          {scanReviewReason}
+        </p>
+      )}
+    </div>
+
+    {scanNeedsConfirmation &&
+      scanAlternatives.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-3 font-black text-slate-800">
+            Was passt wirklich?
+          </p>
+
+          <div className="grid gap-2">
+            {scanAlternatives.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  const matchedLabel =
+                    findLabelByNormalized(option)
+
+                  setCategory(
+                    matchedLabel || option
+                  )
+
+                  setScanSuggestion(option)
+                  setScanNeedsConfirmation(false)
+                  setScanReviewReason(
+                    'Danke – ich übernehme deine Auswahl.'
+                  )
+                }}
+                className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+    {!scanNeedsConfirmation && category && (
+      <p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold text-slate-700">
+        Kategorie übernommen:{' '}
+        <span className="text-violet-700">
+          {category}
+        </span>
+      </p>
+    )}
+  </section>
+)}
 
       <div className="relative z-50 grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-2">
         <button
