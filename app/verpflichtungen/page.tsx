@@ -283,11 +283,7 @@ note: note.trim() || undefined,
           onClick={speichern}
           className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white"
         >
-          Verpflichtung speichern
-        </button>
-      </section>
-
-      <section className="space-y-3">
+         <section className="space-y-3">
   {obligations.length === 0 ? (
     <div className="rounded-3xl bg-purple-50 p-5 font-bold text-slate-700">
       Noch keine Verpflichtungen hinterlegt.
