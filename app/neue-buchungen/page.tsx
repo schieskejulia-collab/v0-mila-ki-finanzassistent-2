@@ -8,7 +8,10 @@ import {
   detectCategory,
   getCategoryLabel,
 } from '@/lib/categories'
-import { saveMerchantMemory } from '@/lib/merchant-memory'
+import {
+  findMerchantMemory,
+  saveMerchantMemory,
+} from '@/lib/merchant-memory'
 import { MilaScanReview } from '@/components/ui/mila-scan-review'
 const INKASSO_LABEL = '⚖️ Inkasso / Forderung'
 
@@ -244,17 +247,26 @@ export default function NeueBuchungPage() {
 
     const fallbackCategory =
       getCategoryLabel(detectedCategory)
+const rememberedMerchant =
+  findMerchantMemory(scannedVendor)
 
-    const proposedCategory = isInkasso
-      ? INKASSO_LABEL
-      : suggestedCategory &&
-          suggestedCategory.toLowerCase() !==
-            'unklar'
-        ? resolveCategoryLabel(
-            suggestedCategory
-          )
-        : fallbackCategory
-
+const rememberedCategory =
+  rememberedMerchant
+    ? getCategoryLabel(
+        rememberedMerchant.category
+      )
+    : ''
+   const proposedCategory = isInkasso
+  ? INKASSO_LABEL
+  : rememberedCategory
+    ? rememberedCategory
+    : suggestedCategory &&
+        suggestedCategory.toLowerCase() !==
+          'unklar'
+      ? resolveCategoryLabel(
+          suggestedCategory
+        )
+      : fallbackCategory
     const needsConfirmation =
       !isInkasso &&
       Boolean(scannedData.needsConfirmation)
