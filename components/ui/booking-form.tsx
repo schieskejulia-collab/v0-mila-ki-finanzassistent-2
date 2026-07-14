@@ -99,19 +99,26 @@ export function BookingForm() {
     }
 
     if (isDuplicateExpense()) {
-      const ok = confirm(
-        'Mila hat eine mögliche Doppelbuchung erkannt. Trotzdem speichern?'
-      )
-      if (!ok) return
-    }
+  const ok = confirm(
+    '⚠️ Mögliche Doppelbuchung erkannt.\n\n' +
+      'Eine sehr ähnliche Ausgabe wurde bereits gespeichert.\n\n' +
+      'OK = Trotzdem speichern\n' +
+      'Abbrechen = Nicht speichern'
+  )
 
-    if (isDuplicateIncome()) {
-      const ok = confirm(
-        'Mila hat eine mögliche doppelte Einnahme erkannt. Trotzdem speichern?'
-      )
-      if (!ok) return
-    }
+  if (!ok) return
+}
 
+if (isDuplicateIncome()) {
+  const ok = confirm(
+    '⚠️ Mögliche doppelte Einnahme erkannt.\n\n' +
+      'Eine sehr ähnliche Einnahme wurde bereits gespeichert.\n\n' +
+      'OK = Trotzdem speichern\n' +
+      'Abbrechen = Nicht speichern'
+  )
+
+  if (!ok) return
+}
     setIsSaving(true)
 
     try {
