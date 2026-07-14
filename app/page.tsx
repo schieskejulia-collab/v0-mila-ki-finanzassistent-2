@@ -541,15 +541,7 @@ const anchorMessage =
   </Link>
 )}
 
-  {openObligations.length > 0 && (
-    <Link
-      href="/verpflichtungen"
-      className="mt-4 block rounded-2xl bg-purple-600 py-3 text-center text-xs font-black text-white"
-    >
-      Alle Verpflichtungen öffnen →
-    </Link>
-  )}
-</div>
+  
       {/* --- MILA-AMPEL --- */}
 <div className="space-y-2">
   <h2 className="px-1 text-xs font-bold uppercase tracking-wider text-slate-400">
