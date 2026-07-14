@@ -294,14 +294,38 @@ const anchorMessage =
      <MorningBriefing />
 
 
-          {/* Lila Hauptkarte */}
-          <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Aktueller Überschuss</p>
-            <p className="mt-1 text-3xl font-black">{formatEuro(summary.balance)}</p>
-            <p className="mt-2 text-xs font-bold text-white/80">
-              Einnahmen {formatEuro(summary.totalIncomes)} · Ausgaben {formatEuro(summary.totalExpenses)}
-            </p>
-          </div>
+        {/* Lila Hauptkarte */}
+<div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
+  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
+    Aktueller Überschuss
+  </p>
+
+  <p className="mt-1 text-3xl font-black">
+    {formatEuro(summary.balance)}
+  </p>
+
+  <p className="mt-2 text-xs font-bold text-white/80">
+    Einnahmen {formatEuro(summary.totalIncomes)} · Ausgaben{' '}
+    {formatEuro(summary.totalExpenses)}
+  </p>
+
+  {openObligations.length > 0 && (
+    <div className="mt-4 rounded-2xl bg-white/10 p-3">
+      <p className="text-[10px] font-black uppercase tracking-wider text-white/70">
+        Offene Verpflichtungen
+      </p>
+
+      <p className="mt-1 text-lg font-black">
+        {formatEuro(openObligationAmount)}
+      </p>
+
+      <p className="mt-1 text-xs font-bold text-white/80">
+        Nach offenen Verpflichtungen verfügbar:{' '}
+        {formatEuro(availableAfterObligations)}
+      </p>
+    </div>
+  )}
+</div>
 
           {/* Score & Rücklage Grids */}
           <div className="grid grid-cols-2 gap-3">
