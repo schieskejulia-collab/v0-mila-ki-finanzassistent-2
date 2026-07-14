@@ -758,97 +758,21 @@ export default function NeueBuchungPage() {
       </div>
 
       {type === 'expense' &&
-        amount &&
-        scanSuggestion && (
-          <section className="rounded-[2rem] bg-violet-50 p-5 text-sm text-slate-700">
-            <p className="font-black text-violet-700">
-              {scanNeedsConfirmation
-                ? '🧠 Mila denkt nach'
-                : '✨ Mila Einschätzung'}
-            </p>
-
-            <div className="mt-3 space-y-2">
-              <p>
-                Meine Vermutung:{' '}
-                <strong>
-                  {scanSuggestion}
-                </strong>
-              </p>
-
-              {confidencePercent !== null && (
-                <p>
-                  Sicherheit:{' '}
-                  <strong>
-                    {confidencePercent} %
-                  </strong>
-                </p>
-              )}
-
-              {scanReviewReason && (
-                <p className="leading-relaxed">
-                  {scanReviewReason}
-                </p>
-              )}
-            </div>
-
-            {scanNeedsConfirmation &&
-            scanAlternatives.length > 0 ? (
-              <div className="mt-4">
-                <p className="mb-3 font-black text-slate-800">
-                  Was passt wirklich?
-                </p>
-
-                <div className="grid gap-2">
-                  {scanAlternatives.map(
-                    (option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() =>
-                          chooseScanCategory(
-                            option
-                          )
-                        }
-                        className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
-                      >
-                        {option}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            ) : null}
-
-            {!scanNeedsConfirmation &&
-              category && (
-                <div className="mt-4 rounded-2xl bg-white px-4 py-3">
-                  <p>
-                    Kategorie übernommen:{' '}
-                    <strong className="text-violet-700">
-                      {category}
-                    </strong>
-                  </p>
-
-                  <p className="mt-1">
-                    Steuerlich:{' '}
-                    <strong>
-                      {taxStatus}
-                    </strong>
-                  </p>
-
-                  {deductible && (
-                    <p className="mt-1">
-                      Geschätzte Steuerwirkung
-                      bei 30 %:{' '}
-                      <strong>
-                        {formatEuro(taxHint)}
-                      </strong>
-                    </p>
-                  )}
-                </div>
-              )}
-          </section>
-        )}
+  amount &&
+  scanSuggestion && (
+    <MilaScanReview
+      suggestion={scanSuggestion}
+      confidence={scanConfidence}
+      needsConfirmation={scanNeedsConfirmation}
+      reviewReason={scanReviewReason}
+      alternatives={scanAlternatives}
+      category={category}
+      taxStatus={taxStatus}
+      taxHint={taxHint}
+      deductible={deductible}
+      onSelectCategory={chooseScanCategory}
+    />
+)}
 
       {type === 'expense' &&
         amount &&
