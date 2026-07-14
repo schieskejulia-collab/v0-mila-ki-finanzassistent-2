@@ -414,48 +414,38 @@ const categoryLabel = isInkasso
         </p>
       )}
 
-      {scanReviewReason && (
-        <p className="leading-relaxed">
-          {scanReviewReason}
-        </p>
-      )}
+      {scanNeedsConfirmation && scanAlternatives.length > 0 ? (
+  <div className="mt-4">
+    <p className="mb-3 font-black text-slate-800">
+      Was passt wirklich?
+    </p>
+
+    <div className="grid gap-2">
+      {scanAlternatives.map((option: string) => {
+        return (
+          <button
+            key={option}
+            type="button"
+            className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
+            onClick={() => {
+              const matchedLabel =
+                findLabelByNormalized(option)
+
+              setCategory(matchedLabel || option)
+              setScanSuggestion(option)
+              setScanNeedsConfirmation(false)
+              setScanReviewReason(
+                'Danke – ich übernehme deine Auswahl.'
+              )
+            }}
+          >
+            {option}
+          </button>
+        )
+      })}
     </div>
-
-    {scanNeedsConfirmation &&
-      scanAlternatives.length > 0 && (
-        <div className="mt-4">
-          <p className="mb-3 font-black text-slate-800">
-            Was passt wirklich?
-          </p>
-
-          <div className="grid gap-2">
-            {scanAlternatives.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  const matchedLabel =
-                    findLabelByNormalized(option)
-
-                  setCategory(
-                    matchedLabel || option
-                  )
-
-                  setScanSuggestion(option)
-                  setScanNeedsConfirmation(false)
-                  setScanReviewReason(
-                    'Danke – ich übernehme deine Auswahl.'
-                  )
-                }}
-                className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
+  </div>
+) : null}
     {!scanNeedsConfirmation && category && (
       <p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold text-slate-700">
         Kategorie übernommen:{' '}
