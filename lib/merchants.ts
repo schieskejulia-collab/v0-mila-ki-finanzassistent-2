@@ -235,10 +235,26 @@ export const MERCHANTS: MerchantInfo[] = Object.entries(RAW_MERCHANTS).map(
 /**
  * Finale Matching-Funktion
  */
-export function findMerchantInfo(vendor: string) {
+export function findMerchantInfo(
+  vendor: string
+): MerchantInfo | undefined {
   const normalizedVendor = normalize(vendor)
 
+  if (!normalizedVendor) {
+    return undefined
+  }
+
   return MERCHANTS.find((merchant) =>
-    merchant.aliases.some((alias) => normalizedVendor.includes(alias))
+    merchant.aliases.some((alias) => {
+      if (!alias) {
+        return false
+      }
+
+      if (alias.length <= 3) {
+        return normalizedVendor === alias
+      }
+
+      return normalizedVendor.includes(alias)
+    })
   )
 }
