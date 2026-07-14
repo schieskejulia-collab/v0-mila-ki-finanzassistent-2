@@ -39,43 +39,66 @@ export function BookingForm() {
   const taxHint = amountNumber > 0 ? amountNumber * 0.3 : 0
 
   function handleScanSuccess(data: any) {
-    if (!data) return
+  if (!data) return
 
-    const scanTitle = data.title || ''
-    const scanVendor = data.vendor || ''
-    const scanAmount = data.amount ? String(data.amount).replace('.', ',') : ''
-    const autoCategory = inferCategory(`${scanTitle} ${scanVendor}`)
+  const scanTitle =
+    data.title ||
+    data.vendor ||
+    data.documentType ||
+    'Dokument'
 
-    setType('expense')
-    setTitle(scanTitle)
-    setPartner(scanVendor)
-    setAmount(scanAmount)
-    setCategory(autoCategory)
-    setNote('Automatisch von Mila ausgelesen 📸')
-    setScanMessage('Beleg erkannt. Bitte kurz prüfen und speichern.')
-  }
+  const scanVendor =
+    data.vendor ||
+    data.creditor ||
+    data.partner ||
+    ''
 
-  function resetForm() {
-    setTitle('')
-    setAmount('')
-    setPartner('')
-    setCategory('sonstiges')
-    setNote('')
-    setScanMessage('')
-  }
+  const scanAmount = data.amount
+    ? String(data.amount).replace('.', ',')
+    : ''
 
-  function isDuplicateExpense() {
-    if (type !== 'expense') return false
+  const documentType = String(
+    data.documentType || data.type || ''
+  ).toLowerCase()
 
-    return expenses.some((expense) => {
-      const sameAmount = Number(expense.amount) === amountNumber
-      const sameVendor =
-        String(expense.vendor || expense.title || '').toLowerCase().trim() ===
-        String(partner || title).toLowerCase().trim()
+  const isObligationDocument =
+    documentType.includes('mahnung') ||
+    documentType.includes('inkasso') ||
+    documentType.includes('forderung') ||
+    documentType.includes('rechnung') ||
+    Boolean(data.dueDate)
 
-      return sameAmount && sameVendor && amountNumber > 0
+  if (isObligationDocument) {
+    const params = new URLSearchParams({
+      title: scanTitle,
+      creditor: scanVendor,
+      amount: scanAmount,
+      dueDate: data.dueDate || '',
+      note:
+        data.note ||
+        data.invoiceNumber ||
+        `Aus Dokument erkannt: ${data.documentType || 'Dokument'}`,
+      source: 'document-scan',
     })
+
+    window.location.href = `/verpflichtungen?${params.toString()}`
+    return
   }
+
+  const autoCategory = inferCategory(
+    `${scanTitle} ${scanVendor}`
+  )
+
+  setType('expense')
+  setTitle(scanTitle)
+  setPartner(scanVendor)
+  setAmount(scanAmount)
+  setCategory(autoCategory)
+  setNote('Automatisch von Mila ausgelesen 📸')
+  setScanMessage(
+    'Beleg erkannt. Bitte kurz prüfen und speichern.'
+  )
+}
 
   function isDuplicateIncome() {
     if (type !== 'income') return false
