@@ -389,7 +389,7 @@ const categoryLabel = isInkasso
   }
 }
 
-    {type === 'expense' && amount && scanSuggestion && (
+   {type === 'expense' && amount && scanSuggestion && (
   <section className="rounded-[2rem] bg-violet-50 p-5">
     <p className="font-black text-violet-700">
       {scanNeedsConfirmation
@@ -447,6 +447,25 @@ const categoryLabel = isInkasso
                     'Danke – ich übernehme deine Auswahl.'
                   )
                 }}
+                className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+    {!scanNeedsConfirmation && category && (
+      <p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold text-slate-700">
+        Kategorie übernommen:{' '}
+        <span className="text-violet-700">
+          {category}
+        </span>
+      </p>
+    )}
+  </section>
+)}
                 className="rounded-2xl border border-violet-200 bg-white px-4 py-3 text-left font-bold text-slate-800 active:scale-[0.99]"
               >
                 {option}
