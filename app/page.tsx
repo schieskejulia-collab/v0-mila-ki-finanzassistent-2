@@ -308,10 +308,16 @@ const anchorMessage =
             <div className="rounded-2xl bg-amber-50 p-4 border border-amber-100">
               <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
               <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
-            <p className="mt-0.5 text-xs font-bold text-slate-600">
-  Geschätzte Rücklage auf deinen steuerlichen Gewinn
+          <p className="mt-0.5 text-xs font-bold text-slate-600">
+  Empfohlene Steuer-Rücklage
 </p>
-<p className="mt-1 text-[10px] font-semibold text-slate-500">
+
+<p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">
+  Grundlage: {formatEuro(estimatedTaxableProfit)} ×{' '}
+  {Math.round(reserveRate * 1000) / 10} %
+</p>
+
+<p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-500">
   Private Ausgaben mindern den steuerlichen Gewinn nicht.
 </p>
             </div>
