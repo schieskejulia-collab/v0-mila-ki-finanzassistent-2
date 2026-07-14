@@ -6,6 +6,8 @@ export type MilaReceiptRule = {
   category: CategoryId
   keywords: string[]
   taxHint: TaxHint
+  confidence: number
+  needsReview: boolean
   question: string
 }
 
@@ -24,8 +26,11 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'betreuung',
       'besseressen',
     ],
-    taxHint: 'no',
-    question: 'Das sieht nach Familie/Kinderbetreuung aus. Soll ich es privat einordnen?',
+    taxHint: 'depends',
+    confidence: 0.72,
+    needsReview: true,
+    question:
+      'Das sieht nach Familie oder Kinderbetreuung aus. War die Ausgabe privat?',
   },
   {
     category: 'reisen',
@@ -45,7 +50,10 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'parkgebuehr',
     ],
     taxHint: 'depends',
-    question: 'War diese Fahrt oder Reise beruflich, Montage oder privat?',
+    confidence: 0.55,
+    needsReview: true,
+    question:
+      'War diese Fahrt oder Reise beruflich, auf Dienstreise oder privat?',
   },
   {
     category: 'fahrzeug',
@@ -59,7 +67,10 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'waschanlage',
     ],
     taxHint: 'depends',
-    question: 'War das beruflich, Fahrt zur Arbeit oder privat?',
+    confidence: 0.58,
+    needsReview: true,
+    question:
+      'War die Fahrzeugausgabe beruflich oder privat veranlasst?',
   },
   {
     category: 'arbeitsmittel',
@@ -76,13 +87,33 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'handyhalterung',
     ],
     taxHint: 'depends',
-    question: 'Nutzt du diesen Gegenstand beruflich?',
+    confidence: 0.6,
+    needsReview: true,
+    question:
+      'Wird dieser Gegenstand tatsächlich beruflich genutzt?',
   },
   {
     category: 'bewirtung',
-    keywords: ['restaurant', 'bäcker', 'baecker', 'kaffee', 'getränke', 'getraenke', 'snacks'],
+    keywords: [
+      'restaurant',
+      'bäcker',
+      'baecker',
+      'kaffee',
+      'café',
+      'cafe',
+      'getränke',
+      'getraenke',
+      'snacks',
+      'imbiss',
+      'mcdonald',
+      'burger king',
+      'starbucks',
+    ],
     taxHint: 'depends',
-    question: 'War das beruflich, Montage oder privat?',
+    confidence: 0.52,
+    needsReview: true,
+    question:
+      'War das privat, ein Kundentermin oder Teil einer Dienstreise?',
   },
   {
     category: 'gesundheit',
@@ -98,91 +129,245 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'schmerzmittel',
     ],
     taxHint: 'depends',
-    question: 'Wurde es ärztlich verordnet und selbst bezahlt?',
+    confidence: 0.62,
+    needsReview: true,
+    question:
+      'War das eine private Gesundheitsausgabe oder besteht ein beruflicher Zusammenhang?',
   },
   {
     category: 'buerobedarf',
-    keywords: ['drucker', 'papier', 'toner', 'ordner', 'bürobedarf', 'buerobedarf'],
+    keywords: [
+      'druckerpapier',
+      'druckerpatrone',
+      'toner',
+      'aktenordner',
+      'bürobedarf',
+      'buerobedarf',
+      'briefumschlag',
+      'versandetikett',
+    ],
     taxHint: 'depends',
-    question: 'Nutzt du es beruflich?',
+    confidence: 0.72,
+    needsReview: true,
+    question:
+      'Wird dieser Bürobedarf für deine berufliche Tätigkeit genutzt?',
   },
   {
     category: 'telefon',
-    keywords: ['internet', 'telefon', 'mobilfunk', 'handyvertrag'],
+    keywords: [
+      'internetvertrag',
+      'telefonvertrag',
+      'mobilfunkvertrag',
+      'handyvertrag',
+      'datenvolumen',
+    ],
     taxHint: 'depends',
-    question: 'Gibt es eine berufliche Nutzung?',
+    confidence: 0.7,
+    needsReview: true,
+    question:
+      'Wird der Anschluss vollständig oder teilweise beruflich genutzt?',
   },
   {
     category: 'versicherungen',
-    keywords: ['haftpflicht', 'unfallversicherung', 'gewerkschaft', 'berufsverband'],
+    keywords: [
+      'haftpflicht',
+      'unfallversicherung',
+      'berufshaftpflicht',
+      'betriebshaftpflicht',
+      'gewerkschaft',
+      'berufsverband',
+    ],
     taxHint: 'depends',
-    question: 'Welche Art Versicherung oder Beitrag ist es?',
+    confidence: 0.68,
+    needsReview: true,
+    question:
+      'Welche Art von Versicherung oder Mitgliedsbeitrag ist das?',
   },
   {
     category: 'weiterbildung',
-    keywords: ['seminar', 'schulung', 'prüfung', 'pruefung', 'zertifikat', 'fachbuch'],
+    keywords: [
+      'seminar',
+      'schulung',
+      'prüfung',
+      'pruefung',
+      'zertifikat',
+      'fachbuch',
+      'weiterbildung',
+      'onlinekurs',
+      'online kurs',
+    ],
     taxHint: 'depends',
-    question: 'Hat die Weiterbildung beruflichen Bezug?',
+    confidence: 0.68,
+    needsReview: true,
+    question:
+      'Hat die Weiterbildung einen konkreten beruflichen Bezug?',
   },
   {
     category: 'software',
-    keywords: ['software', 'cloud', 'scanner-app', 'scanner app', 'chatgpt', 'openai'],
-    taxHint: 'yes',
-    question: 'Wird das Tool beruflich genutzt?',
+    keywords: [
+      'software',
+      'cloud',
+      'scanner-app',
+      'scanner app',
+      'chatgpt',
+      'openai',
+      'github',
+      'vercel',
+      'cloudflare',
+      'hosting',
+      'domain',
+      'saas',
+    ],
+    taxHint: 'depends',
+    confidence: 0.76,
+    needsReview: true,
+    question:
+      'Wird dieses Tool oder Abonnement beruflich genutzt?',
   },
 ]
 
 export type ReceiptRuleResult = {
   category: CategoryId
   taxHint: TaxHint
-  confidence: 'high' | 'medium' | 'low'
+  confidence: number
   needsReview: boolean
-  source: 'memory' | 'merchant' | 'category' | 'rule' | 'fallback'
+  source:
+    | 'memory'
+    | 'merchant'
+    | 'category'
+    | 'rule'
+    | 'fallback'
   question?: string
 }
 
-export function classifyReceipt(receipt: any): ReceiptRuleResult {
-  const text = `${receipt.title || ''} ${receipt.description || ''} ${
-    receipt.vendor || receipt.merchant || ''
-  } ${receipt.category || ''} ${receipt.note || ''}`.toLowerCase()
+function getReceiptText(receipt: any) {
+  return `
+    ${receipt?.title || ''}
+    ${receipt?.description || ''}
+    ${receipt?.vendor || ''}
+    ${receipt?.merchant || ''}
+    ${receipt?.category || ''}
+    ${receipt?.note || ''}
+  `
+    .toLowerCase()
+    .trim()
+}
 
-  const rule = MILA_RECEIPT_RULES.find((item) =>
-    item.keywords.some((keyword) => text.includes(keyword.toLowerCase()))
-  )
+export function classifyReceipt(
+  receipt: any
+): ReceiptRuleResult {
+  const text = getReceiptText(receipt)
 
-  if (rule) {
+  /*
+   * Zuerst das persönliche Händlergedächtnis und
+   * vorhandene Händlerwissen prüfen.
+   */
+  const learnedResult = classifyEntry({
+    title:
+      receipt?.title ||
+      receipt?.description ||
+      '',
+    vendor:
+      receipt?.vendor ||
+      receipt?.merchant ||
+      '',
+    category: receipt?.category || '',
+    note: receipt?.note || '',
+  })
+
+  /*
+   * Eine vom Nutzer gelernte Händlerentscheidung
+   * hat immer Vorrang.
+   */
+  if (learnedResult.source === 'memory') {
     return {
-      category: rule.category,
-      taxHint: rule.taxHint,
-      confidence: 'medium',
-      needsReview: rule.taxHint !== 'yes',
-      source: 'rule',
-      question: rule.question,
+      category: learnedResult.category,
+      taxHint: learnedResult.taxHint,
+      confidence: 0.92,
+      needsReview: false,
+      source: 'memory',
     }
   }
 
-  const result = classifyEntry({
-    title: receipt.title || receipt.description || '',
-    vendor: receipt.vendor || receipt.merchant || '',
-    category: receipt.category || '',
-    note: receipt.note || '',
-  })
+  /*
+   * Eindeutige Verpflichtungen werden nicht durch
+   * normale Belegregeln überschrieben.
+   */
+  if (
+    text.includes('inkasso') ||
+    text.includes('forderung') ||
+    text.includes('mahnung') ||
+    text.includes('gläubiger') ||
+    text.includes('vollstreckung')
+  ) {
+    return {
+      category: 'verpflichtung',
+      taxHint: 'nicht absetzbar / privat',
+      confidence: 0.95,
+      needsReview: false,
+      source: 'category',
+      question:
+        'Das sieht nach einer Forderung oder Verpflichtung aus.',
+    }
+  }
 
-  const needsReview =
-    result.taxHint === 'depends' ||
-    result.taxHint === 'unknown' ||
-    result.category === 'sonstiges'
+  /*
+   * Danach vorsichtige Inhaltsregeln prüfen.
+   * Sie liefern nur eine Vermutung und keine
+   * endgültige steuerliche Entscheidung.
+   */
+  const matchingRule =
+    MILA_RECEIPT_RULES.find((rule) =>
+      rule.keywords.some((keyword) =>
+        text.includes(keyword.toLowerCase())
+      )
+    )
+
+  if (matchingRule) {
+    return {
+      category: matchingRule.category,
+      taxHint: matchingRule.taxHint,
+      confidence: matchingRule.confidence,
+      needsReview:
+        matchingRule.needsReview,
+      source: 'rule',
+      question: matchingRule.question,
+    }
+  }
+
+  /*
+   * Eine bekannte Händlerzuordnung darf einen
+   * Vorschlag machen. Sie bleibt aber prüfbar,
+   * solange sie nicht vom Nutzer gelernt wurde.
+   */
+  if (learnedResult.source === 'merchant') {
+    return {
+      category: learnedResult.category,
+      taxHint: learnedResult.taxHint,
+      confidence: 0.7,
+      needsReview:
+        learnedResult.taxHint !== 'yes',
+      source: 'merchant',
+    }
+  }
+
+  if (learnedResult.source === 'category') {
+    return {
+      category: learnedResult.category,
+      taxHint: learnedResult.taxHint,
+      confidence: 0.58,
+      needsReview: true,
+      source: 'category',
+    }
+  }
 
   return {
-    category: result.category,
-    taxHint: result.taxHint,
-    confidence:
-      result.source === 'memory' || result.source === 'merchant'
-        ? 'high'
-        : result.source === 'category'
-        ? 'medium'
-        : 'low',
-    needsReview,
-    source: result.source,
+    category: 'sonstiges',
+    taxHint: 'unknown',
+    confidence: 0.35,
+    needsReview: true,
+    source: 'fallback',
+    question:
+      'Der Verwendungszweck ist noch nicht eindeutig erkennbar.',
   }
 }
