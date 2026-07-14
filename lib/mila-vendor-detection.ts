@@ -164,9 +164,23 @@ export function vendorConfidence(
     }
   }
 
-  if (bestDistance === 0) return 1
-  if (bestDistance === 1) return 0.85
-  if (bestDistance === 2) return 0.7
+  const shortestKeywordLength = Math.min(
+  ...vendor.keywords
+    .map((keyword) => normalizeVendorText(keyword).length)
+    .filter((length) => length > 0)
+)
+
+if (bestDistance === 0) return 1
+if (bestDistance === 1) return 0.85
+
+if (
+  bestDistance === 2 &&
+  shortestKeywordLength >= 6
+) {
+  return 0.7
+}
+
+return 0
 
   return 0
 }
