@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { classifyReceipt } from '@/lib/receipt-rules'
 import { classifyDocument } from '@/lib/document-classifier'
+import { detectCategory } from '@/lib/categories'
 function cleanJson(content: string) {
   return content.replace(/```json/gi, '').replace(/```/g, '').trim()
 }
