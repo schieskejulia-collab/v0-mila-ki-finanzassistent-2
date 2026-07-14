@@ -1,4 +1,4 @@
-'use client'
+='use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -211,10 +211,29 @@ const taxProfile = estimateTaxProfile({
   assemblyWork,
 })
 
-const taxReserve =
-  summary.balance > 0 && taxProfile.reserveMax > 0
-    ? taxProfile.reserveMax
-    : 0
+const deductibleExpenses = expenses
+  .filter((expense) => {
+    const category = String(expense.category || '').toLowerCase()
+
+    return (
+      category !== 'privat' &&
+      category !== 'privat / nicht absetzbar' &&
+      category !== 'nicht absetzbar'
+    )
+  })
+  .reduce((sum, expense) => sum + Number(expense.amount || 0), 0)
+
+const estimatedTaxableProfit = Math.max(
+  0,
+  summary.totalIncomes - deductibleExpenses
+)
+
+const reserveRate =
+  taxProfile.reservePercent && taxProfile.reservePercent > 0
+    ? taxProfile.reservePercent / 100
+    : 0.125
+
+const taxReserve = estimatedTaxableProfit * reserveRate
 
 const financeScore = calculateFinanceScore({
   balance: summary.balance,
@@ -290,7 +309,10 @@ const anchorMessage =
               <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider">Rücklage</p>
               <p className="mt-1 text-2xl font-black text-amber-800">{formatEuro(taxReserve)}</p>
             <p className="mt-0.5 text-xs font-bold text-slate-600">
-  Empfohlene Steuer-Rücklage
+  Geschätzte Rücklage auf deinen steuerlichen Gewinn
+</p>
+<p className="mt-1 text-[10px] font-semibold text-slate-500">
+  Private Ausgaben mindern den steuerlichen Gewinn nicht.
 </p>
             </div>
           </div>
