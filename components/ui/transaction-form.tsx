@@ -69,6 +69,7 @@ export function TransactionForm({
     'Homeoffice',
 
     'Prüfung nötig',
+'Kinder & Betreuung',
 
     'Sonstiges',
 
@@ -120,6 +121,7 @@ export function TransactionForm({
     'Homeoffice': 'homeoffice',
 
     'Prüfung nötig': 'pruefung',
+'Kinder & Betreuung': 'kinder',
 
     'Sonstiges': 'sonstiges',
 
@@ -189,6 +191,23 @@ const detectCategoryFromText = (text: string) => {
       words: ['vodafone', 'telekom', 'o2', 'telefon', 'internet', 'mobilfunk'],
 
     },
+{
+  label: 'Kinder & Betreuung',
+  words: [
+    'kita',
+    'kindergarten',
+    'hort',
+    'kindertagesstätte',
+    'kindertagesstaette',
+    'kinderbetreuung',
+    'essengeld',
+    'schulessen',
+    'besseressen',
+    'nordspatzen',
+    'verpflegung kita',
+    'verpflegung kindergarten',
+  ],
+},
 
   ]
 
@@ -211,13 +230,6 @@ const detectCategoryFromText = (text: string) => {
 
   // Wird aufgerufen, wenn Mila den Beleg erfolgreich ausgelesen hat
   const handleScanSuccess = (data: { amount: number; vendor: string; category: string; title: string }) => {
-  setType('expense')
-  setAmount(data.amount.toString())
-  setTitle(data.vendor || data.title)
-
-  const matchedLabel = findLabelByNormalized(data.category)
-  setCategory(matchedLabel)
-}
 
 useEffect(() => {
   if (type !== 'expense') return
