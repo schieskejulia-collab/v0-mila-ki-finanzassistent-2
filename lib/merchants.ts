@@ -3,13 +3,31 @@ import type { CategoryId } from './categories'
 export type TaxHint = 'likely' | 'depends' | 'private' | 'unknown'
 
 export type MerchantInfo = {
-  name?: string
+  name: string
   category: CategoryId
   taxHint: TaxHint
-  aliases?: string[]
+  aliases: string[]
 }
 
-export const MERCHANTS: Record<string, MerchantInfo> = {
+/**
+ * Finale normalize()-Version
+ */
+export function normalize(str: string) {
+  return String(str || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .trim()
+}
+
+/**
+ * Rohdaten aller Händler
+ */
+const RAW_MERCHANTS: Record<
+  string,
+  Omit<MerchantInfo, 'aliases' | 'name'> & { aliases?: string[] }
+> = {
   // Supermärkte / privat
   aldi: { category: 'privat', taxHint: 'private' },
   'aldi nord': { category: 'privat', taxHint: 'private' },
@@ -20,6 +38,8 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
   kaufland: { category: 'privat', taxHint: 'private' },
   netto: { category: 'privat', taxHint: 'private' },
   penny: { category: 'privat', taxHint: 'private' },
+  marktkauf: { category: 'privat', taxHint: 'private' },
+  globus: { category: 'privat', taxHint: 'private' },
 
   // Drogerie
   dm: { category: 'privat', taxHint: 'private' },
@@ -98,7 +118,16 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
   lieferando: { category: 'bewirtung', taxHint: 'depends' },
 
   // Online / Material
-  amazon: { category: 'material', taxHint: 'depends' },
+  amazon: {
+    category: 'material',
+    taxHint: 'depends',
+    aliases: [
+      'amazon eu',
+      'amazon.de',
+      'amazon marketplace',
+      'amazon digital',
+    ],
+  },
   'amazon marketplace': { category: 'material', taxHint: 'depends' },
   ebay: { category: 'material', taxHint: 'depends' },
   etsy: { category: 'material', taxHint: 'depends' },
@@ -137,28 +166,79 @@ export const MERCHANTS: Record<string, MerchantInfo> = {
   'nanu nana': {
     category: 'geschenke',
     taxHint: 'depends',
-    aliases: ['nanu nana', 'nanu-nana', 'nanunana', 'nanu'],
+    aliases: [
+      'nanu-nana',
+      'nanunana',
+      'nanu',
+      'nanu nana gmbh',
+    ],
   },
-  'nanu-nana': { category: 'geschenke', taxHint: 'depends' },
   tedi: { category: 'sonstiges', taxHint: 'depends' },
   action: { category: 'sonstiges', taxHint: 'depends' },
   depot: { category: 'geschenke', taxHint: 'depends' },
 
-  // Haustier / Sport eher privat
+  // Haustier / Sport
   fressnapf: { category: 'privat', taxHint: 'private' },
   zooplus: { category: 'privat', taxHint: 'private' },
   decathlon: { category: 'privat', taxHint: 'depends' },
   intersport: { category: 'privat', taxHint: 'depends' },
   sportcheck: { category: 'privat', taxHint: 'depends' },
+
+  // Software / SaaS / Hosting
+  openai: { category: 'software', taxHint: 'likely' },
+  chatgpt: { category: 'software', taxHint: 'likely' },
+  github: { category: 'software', taxHint: 'likely' },
+  vercel: { category: 'software', taxHint: 'likely' },
+  cloudflare: { category: 'software', taxHint: 'likely' },
+  supabase: { category: 'software', taxHint: 'likely' },
+  groq: { category: 'software', taxHint: 'likely' },
+  anthropic: { category: 'software', taxHint: 'likely' },
+  claude: { category: 'software', taxHint: 'likely' },
+  gemini: { category: 'software', taxHint: 'likely' },
+  'google workspace': { category: 'software', taxHint: 'likely' },
+  microsoft: { category: 'software', taxHint: 'likely' },
+  notion: { category: 'software', taxHint: 'likely' },
+  figma: { category: 'software', taxHint: 'likely' },
+
+  ionos: { category: 'software', taxHint: 'likely' },
+  hetzner: { category: 'software', taxHint: 'likely' },
+  namecheap: { category: 'software', taxHint: 'likely' },
+  'all-inkl': { category: 'software', taxHint: 'likely' },
+  hostinger: { category: 'software', taxHint: 'likely' },
+
+  canva: { category: 'software', taxHint: 'likely' },
+  adobe: { category: 'software', taxHint: 'likely' },
+  zoom: { category: 'software', taxHint: 'likely' },
+  slack: { category: 'software', taxHint: 'likely' },
+  make: { category: 'software', taxHint: 'likely' },
+  zapier: { category: 'software', taxHint: 'likely' },
+  n8n: { category: 'software', taxHint: 'likely' },
 }
 
-export function findMerchantInfo(vendor: string) {
-  const normalizedVendor = vendor.toLowerCase().trim()
+/**
+ * Normalisierte Händlerliste
+ */
+export const MERCHANTS: MerchantInfo[] = Object.entries(RAW_MERCHANTS).map(
+  ([rawName, info]) => {
+    const normalizedName = normalize(rawName)
+    const aliasList = info.aliases?.map(normalize) ?? []
 
-  return Object.entries(MERCHANTS).find(([merchantName, info]) => {
-    if (normalizedVendor.includes(merchantName)) return true
-    return info.aliases?.some((alias) =>
-      normalizedVendor.includes(alias.toLowerCase())
-    )
-  })?.[1]
+    return {
+      name: normalizedName,
+      category: info.category,
+      taxHint: info.taxHint,
+      aliases: [normalizedName, ...aliasList],
+    }
+  }
+)
+
+/**
+ * Finale Matching-Funktion
+ */
+export function findMerchantInfo(vendor: string) {
+  const normalizedVendor = normalize(vendor)
+
+  return MERCHANTS.find((merchant) =>
+    merchant.aliases.some((alias) => normalizedVendor.includes(alias))
+  )
 }
