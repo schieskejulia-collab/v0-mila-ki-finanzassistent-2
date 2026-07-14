@@ -389,7 +389,7 @@ const categoryLabel = isInkasso
   }
 }
 
-     {type === 'expense' && amount && scanSuggestion && (
+    {type === 'expense' && amount && scanSuggestion && (
   <section className="rounded-[2rem] bg-violet-50 p-5">
     <p className="font-black text-violet-700">
       {scanNeedsConfirmation
