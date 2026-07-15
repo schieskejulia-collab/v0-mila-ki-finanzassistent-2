@@ -267,7 +267,51 @@ export function MorningBriefing({
     message =
       'Trage deine ersten Einnahmen, Ausgaben oder Verpflichtungen ein. Mila zeigt dir danach Schritt für Schritt, was gerade wichtig ist.'
   }
+const milaTodayMessage = (() => {
+  if (overdueObligations.length > 0) {
+    return 'Heute zählt nur der nächste Schritt: Prüfe zuerst die überfällige Zahlung. Danach darfst du den Rest für heute liegen lassen.'
+  }
 
+  if (dueTodayObligations.length > 0) {
+    return `Heute wird eine Verpflichtung fällig. Wenn du sie erledigst, bleiben dir danach voraussichtlich ${money(
+      realisticAvailable
+    )} verfügbar.`
+  }
+
+  if (dueSoonObligations.length > 0) {
+    return `Die nächste Zahlung ist bereits eingeplant. Aktuell bleiben dir nach offenen Verpflichtungen ${money(
+      realisticAvailable
+    )} verfügbar.`
+  }
+
+  if (overdueIncomes.length > 0) {
+    return 'Heute wäre ein guter Zeitpunkt, genau einen überfälligen Zahlungseingang zu prüfen. Einer reicht.'
+  }
+
+  if (openIncomes.length > 0) {
+    return 'Deine offenen Einnahmen sind im Blick. Prüfe heute nur, ob bei einer Zahlung ein freundliches Nachfassen sinnvoll ist.'
+  }
+
+  if (realisticAvailable < 0) {
+    return 'Dein Spielraum ist gerade knapp. Heute geht es nicht um Perfektion, sondern darum, Zahlungen nach Frist und Wichtigkeit zu sortieren.'
+  }
+
+  if (taxReserve > 0 && afterReserve >= 0) {
+    return `Alle dringenden Verpflichtungen sind erledigt. Wenn du ${money(
+      taxReserve
+    )} als Rücklage einplanst, bleiben dir noch ${money(
+      afterReserve
+    )} frei verfügbar.`
+  }
+
+  if (balance > 0) {
+    return `Deine finanzielle Lage wirkt heute ruhig. Von deinem aktuellen Überschuss bleiben nach offenen Verpflichtungen ${money(
+      realisticAvailable
+    )}.`
+  }
+
+  return 'Heute musst du nicht alles lösen. Jede neue Buchung hilft Mila, deine finanzielle Lage genauer einzuordnen.'
+})()
   return (
     <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
       <div>
@@ -279,7 +323,15 @@ export function MorningBriefing({
           {greeting}
           {name ? `, ${name}` : ''} 🌸
         </h1>
+<div className="rounded-3xl border border-pink-100 bg-gradient-to-br from-pink-50 to-violet-50 p-5">
+  <p className="text-xs font-black uppercase tracking-[0.25em] text-pink-600">
+    🌸 Mila sagt heute
+  </p>
 
+  <p className="mt-3 text-base font-bold leading-relaxed text-slate-700">
+    {milaTodayMessage}
+  </p>
+</div>
         <p className="mt-2 text-sm font-bold text-slate-500">
           Status: {getProfileLabel(userStatus)}
           {industry ? ` (${industry})` : ''} ·{' '}
