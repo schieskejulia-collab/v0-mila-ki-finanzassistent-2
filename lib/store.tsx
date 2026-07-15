@@ -60,6 +60,31 @@ addGoal: (goal: MilaGoal) => void
 updateGoal: (id: string, saved: number) => void
 
 deleteGoal: (id: string) => void
+obligations: Obligation[]
+setObligations: (
+  items: Obligation[]
+) => void
+
+addObligation: (
+  item: Obligation
+) => Promise<void>
+
+updateObligation: (
+  id: string,
+  updates: Partial<Obligation>
+) => Promise<void>
+
+deleteObligation: (
+  id: string
+) => Promise<void>
+
+goals: MilaGoal[]
+
+addGoal: (goal: MilaGoal) => void
+updateGoal: (id: string, saved: number) => void
+deleteGoal: (id: string) => void
+
+documents: MilaDocument[]
 setDocuments: (
   items: MilaDocument[]
 ) => void
@@ -298,6 +323,11 @@ export function FinanceProvider({
     obligations,
     setObligations,
   ] = useState<Obligation[]>([])
+
+const [
+  goals,
+  setGoals,
+] = useState<MilaGoal[]>([])
 
   const [
     documents,
@@ -1193,7 +1223,37 @@ const deleteObligation = useCallback(
   },
   [userId]
 )
+const addGoal = useCallback((goal: MilaGoal) => {
+  setGoals((previous) => [
+    ...previous,
+    {
+      ...goal,
+      id: goal.id || crypto.randomUUID(),
+    },
+  ])
+}, [])
 
+const updateGoal = useCallback(
+  (id: string, saved: number) => {
+    setGoals((previous) =>
+      previous.map((goal) =>
+        goal.id === id
+          ? {
+              ...goal,
+              saved: Math.max(0, Number(saved || 0)),
+            }
+          : goal
+      )
+    )
+  },
+  []
+)
+
+const deleteGoal = useCallback((id: string) => {
+  setGoals((previous) =>
+    previous.filter((goal) => goal.id !== id)
+  )
+}, [])
 const deleteDocument = useCallback((id: string) => {
   if (!id) {
     console.warn(
@@ -1248,8 +1308,18 @@ const deleteDocument = useCallback((id: string) => {
       updateObligation,
       deleteObligation,
 
-      documents,
+      goals,
+
+addGoal,
+
+updateGoal,
+
+deleteGoal,
+
+documents,
+
 setDocuments,
+
 deleteDocument,
 
       userName,
