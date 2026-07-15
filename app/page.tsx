@@ -610,16 +610,14 @@ const anchorMessage =
   Empfohlene Steuer-Rücklage
 </p>
 
-<p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">
-  Grundlage: {formatEuro(estimatedTaxableProfit)} ×{' '}
-  {Math.round(reserveRate * 1000) / 10} %
-</p>
-
 <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-500">
   Private Ausgaben mindern den steuerlichen Gewinn nicht.
 </p>
-<div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-sm">
+            </div>
+          </div>
 
+{/* --- MILA FORECAST --- */}
+<div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
   <p className="text-[10px] font-black uppercase tracking-wider text-purple-600">
     🔮 Mila Forecast
   </p>
@@ -631,10 +629,8 @@ const anchorMessage =
   <p className="mt-2 text-sm font-semibold text-slate-600">
     {forecast.message}
   </p>
-
 </div>
-            </div>
-          </div>
+
 </section>
 {/* --- HEUTE ERLEDIGEN --- */}
 {todayTask && (
