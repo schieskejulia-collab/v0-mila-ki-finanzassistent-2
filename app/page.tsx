@@ -18,6 +18,7 @@ import { estimateTaxProfile } from '@/lib/tax-profile'
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaPatterns } from '@/lib/mila-patterns'
 import { getMilaFinanceAnalysis } from '@/lib/mila-finance-analysis'
+import { getMilaForecast } from '@/lib/mila-forecast'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -396,6 +397,10 @@ const milaMood = (() => {
 
   return null
 })()
+const forecast = getMilaForecast(
+  incomes || [],
+  expenses || []
+)
 const financeScore = calculateFinanceScore({
   balance: summary.balance,
   totalIncomes: summary.totalIncomes,
@@ -532,6 +537,21 @@ const anchorMessage =
 <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-500">
   Private Ausgaben mindern den steuerlichen Gewinn nicht.
 </p>
+<div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-sm">
+
+  <p className="text-[10px] font-black uppercase tracking-wider text-purple-600">
+    🔮 Mila Forecast
+  </p>
+
+  <p className="mt-2 text-2xl font-black text-slate-900">
+    {formatEuro(forecast.expectedBalance)}
+  </p>
+
+  <p className="mt-2 text-sm font-semibold text-slate-600">
+    {forecast.message}
+  </p>
+
+</div>
             </div>
           </div>
 </section>
