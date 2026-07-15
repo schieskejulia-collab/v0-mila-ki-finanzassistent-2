@@ -558,16 +558,20 @@ if (obligationsResult.error) {
   )
 }
 
-if (goalsResult.error) {
+if (!goalsResult) {
+  console.warn('Ziele konnten nicht geladen werden: Ergebnis fehlt.')
+  setGoals([])
+} else if (goalsResult.error) {
   console.error(
     'Ziele laden fehlgeschlagen:',
     goalsResult.error
   )
+  setGoals([])
 } else {
   setGoals(
     (goalsResult.data || []).map((goal: any) => ({
       id: goal.id,
-      title: goal.title,
+      title: String(goal.title || ''),
       target: Number(goal.target || 0),
       saved: Number(goal.saved || 0),
       dueDate: goal.due_date || undefined,
