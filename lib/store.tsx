@@ -1342,11 +1342,15 @@ const deleteGoal = useCallback(
 const deleteDocument = useCallback(
   (id: string) => {
     setDocuments((previous) =>
-      previous.filter((item: any) => item.id !== id)
+      previous.filter(
+        (item: any) => item.id !== id
+      )
     )
   },
   []
 )
+
+const summary = useMemo(
   setDocuments((previous) =>
     previous.filter((item: any) => item.id !== id)
   )
