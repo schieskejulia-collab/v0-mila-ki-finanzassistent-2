@@ -1317,10 +1317,6 @@ const updateGoal = useCallback(
   },
   [userId]
 )
-const deleteGoal = useCallback((id: string) => {
-  setGoals((previous) =>
-    previous.filter((goal) => goal.id !== id)
-  )
 }, [])
 const deleteGoal = useCallback(
   async (id: string) => {
@@ -1342,6 +1338,14 @@ const deleteGoal = useCallback(
     )
   },
   [userId]
+)
+const deleteDocument = useCallback(
+  (id: string) => {
+    setDocuments((previous) =>
+      previous.filter((item: any) => item.id !== id)
+    )
+  },
+  []
 )
   setDocuments((previous) =>
     previous.filter((item: any) => item.id !== id)
