@@ -517,6 +517,50 @@ const anchorMessage =
   </div>
 )}
         {/* Lila Hauptkarte */}
+{goals.length > 0 && (
+  <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-sm">
+
+    <p className="text-xs font-black uppercase tracking-wider text-purple-600">
+      🎯 AKTUELLES SPARZIEL
+    </p>
+
+    {(() => {
+      const goal = goals[0]
+
+      const percent = Math.min(
+        100,
+        Math.round(
+          (goal.saved / goal.target) * 100
+        )
+      )
+
+      return (
+        <>
+          <h3 className="mt-3 text-xl font-black">
+            {goal.title}
+          </h3>
+
+          <div className="mt-4 h-3 rounded-full bg-slate-200 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+              style={{
+                width: `${percent}%`,
+              }}
+            />
+          </div>
+
+          <p className="mt-3 text-sm font-bold">
+            {formatEuro(goal.saved)} von {formatEuro(goal.target)}
+          </p>
+
+          <p className="text-xs text-slate-500">
+            Noch {formatEuro(goal.target - goal.saved)}
+          </p>
+        </>
+      )
+    })()}
+  </div>
+)}
 <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
     Aktueller Überschuss
