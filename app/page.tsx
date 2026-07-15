@@ -19,6 +19,7 @@ import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaPatterns } from '@/lib/mila-patterns'
 import { getMilaFinanceAnalysis } from '@/lib/mila-finance-analysis'
 import { getMilaForecast } from '@/lib/mila-forecast'
+import { getMilaDailyInsight } from '@/lib/mila-daily-insight'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
