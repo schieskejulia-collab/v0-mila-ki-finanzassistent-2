@@ -102,6 +102,7 @@ export default function DashboardPage() {
   vatStatus,
   isLoggedIn,
 documents,
+goals,
   taxClass,
   annualGross,
   annualProfit,
