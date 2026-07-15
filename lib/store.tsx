@@ -1237,45 +1237,112 @@ const deleteObligation = useCallback(
   },
   [userId]
 )
-const addGoal = useCallback((goal: MilaGoal) => {
-  setGoals((previous) => [
-    ...previous,
-    {
+const addGoal = useCallback(
+  async (goal: MilaGoal) => {
+    const normalizedGoal: MilaGoal = {
       ...goal,
       id: goal.id || crypto.randomUUID(),
-    },
-  ])
-}, [])
+      title: String(goal.title || '').trim(),
+      target: Math.max(0, Number(goal.target || 0)),
+      saved: Math.max(0, Number(goal.saved || 0)),
+      dueDate: goal.dueDate || undefined,
+    }
+
+    if (!normalizedGoal.title) {
+      throw new Error('Das Ziel braucht einen Namen.')
+    }
+
+    if (normalizedGoal.target <= 0) {
+      throw new Error('Der Zielbetrag muss größer als 0 sein.')
+    }
+
+    if (userId) {
+      const { error } = await supabase
+        .from('goals')
+        .insert({
+          id: normalizedGoal.id,
+          user_id: userId,
+          title: normalizedGoal.title,
+          target: normalizedGoal.target,
+          saved: normalizedGoal.saved,
+          due_date: normalizedGoal.dueDate || null,
+        })
+
+      if (error) {
+        console.error('Ziel speichern fehlgeschlagen:', error)
+        throw error
+      }
+    }
+
+    setGoals((previous) => [
+      ...previous,
+      normalizedGoal,
+    ])
+  },
+  [userId]
+)
 
 const updateGoal = useCallback(
-  (id: string, saved: number) => {
+  async (id: string, saved: number) => {
+    const normalizedSaved = Math.max(
+      0,
+      Number(saved || 0)
+    )
+
+    if (userId) {
+      const { error } = await supabase
+        .from('goals')
+        .update({
+          saved: normalizedSaved,
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('Ziel aktualisieren fehlgeschlagen:', error)
+        throw error
+      }
+    }
+
     setGoals((previous) =>
       previous.map((goal) =>
         goal.id === id
           ? {
               ...goal,
-              saved: Math.max(0, Number(saved || 0)),
+              saved: normalizedSaved,
             }
           : goal
       )
     )
   },
-  []
+  [userId]
 )
-
 const deleteGoal = useCallback((id: string) => {
   setGoals((previous) =>
     previous.filter((goal) => goal.id !== id)
   )
 }, [])
-const deleteDocument = useCallback((id: string) => {
-  if (!id) {
-    console.warn(
-      'Dokument konnte nicht gelöscht werden: ID fehlt.'
-    )
-    return
-  }
+const deleteGoal = useCallback(
+  async (id: string) => {
+    if (userId) {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
 
+      if (error) {
+        console.error('Ziel löschen fehlgeschlagen:', error)
+        throw error
+      }
+    }
+
+    setGoals((previous) =>
+      previous.filter((goal) => goal.id !== id)
+    )
+  },
+  [userId]
+)
   setDocuments((previous) =>
     previous.filter((item: any) => item.id !== id)
   )
