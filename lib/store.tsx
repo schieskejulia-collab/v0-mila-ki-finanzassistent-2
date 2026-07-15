@@ -1328,7 +1328,10 @@ const deleteGoal = useCallback(
         .eq('user_id', userId)
 
       if (error) {
-        console.error('Ziel löschen fehlgeschlagen:', error)
+        console.error(
+          'Ziel löschen fehlgeschlagen:',
+          error
+        )
         throw error
       }
     }
@@ -1339,6 +1342,7 @@ const deleteGoal = useCallback(
   },
   [userId]
 )
+
 const deleteDocument = useCallback(
   (id: string) => {
     setDocuments((previous) =>
