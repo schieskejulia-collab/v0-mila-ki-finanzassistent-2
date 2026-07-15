@@ -1269,7 +1269,10 @@ const addGoal = useCallback(
         })
 
       if (error) {
-        console.error('Ziel speichern fehlgeschlagen:', error)
+        console.error(
+          'Ziel speichern fehlgeschlagen:',
+          error
+        )
         throw error
       }
     }
@@ -1299,7 +1302,10 @@ const updateGoal = useCallback(
         .eq('user_id', userId)
 
       if (error) {
-        console.error('Ziel aktualisieren fehlgeschlagen:', error)
+        console.error(
+          'Ziel aktualisieren fehlgeschlagen:',
+          error
+        )
         throw error
       }
     }
@@ -1337,7 +1343,9 @@ const deleteGoal = useCallback(
     }
 
     setGoals((previous) =>
-      previous.filter((goal) => goal.id !== id)
+      previous.filter(
+        (goal) => goal.id !== id
+      )
     )
   },
   [userId]
@@ -1353,7 +1361,6 @@ const deleteDocument = useCallback(
   },
   []
 )
-
 const summary = useMemo(
   setDocuments((previous) =>
     previous.filter((item: any) => item.id !== id)
