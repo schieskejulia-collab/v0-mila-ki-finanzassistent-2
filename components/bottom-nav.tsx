@@ -29,6 +29,11 @@ const navItems = [
     label: 'Profil',
     icon: '👤',
   },
+{
+  href: '/ziele',
+  label: 'Ziele',
+  icon: '🎯',
+},
 ]
 export function BottomNav() {
   const pathname = usePathname()
