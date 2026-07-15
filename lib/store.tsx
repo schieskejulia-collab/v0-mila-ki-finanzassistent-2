@@ -1317,7 +1317,7 @@ const updateGoal = useCallback(
   },
   [userId]
 )
-}, [])
+
 const deleteGoal = useCallback(
   async (id: string) => {
     if (userId) {
