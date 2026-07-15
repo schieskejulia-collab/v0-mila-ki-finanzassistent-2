@@ -1361,16 +1361,16 @@ const deleteDocument = useCallback(
   },
   []
 )
+
 const summary = useMemo(
-  setDocuments((previous) =>
-    previous.filter((item: any) => item.id !== id)
-  )
+  () => calculateSummary(incomes, expenses),
+  [incomes, expenses]
+)
 
-  const budgetStatus = useMemo(
-    () => [],
-    [categories, expenses]
-  )
-
+const budgetStatus = useMemo(
+  () => [],
+  [categories, expenses]
+)
   const value = useMemo(
     () => ({
       expenses,
