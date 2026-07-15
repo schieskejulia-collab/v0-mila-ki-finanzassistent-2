@@ -208,7 +208,14 @@ const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
   obligations: openObligations,
 })
-
+const dailyInsight = getMilaDailyInsight({
+  expenses: expenses || [],
+  incomes: incomes || [],
+  obligations: obligations || [],
+  goals: goals || [],
+  taxReserve,
+  availableAfterObligations,
+})
 const taxProfile = estimateTaxProfile({
   userType: assemblyWork ? 'montagearbeiter' : userStatus,
   annualGrossSalary: Number(annualGross || 0),
@@ -480,6 +487,34 @@ const anchorMessage =
     {milaMood.message}
   </p>
 </div>
+{/* --- MILA HAT ETWAS ERKANNT --- */}
+{dailyInsight && (
+  <div
+    className={`rounded-2xl border p-5 shadow-sm ${
+      dailyInsight.type === 'warning'
+        ? 'border-amber-200 bg-amber-50'
+        : dailyInsight.type === 'good'
+          ? 'border-emerald-200 bg-emerald-50'
+          : 'border-violet-200 bg-violet-50'
+    }`}
+  >
+    <p
+      className={`text-xs font-black uppercase tracking-[0.2em] ${
+        dailyInsight.type === 'warning'
+          ? 'text-amber-700'
+          : dailyInsight.type === 'good'
+            ? 'text-emerald-700'
+            : 'text-violet-700'
+      }`}
+    >
+      {dailyInsight.title}
+    </p>
+
+    <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-700">
+      {dailyInsight.message}
+    </p>
+  </div>
+)}
         {/* Lila Hauptkarte */}
 <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
