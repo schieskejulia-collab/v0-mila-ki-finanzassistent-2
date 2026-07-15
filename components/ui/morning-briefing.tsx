@@ -2,20 +2,27 @@
 
 import { useFinance } from '@/lib/store'
 
+type MorningBriefingProps = {
+  taxReserve?: number
+  financeScore?: number
+  availableAfterObligations?: number
+}
+
 function money(value: number) {
-  return value.toLocaleString('de-DE', {
+  return Number(value || 0).toLocaleString('de-DE', {
     style: 'currency',
     currency: 'EUR',
   })
 }
 
-function number(value: any) {
+function number(value: unknown) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
 function getGreeting() {
   const hour = new Date().getHours()
+
   if (hour < 11) return 'Guten Morgen'
   if (hour < 18) return 'Guten Tag'
   return 'Guten Abend'
@@ -28,116 +35,241 @@ function getProfileLabel(userStatus: string) {
   if (userStatus === 'angestellt') return 'Angestellt'
   if (userStatus === 'minijob') return 'Minijob'
   if (userStatus === 'montagearbeiter') return 'Montage'
+
   return 'Profil'
 }
 
 function getVatLabel(vatStatus: string) {
   if (vatStatus === 'kleinunternehmer') return 'Kleinunternehmer'
   if (vatStatus === 'regelbesteuerung_19') return 'Regelbest.'
-  if (vatStatus === 'ermaessigt_7') return '7% USt.'
+  if (vatStatus === 'ermaessigt_7') return '7 % USt.'
+
   return 'USt. unklar'
 }
 
-export function MorningBriefing() {
+function getDueDate(item: any) {
+  return String(item.dueDate || item.due_date || '')
+}
+
+function daysUntil(value: string) {
+  if (!value) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(value)
+
+  if (Number.isNaN(due.getTime())) {
+    return null
+  }
+
+  due.setHours(0, 0, 0, 0)
+
+  return Math.round(
+    (due.getTime() - today.getTime()) /
+      (1000 * 60 * 60 * 24)
+  )
+}
+
+export function MorningBriefing({
+  taxReserve = 0,
+  financeScore = 0,
+  availableAfterObligations,
+}: MorningBriefingProps) {
   const {
     userName,
     userStatus,
     industry,
     vatStatus,
     summary,
-    incomes,
-    expenses,
+    incomes = [],
+    expenses = [],
+    obligations = [],
   } = useFinance()
 
   const name = userName?.trim() || ''
   const greeting = getGreeting()
 
-  const incomeTotal = number(summary?.totalIncome)
+  /*
+   * In älteren Store-Versionen hieß das Feld totalIncome,
+   * in neueren totalIncomes. Mila unterstützt deshalb beide.
+   */
+  const incomeTotal = number(
+    summary?.totalIncomes ?? summary?.totalIncome
+  )
+
   const expenseTotal = number(summary?.totalExpenses)
-  const balance = number(summary?.balance)
+
+  const balance = number(
+    summary?.balance ?? incomeTotal - expenseTotal
+  )
 
   const openIncomes = incomes.filter((item: any) => {
     const status = String(item.status || '').toLowerCase()
-    return status === 'offen' || status === 'ueberfaellig' || status === 'überfällig'
+
+    return (
+      status === 'offen' ||
+      status === 'ueberfaellig' ||
+      status === 'überfällig'
+    )
   })
 
   const overdueIncomes = incomes.filter((item: any) => {
     const status = String(item.status || '').toLowerCase()
-    return status === 'ueberfaellig' || status === 'überfällig'
-  })
 
-  const softwareExpenses = expenses.filter((item: any) => {
-    const text = `${item.title || ''} ${item.vendor || ''} ${item.category || ''}`.toLowerCase()
     return (
-      text.includes('software') ||
-      text.includes('ki') ||
-      text.includes('chatgpt') ||
-      text.includes('hosting') ||
-      text.includes('cloud') ||
-      text.includes('abo')
+      status === 'ueberfaellig' ||
+      status === 'überfällig'
     )
   })
 
-  const isBusiness =
-    userStatus === 'freiberufler' ||
-    userStatus === 'kleinunternehmer' ||
-    userStatus === 'selbststaendig_gewerbe'
+  const openObligations = obligations.filter((item: any) => {
+    const status = String(item.status || 'offen').toLowerCase()
 
-  const needsVatAttention =
-    vatStatus === 'regelbesteuerung_19' || vatStatus === 'ermaessigt_7'
+    return (
+      status !== 'bezahlt' &&
+      status !== 'erledigt'
+    )
+  })
+
+  const openObligationAmount = openObligations.reduce(
+    (sum: number, item: any) =>
+      sum + number(item.amount),
+    0
+  )
+
+  const realisticAvailable =
+    typeof availableAfterObligations === 'number'
+      ? availableAfterObligations
+      : balance - openObligationAmount
+
+  const obligationEntries = openObligations
+    .map((item: any) => ({
+      item,
+      days: daysUntil(getDueDate(item)),
+    }))
+    .filter(
+      (
+        entry
+      ): entry is {
+        item: any
+        days: number
+      } => entry.days !== null
+    )
+    .sort((a, b) => a.days - b.days)
+
+  const overdueObligations = obligationEntries.filter(
+    (entry) => entry.days < 0
+  )
+
+  const dueTodayObligations = obligationEntries.filter(
+    (entry) => entry.days === 0
+  )
+
+  const dueSoonObligations = obligationEntries.filter(
+    (entry) =>
+      entry.days > 0 &&
+      entry.days <= 3
+  )
+
+  const afterReserve =
+    realisticAvailable - number(taxReserve)
+
+  const dataQuality =
+    incomes.length +
+    expenses.length +
+    obligations.length
 
   let title = ''
-let message = ''
+  let message = ''
 
-const profit = incomeTotal - expenseTotal
+  if (overdueObligations.length > 0) {
+    const next = overdueObligations[0].item
 
-const dataQuality =
-  incomes.length + expenses.length
+    title = '🚨 Eine Zahlung braucht zuerst deine Aufmerksamkeit'
 
-const reserveSuggestion =
-  isBusiness && needsVatAttention
-    ? incomeTotal * 0.25
-    : isBusiness
-    ? incomeTotal * 0.15
-    : 0
+    message = `${next.title || 'Eine Verpflichtung'} über ${money(
+      number(next.amount)
+    )} ist bereits überfällig. Schau sie dir zuerst an – danach ist für heute genug getan.`
 
+  } else if (dueTodayObligations.length > 0) {
+    const next = dueTodayObligations[0].item
 
-if (overdueIncomes.length > 0) {
-  title = '⚠️ Offene Einnahmen zuerst klären'
-  message = `Du wartest auf ${overdueIncomes.length} überfällige Zahlung(en). Mila würde heute zuerst prüfen, welche Zahlung fehlt und ob du nachfassen solltest.`
+    title = '🧾 Heute ist eine Sache wichtig'
 
-} else if (openIncomes.length > 0) {
-  title = '💰 Einnahmen im Blick behalten'
-  message = `Du wartest noch auf ${openIncomes.length} Zahlung(en). Mila behält für dich im Blick, wann das Geld eingehen sollte.`
+    message = `${next.title || 'Eine Verpflichtung'} über ${money(
+      number(next.amount)
+    )} wird heute fällig. Nach allen offenen Verpflichtungen bleiben dir voraussichtlich ${money(
+      realisticAvailable
+    )}.`
 
-} else if (balance < 0) {
-  title = '🧭 Heute Stabilität schaffen'
-  message = `Dein aktueller Stand liegt bei ${money(balance)}. Mila würde heute zuerst feste Kosten, offene Beträge und mögliche Spielräume sortieren.`
+  } else if (dueSoonObligations.length > 0) {
+    const next = dueSoonObligations[0]
+    const dueText =
+      next.days === 1
+        ? 'morgen'
+        : `in ${next.days} Tagen`
 
-} else if (dataQuality < 3) {
-  title = '🌱 Mila lernt dich kennen'
-  message = 'Die ersten Daten sind da. Mit jeder weiteren Buchung erkennt Mila deine Gewohnheiten, wiederkehrende Kosten und sinnvolle nächste Schritte besser.'
+    title = '📅 Die nächste Zahlung ist schon im Blick'
 
-} else if (isBusiness && profit > 0) {
-  title = '🌿 Dein Geschäft wirkt stabil'
-  message = `Du hast aktuell ${money(profit)} Überschuss. Mila würde davon etwa ${money(
-    reserveSuggestion
-  )} als Orientierung für Rücklagen einplanen.`
+    message = `${next.item.title || 'Eine Verpflichtung'} über ${money(
+      number(next.item.amount)
+    )} wird ${dueText} fällig. Aktuell bleiben nach offenen Verpflichtungen ${money(
+      realisticAvailable
+    )} verfügbar.`
 
-} else if (softwareExpenses.length > 0) {
-  title = '💻 Digitale Tools im Blick'
-  message = `Mila hat ${softwareExpenses.length} digitale Ausgabe(n) erkannt. Viele Tools sparen Zeit oder unterstützen deine Arbeit – wichtig ist, dass sie dir weiterhin Nutzen bringen.`
+  } else if (overdueIncomes.length > 0) {
+    title = '⚠️ Offene Einnahmen zuerst klären'
 
-} else if (balance > 0) {
-  title = '✨ Dein finanzieller Spielraum'
-  message = `Dein aktueller Spielraum liegt bei ${money(balance)}. Mit jeder weiteren Buchung erkennt Mila besser, welche nächsten Schritte für dich sinnvoll sind.`
+    message = `Du wartest auf ${overdueIncomes.length} überfällige Zahlung${
+      overdueIncomes.length === 1 ? '' : 'en'
+    }. Nimm dir heute nur eine davon vor und prüfe, ob du nachfassen solltest.`
 
-} else {
-  title = '🌸 Gemeinsam schaffen wir Überblick'
-  message = 'Trage deine ersten Einnahmen und Ausgaben ein. Mila erkennt mit der Zeit Muster und zeigt dir, was für dich gerade wichtig ist.'
-}
+  } else if (openIncomes.length > 0) {
+    title = '💰 Zahlungseingänge im Blick behalten'
+
+    message = `Du wartest noch auf ${openIncomes.length} Zahlung${
+      openIncomes.length === 1 ? '' : 'en'
+    }. Mila behält die offenen Eingänge für dich im Blick.`
+
+  } else if (realisticAvailable < 0) {
+    title = '🧭 Heute zuerst Stabilität schaffen'
+
+    message = `Nach deinen offenen Verpflichtungen fehlen aktuell ${money(
+      Math.abs(realisticAvailable)
+    )}. Sortiere zuerst nach Frist und Wichtigkeit – nicht alles gleichzeitig.`
+
+  } else if (dataQuality < 3) {
+    title = '🌱 Mila lernt dich kennen'
+
+    message =
+      'Die ersten Daten sind da. Mit jeder weiteren Buchung erkennt Mila deine Gewohnheiten, regelmäßigen Kosten und sinnvolle nächste Schritte besser.'
+
+  } else if (taxReserve > 0 && afterReserve >= 0) {
+    title = '✨ Deine finanzielle Basis wirkt stabil'
+
+    message = `Nach offenen Verpflichtungen und deiner empfohlenen Steuer-Rücklage bleiben voraussichtlich ${money(
+      afterReserve
+    )} frei verfügbar. Dein Finanzscore liegt aktuell bei ${financeScore}/100.`
+
+  } else if (balance > 0) {
+    title = '✨ Dein finanzieller Spielraum'
+
+    message = `Dein aktueller Überschuss liegt bei ${money(
+      balance
+    )}. Nach offenen Verpflichtungen bleiben davon voraussichtlich ${money(
+      realisticAvailable
+    )}.`
+
+  } else {
+    title = '🌸 Gemeinsam schaffen wir Überblick'
+
+    message =
+      'Trage deine ersten Einnahmen, Ausgaben oder Verpflichtungen ein. Mila zeigt dir danach Schritt für Schritt, was gerade wichtig ist.'
+  }
+
   return (
-    <section className="rounded-[2rem] bg-white p-6 shadow-sm space-y-5">
+    <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.35em] text-purple-600">
           Heute für dich
@@ -150,7 +282,8 @@ if (overdueIncomes.length > 0) {
 
         <p className="mt-2 text-sm font-bold text-slate-500">
           Status: {getProfileLabel(userStatus)}
-          {industry ? ` (${industry})` : ''} · {getVatLabel(vatStatus)}
+          {industry ? ` (${industry})` : ''} ·{' '}
+          {getVatLabel(vatStatus)}
         </p>
       </div>
 
