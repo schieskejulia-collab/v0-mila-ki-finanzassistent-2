@@ -545,34 +545,38 @@ supabase
             incomesResult.data || []
           )
         }
-
-        if (
-          obligationsResult.error
-        ) {
-          console.error(
-            'Verpflichtungen laden fehlgeschlagen:',
-            obligationsResult.error
-          )
-        } else {
-          setObligations(
-setGoals(
-  (goalsResult.data || []).map((goal: any) => ({
-    id: goal.id,
-    title: goal.title,
-    target: Number(goal.target),
-    saved: Number(goal.saved),
-    dueDate: goal.due_date || undefined,
-  }))
-)
-            (
-              obligationsResult.data ||
-              []
-            ).map(normalizeObligation)
-          )
-        }
-      },
-      []
+if (obligationsResult.error) {
+  console.error(
+    'Verpflichtungen laden fehlgeschlagen:',
+    obligationsResult.error
+  )
+} else {
+  setObligations(
+    (obligationsResult.data || []).map(
+      normalizeObligation
     )
+  )
+}
+
+if (goalsResult.error) {
+  console.error(
+    'Ziele laden fehlgeschlagen:',
+    goalsResult.error
+  )
+} else {
+  setGoals(
+    (goalsResult.data || []).map((goal: any) => ({
+      id: goal.id,
+      title: goal.title,
+      target: Number(goal.target || 0),
+      saved: Number(goal.saved || 0),
+      dueDate: goal.due_date || undefined,
+    }))
+  )
+}
+  },
+  []
+)
 
   useEffect(() => {
     let mounted = true
