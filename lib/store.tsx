@@ -12,6 +12,7 @@ import {
 
 import { supabase } from '@/lib/supabase'
 import { calculateSummary } from '@/lib/calculations'
+import type { MilaGoal } from '@/lib/mila-goals'
 import type { Obligation } from './mila-obligations'
 import type { MilaDocument } from './mila-documents'
 
@@ -52,7 +53,13 @@ interface FinanceContextValue {
   ) => Promise<void>
 
  documents: MilaDocument[]
+goals: MilaGoal[]
 
+addGoal: (goal: MilaGoal) => void
+
+updateGoal: (id: string, saved: number) => void
+
+deleteGoal: (id: string) => void
 setDocuments: (
   items: MilaDocument[]
 ) => void
