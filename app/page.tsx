@@ -253,7 +253,69 @@ const financeAnalysis = getMilaFinanceAnalysis({
 const todayTask = (() => {
   if (overdueObligations.length > 0) {
     const item = overdueObligations[0] as any
+const milaMood = (() => {
+  if (overdueObligations.length > 0 || overdueCount > 0) {
+    return {
+      label: 'Heute aufmerksam',
+      message:
+        'Es gibt überfällige Zahlungen. Mila würde heute nur die wichtigste davon zuerst klären.',
+      color:
+        'border-rose-200 bg-rose-50 text-rose-900',
+      dot: 'bg-rose-500',
+      emoji: '🔴',
+    }
+  }
 
+  if (dueSoonObligations.length > 0 || openCount > 0) {
+    return {
+      label: 'Heute im Blick behalten',
+      message:
+        'Es steht eine Zahlung oder ein offener Eingang an. Alles ist noch überschaubar.',
+      color:
+        'border-amber-200 bg-amber-50 text-amber-900',
+      dot: 'bg-amber-500',
+      emoji: '🟡',
+    }
+  }
+
+  if (
+    summary.balance > 0 &&
+    availableAfterObligations >= 0 &&
+    financeScore >= 70
+  ) {
+    return {
+      label: 'Heute ruhig',
+      message:
+        'Deine finanzielle Lage wirkt stabil. Es gibt aktuell nichts Dringendes zu erledigen.',
+      color:
+        'border-emerald-200 bg-emerald-50 text-emerald-900',
+      dot: 'bg-emerald-500',
+      emoji: '🟢',
+    }
+  }
+
+  if (summary.balance < 0 || availableAfterObligations < 0) {
+    return {
+      label: 'Heute vorsichtig',
+      message:
+        'Dein Spielraum ist gerade knapp. Größere Ausgaben würde Mila heute lieber vermeiden.',
+      color:
+        'border-rose-200 bg-rose-50 text-rose-900',
+      dot: 'bg-rose-500',
+      emoji: '🔴',
+    }
+  }
+
+  return {
+    label: 'Heute noch sortieren',
+    message:
+      'Mila sammelt noch Daten. Mit weiteren Buchungen wird die Einschätzung genauer.',
+    color:
+      'border-violet-200 bg-violet-50 text-violet-900',
+    dot: 'bg-violet-500',
+    emoji: '🟣',
+  }
+})()
     return {
       title: item.title || 'Überfällige Verpflichtung prüfen',
       message: `${formatEuro(
@@ -388,7 +450,30 @@ const anchorMessage =
   availableAfterObligations={availableAfterObligations}
 />
 
+{/* --- MILA-STIMMUNG --- */}
+<div
+  className={`rounded-2xl border p-5 shadow-sm ${milaMood.color}`}
+>
+  <div className="flex items-center gap-3">
+    <span
+      className={`h-3 w-3 shrink-0 rounded-full ${milaMood.dot} animate-pulse`}
+    />
 
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.2em] opacity-70">
+        {milaMood.emoji} Mila heute
+      </p>
+
+      <p className="mt-1 text-xl font-black">
+        {milaMood.label}
+      </p>
+    </div>
+  </div>
+
+  <p className="mt-3 text-sm font-semibold leading-relaxed opacity-80">
+    {milaMood.message}
+  </p>
+</div>
         {/* Lila Hauptkarte */}
 <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
