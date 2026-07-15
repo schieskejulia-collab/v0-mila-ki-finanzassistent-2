@@ -1366,14 +1366,6 @@ const summary = useMemo(
     previous.filter((item: any) => item.id !== id)
   )
 
-  const summary = useMemo(
-    () =>
-      calculateSummary(
-        incomes,
-        expenses
-      ),
-    [incomes, expenses]
-  )
   const budgetStatus = useMemo(
     () => [],
     [categories, expenses]
