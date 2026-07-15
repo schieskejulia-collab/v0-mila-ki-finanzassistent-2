@@ -244,7 +244,12 @@ const reserveRate =
     : 0.125
 
 const taxReserve = estimatedTaxableProfit * reserveRate
-
+const financeAnalysis = getMilaFinanceAnalysis({
+  expenses: expenses || [],
+  incomes: incomes || [],
+  obligations: obligations || [],
+  taxReserve,
+})
 const financeScore = calculateFinanceScore({
   balance: summary.balance,
   totalIncomes: summary.totalIncomes,
