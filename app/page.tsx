@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase'
 import { estimateTaxProfile } from '@/lib/tax-profile'
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { getMilaPatterns } from '@/lib/mila-patterns'
+import { getMilaFinanceAnalysis } from '@/lib/mila-finance-analysis'
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
@@ -205,6 +206,7 @@ const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
   obligations: openObligations,
 })
+
 const taxProfile = estimateTaxProfile({
   userType: assemblyWork ? 'montagearbeiter' : userStatus,
   annualGrossSalary: Number(annualGross || 0),
