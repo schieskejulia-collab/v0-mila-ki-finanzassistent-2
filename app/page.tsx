@@ -382,7 +382,11 @@ const anchorMessage =
 
         {/* --- MAIN HEADER BLOCK & MORNING BRIEFING --- */}
         <section className="rounded-[2rem] bg-white p-5 border border-slate-100 shadow-sm space-y-4">
-     <MorningBriefing />
+    <MorningBriefing
+  taxReserve={taxReserve}
+  financeScore={financeScore}
+  availableAfterObligations={availableAfterObligations}
+/>
 
 
         {/* Lila Hauptkarte */}
