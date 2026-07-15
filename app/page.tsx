@@ -568,43 +568,58 @@ const anchorMessage =
 </div>
 
 {/* --- KI-ERKENNTNISSE --- */}
-<div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
-
-  <h2 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+<div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
     📊 KI-Erkenntnisse
   </h2>
 
-  {milaPatterns.length === 0 ? (
-    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-      <p className="text-xs font-semibold text-slate-600">
+  {financeAnalysis.length === 0 ? (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs font-semibold leading-relaxed text-slate-600">
         Mila sammelt noch Daten. Mit weiteren Buchungen erkennt sie automatisch
-        wiederkehrende Rechnungen, Versicherungen und dein persönliches
-        Kaufverhalten.
+        wiederkehrende Rechnungen, Versicherungen und deinen finanziellen
+        Spielraum.
       </p>
     </div>
   ) : (
     <div className="space-y-3">
+      {financeAnalysis.map((item) => {
+        const style =
+          item.type === 'danger'
+            ? 'border-rose-100 bg-rose-50'
+            : item.type === 'warning'
+              ? 'border-amber-100 bg-amber-50'
+              : item.type === 'good'
+                ? 'border-emerald-100 bg-emerald-50'
+                : 'border-violet-100 bg-violet-50'
 
-      {milaPatterns.map((pattern) => (
-        <div
-          key={pattern.id}
-          className="rounded-2xl border border-violet-100 bg-violet-50 p-4"
-        >
-          <p className="font-black text-violet-800">
-            {pattern.title}
-          </p>
+        const titleColor =
+          item.type === 'danger'
+            ? 'text-rose-800'
+            : item.type === 'warning'
+              ? 'text-amber-800'
+              : item.type === 'good'
+                ? 'text-emerald-800'
+                : 'text-violet-800'
 
-          <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
-           {pattern.description}
-          </p>
-        </div>
-      ))}
+        return (
+          <div
+            key={item.id}
+            className={`rounded-2xl border p-4 ${style}`}
+          >
+            <p className={`font-black ${titleColor}`}>
+              {item.title}
+            </p>
 
+            <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">
+              {item.message}
+            </p>
+          </div>
+        )
+      })}
     </div>
   )}
-
 </div>
-
 {/* --- CHAT-ANKER --- */}
 <Link
   href="/chat"
