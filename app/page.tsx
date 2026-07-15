@@ -250,6 +250,90 @@ const financeAnalysis = getMilaFinanceAnalysis({
   obligations: obligations || [],
   taxReserve,
 })
+const todayTask = (() => {
+  if (overdueObligations.length > 0) {
+    const item = overdueObligations[0] as any
+
+    return {
+      title: item.title || 'Überfällige Verpflichtung prüfen',
+      message: `${formatEuro(
+        Number(item.amount || 0)
+      )} sind überfällig. Prüfe diese Zahlung zuerst.`,
+      href: '/verpflichtungen',
+      tone: 'danger' as const,
+    }
+  }
+
+  if (dueSoonObligations.length > 0) {
+    const sortedItems = [...dueSoonObligations].sort(
+      (a: any, b: any) => {
+        const aDate = new Date(
+          a.dueDate || a.due_date || ''
+        ).getTime()
+
+        const bDate = new Date(
+          b.dueDate || b.due_date || ''
+        ).getTime()
+
+        return aDate - bDate
+      }
+    )
+
+    const item = sortedItems[0] as any
+    const dueDate = item.dueDate || item.due_date || ''
+
+    const due = new Date(dueDate)
+    due.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const days = Math.round(
+      (due.getTime() - today.getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+
+    const dueText =
+      days === 0
+        ? 'heute'
+        : days === 1
+          ? 'morgen'
+          : `in ${days} Tagen`
+
+    return {
+      title: item.title || 'Nächste Verpflichtung prüfen',
+      message: `${formatEuro(
+        Number(item.amount || 0)
+      )} werden ${dueText} fällig.`,
+      href: '/verpflichtungen',
+      tone: 'warning' as const,
+    }
+  }
+
+  if (openCount > 0) {
+    return {
+      title: 'Offenen Zahlungseingang prüfen',
+      message: `Du wartest noch auf ${formatEuro(
+        totalOpenAmount
+      )}. Prüfe heute einen offenen Eingang.`,
+      href: '/finanzen',
+      tone: 'info' as const,
+    }
+  }
+
+  if (taxReserve > 0) {
+    return {
+      title: 'Steuer-Rücklage einplanen',
+      message: `Plane ${formatEuro(
+        taxReserve
+      )} als Rücklage ein.`,
+      href: '/finanzen',
+      tone: 'good' as const,
+    }
+  }
+
+  return null
+})()
 const financeScore = calculateFinanceScore({
   balance: summary.balance,
   totalIncomes: summary.totalIncomes,
@@ -362,7 +446,45 @@ const anchorMessage =
             </div>
           </div>
 </section>
+{/* --- HEUTE ERLEDIGEN --- */}
+{todayTask && (
+  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-500">
+          ✅ Heute erledigen
+        </p>
 
+        <p className="mt-2 text-xl font-black text-slate-950">
+          {todayTask.title}
+        </p>
+      </div>
+
+      <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-500">
+        ca. 2 Min.
+      </span>
+    </div>
+
+    <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
+      {todayTask.message}
+    </p>
+
+    <Link
+      href={todayTask.href}
+      className={`mt-4 block rounded-2xl py-3 text-center text-sm font-black ${
+        todayTask.tone === 'danger'
+          ? 'bg-rose-600 text-white'
+          : todayTask.tone === 'warning'
+            ? 'bg-amber-500 text-white'
+            : todayTask.tone === 'good'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-violet-600 text-white'
+      }`}
+    >
+      Jetzt ansehen →
+    </Link>
+  </div>
+)}
 {/* --- HEUTE WICHTIG --- */}
 
 <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
