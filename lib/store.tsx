@@ -489,11 +489,12 @@ const [
         // die bereits geladenen lokalen Daten.
         if (!uid) return
 
-        const [
-          expensesResult,
-          incomesResult,
-          obligationsResult,
-        ] = await Promise.all([
+       const [
+  expensesResult,
+  incomesResult,
+  obligationsResult,
+  goalsResult,
+] = await Promise.all([
           supabase
             .from('expenses')
             .select('*')
@@ -517,6 +518,10 @@ const [
             .order('created_at', {
               ascending: false,
             }),
+supabase
+  .from('goals')
+  .select('*')
+  .eq('user_id', uid),
         ])
 
         if (expensesResult.error) {
@@ -550,6 +555,15 @@ const [
           )
         } else {
           setObligations(
+setGoals(
+  (goalsResult.data || []).map((goal: any) => ({
+    id: goal.id,
+    title: goal.title,
+    target: Number(goal.target),
+    saved: Number(goal.saved),
+    dueDate: goal.due_date || undefined,
+  }))
+)
             (
               obligationsResult.data ||
               []
