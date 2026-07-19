@@ -442,18 +442,31 @@ const [
         setAssemblyWork(false)
       }
 
-      setExpenses(savedExpenses)
-      setIncomes(savedIncomes)
+setExpenses(
+  Array.isArray(savedExpenses)
+    ? savedExpenses
+    : []
+)
 
-      setObligations(
-        savedObligations.map(
-          normalizeObligation
-        )
+setIncomes(
+  Array.isArray(savedIncomes)
+    ? savedIncomes
+    : []
+)
+
+setObligations(
+  Array.isArray(savedObligations)
+    ? savedObligations.map(
+        normalizeObligation
       )
+    : []
+)
 
-      setDocuments(savedDocuments)
-      setProfileLoaded(true)
-    }, [])
+setDocuments(
+  Array.isArray(savedDocuments)
+    ? savedDocuments
+    : []
+)
 
   const fetchFinanceData =
     useCallback(
