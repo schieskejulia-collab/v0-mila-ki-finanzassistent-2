@@ -571,65 +571,83 @@ if (!goalsResult) {
   []
 )
 
-  useEffect(() => {
-    let mounted = true
+useEffect(() => {
+  let mounted = true
 
-    async function init() {
-      const {
-        data: { session },
-      } =
-        await supabase.auth.getSession()
+  async function loadSessionData() {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
 
-      if (!mounted) return
+    if (!mounted) return
 
-      const uid =
-        session?.user?.id || ''
+    if (error) {
+      console.error(
+        'Session konnte nicht geladen werden:',
+        error
+      )
+    }
 
+    const uid = session?.user?.id || ''
+
+    setProfileLoaded(false)
+    setUserId(uid)
+    setIsLoggedIn(Boolean(uid))
+
+    if (!uid) {
+      loadLocalProfile()
+      return
+    }
+
+    // Persönliche Profildaten lokal laden.
+    loadLocalProfile(uid)
+
+    // Finanzdaten danach verbindlich aus Supabase holen.
+    await fetchFinanceData(uid)
+
+    if (mounted) {
+      setProfileLoaded(true)
+    }
+  }
+
+  void loadSessionData()
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      const uid = session?.user?.id || ''
+
+      setProfileLoaded(false)
       setUserId(uid)
       setIsLoggedIn(Boolean(uid))
 
-      loadLocalProfile(
-        uid || undefined
-      )
+      // Supabase-Abfragen bewusst aus dem direkten
+      // Auth-Callback heraus verschieben.
+      window.setTimeout(async () => {
+        if (!mounted) return
 
-      await fetchFinanceData(
-        uid || undefined
-      )
-    }
-
-    init()
-
-    const {
-      data: { subscription },
-    } =
-      supabase.auth.onAuthStateChange(
-        async (_event, session) => {
-          const uid =
-            session?.user?.id || ''
-
-          setProfileLoaded(false)
-          setUserId(uid)
-          setIsLoggedIn(Boolean(uid))
-
-          loadLocalProfile(
-            uid || undefined
-          )
-
-          await fetchFinanceData(
-            uid || undefined
-          )
+        if (!uid) {
+          loadLocalProfile()
+          return
         }
-      )
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
+        loadLocalProfile(uid)
+        await fetchFinanceData(uid)
+
+        if (mounted) {
+          setProfileLoaded(true)
+        }
+      }, 0)
     }
-  }, [
-    fetchFinanceData,
-    loadLocalProfile,
-  ])
+  )
 
+  return () => {
+    mounted = false
+    subscription.unsubscribe()
+  }
+}, [fetchFinanceData, loadLocalProfile])
   useEffect(() => {
     if (!profileLoaded) return
 
