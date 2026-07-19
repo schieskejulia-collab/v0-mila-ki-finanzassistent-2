@@ -98,40 +98,28 @@ setAnnualProfit(profile.annualProfit || '')
 }, [])
 
 useEffect(() => {
-  
-localStorage.setItem(
-  'mila_profile',
-  JSON.stringify({
-    userName,
-    userStatus,
-    industry,
-    annualGross,
-    annualProfit,
-    vatStatus,
-    federalState,
-    churchTax,
-    married,
-    children,
-    assemblyWork,
-  })
-)
+  localStorage.setItem(
+    'mila_profile',
+    JSON.stringify({
+      userName,
+      userStatus,
+      industry,
+      annualGross,
+      annualProfit,
+      vatStatus,
+      federalState,
+      churchTax,
+      married,
+      children,
+      assemblyWork,
+    })
+  )
+}, [
+  userName,
   userStatus,
   industry,
   annualGross,
   annualProfit,
-  vatStatus,
-  federalState,
-  churchTax,
-  married,
-  children,
-  assemblyWork,
-})
-  )
-}, [
-  userStatus,
-  industry,
-annualProfit,
-  annualGross,
   vatStatus,
   federalState,
   churchTax,
