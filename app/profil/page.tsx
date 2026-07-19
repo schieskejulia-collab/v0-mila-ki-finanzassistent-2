@@ -1,7 +1,35 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
+export default function ProfilPage() {
+  const router = useRouter()
+
+  const {
+    userName,
+    setUserName,
+    userStatus,
+    setUserStatus,
+    industry,
+    setIndustry,
+    logout,
+  } = useFinance()
+
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/login')
+  }
+
+  const [taxClass, setTaxClass] = useState('1')
+  const [federalState, setFederalState] = useState('')
+  const [churchTax, setChurchTax] = useState('nein')
+  const [children, setChildren] = useState('0')
+  const [married, setMarried] = useState('nein')
+  const [annualGross, setAnnualGross] = useState('')
+  const [annualProfit, setAnnualProfit] = useState('')
+  const [assemblyWork, setAssemblyWork] = useState('nein')
+  const [vatStatus, setVatStatus] = useState('kleinunternehmer')
 const USER_TYPES = [
   {
     key: 'angestellt',
