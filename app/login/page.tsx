@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -42,17 +43,23 @@ export default function LoginPage() {
     }
 
     if (mode === 'signup') {
-  setMessage('Konto erstellt. Prüfe ggf. deine E-Mail und logge dich danach ein.')
-  setLoading(false)
-  setMode('login')
-  return
-}
+      setMessage(
+        'Konto erstellt. Prüfe ggf. deine E-Mail und logge dich danach ein.'
+      )
+      setLoading(false)
+      setMode('login')
+      return
+    }
 
-setMessage('Login erfolgreich.')
-setLoading(false)
-router.push('/')
-router.refresh()
-}
+    // Kurz warten bis Supabase die Session gesetzt hat
+    await supabase.auth.getSession()
+
+    setMessage('Login erfolgreich.')
+    setLoading(false)
+
+    router.replace('/')
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-4 text-slate-950">
       <section className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-sm">
@@ -61,7 +68,9 @@ router.refresh()
         </p>
 
         <h1 className="mt-3 text-3xl font-black">
-          {mode === 'login' ? 'Einloggen' : 'Konto erstellen'}
+          {mode === 'login'
+            ? 'Einloggen'
+            : 'Konto erstellen'}
         </h1>
 
         <p className="mt-2 text-sm text-slate-500">
@@ -73,7 +82,9 @@ router.refresh()
             type="email"
             placeholder="E-Mail"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-base outline-none focus:border-violet-500"
           />
 
@@ -81,7 +92,9 @@ router.refresh()
             type="password"
             placeholder="Passwort"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-base outline-none focus:border-violet-500"
           />
 
@@ -108,7 +121,11 @@ router.refresh()
         <button
           type="button"
           onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login')
+            setMode(
+              mode === 'login'
+                ? 'signup'
+                : 'login'
+            )
             setMessage('')
           }}
           className="mt-5 w-full text-sm font-bold text-violet-700"
