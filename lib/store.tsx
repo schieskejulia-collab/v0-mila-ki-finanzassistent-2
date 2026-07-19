@@ -725,7 +725,11 @@ if (!goalsResult) {
     setIncomes([])
     setObligations([])
     setDocuments([])
-
+setExpenses([])
+setIncomes([])
+setObligations([])
+setGoals([])
+setDocuments([])
     setUserName('')
     setUserStatus('')
     setIndustry('sonstiges')
@@ -1375,25 +1379,18 @@ const budgetStatus = useMemo(
       deleteIncome,
       updateIncomeStatus,
 
-      obligations,
-      setObligations,
+            obligations,
       addObligation,
       updateObligation,
       deleteObligation,
 
       goals,
+      addGoal,
+      updateGoal,
+      deleteGoal,
 
-addGoal,
-
-updateGoal,
-
-deleteGoal,
-
-documents,
-
-setDocuments,
-
-deleteDocument,
+      documents,
+      deleteDocument,
 
       userName,
       setUserName,
