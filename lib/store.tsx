@@ -732,38 +732,40 @@ if (!goalsResult) {
     []
   )
 
-  const logout = useCallback(() => {
-    setProfileLoaded(false)
-    setIsLoggedIn(false)
-    setUserId('')
+  const logout = useCallback(async () => {
+  const { error } = await supabase.auth.signOut()
 
-    setExpenses([])
-    setIncomes([])
-    setObligations([])
-    setDocuments([])
-setExpenses([])
-setIncomes([])
-setObligations([])
-setGoals([])
-setDocuments([])
-    setUserName('')
-    setUserStatus('')
-    setIndustry('sonstiges')
-    setTaxClass('1')
-    setAnnualGross(0)
-    setAnnualProfit(0)
-    setVatStatus('')
-    setFederalState('')
-    setChurchTax(false)
-    setMarried(false)
-    setChildren(0)
-    setAssemblyWork(false)
+  if (error) {
+    console.error(
+      'Abmelden fehlgeschlagen:',
+      error
+    )
+    throw error
+  }
 
-    setTimeout(() => {
-      loadLocalProfile()
-    }, 0)
-  }, [loadLocalProfile])
+  setProfileLoaded(false)
+  setIsLoggedIn(false)
+  setUserId('')
 
+  setExpenses([])
+  setIncomes([])
+  setObligations([])
+  setGoals([])
+  setDocuments([])
+
+  setUserName('')
+  setUserStatus('')
+  setIndustry('sonstiges')
+  setTaxClass('1')
+  setAnnualGross(0)
+  setAnnualProfit(0)
+  setVatStatus('')
+  setFederalState('')
+  setChurchTax(false)
+  setMarried(false)
+  setChildren(0)
+  setAssemblyWork(false)
+}, [])
   const addExpense = useCallback(
     async (item: any) => {
       if (!userId) {
