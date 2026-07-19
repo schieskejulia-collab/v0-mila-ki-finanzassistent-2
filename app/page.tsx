@@ -209,62 +209,143 @@ const assistantFindings = getMilaAssistantFindings({
   documents: documents || [],
   obligations: openObligations,
 })
-const dailyInsight = getMilaDailyInsight({
-  expenses: expenses || [],
-  incomes: incomes || [],
-  obligations: obligations || [],
-  goals: goals || [],
-  taxReserve,
-  availableAfterObligations,
-})
+
 const taxProfile = estimateTaxProfile({
-  userType: assemblyWork ? 'montagearbeiter' : userStatus,
-  annualGrossSalary: Number(annualGross || 0),
-  estimatedAnnualProfit: Number(annualProfit || 0),
-  annualRevenueGross: summary.totalIncomes,
+  userType: assemblyWork
+    ? 'montagearbeiter'
+    : userStatus,
+  annualGrossSalary: Number(
+    annualGross || 0
+  ),
+  estimatedAnnualProfit: Number(
+    annualProfit || 0
+  ),
+  annualRevenueGross:
+    summary.totalIncomes,
   vatStatus,
   federalState,
   churchTax,
   taxClass,
   isMarried: married,
-  hasChildren: Number(children || 0) > 0,
+  hasChildren:
+    Number(children || 0) > 0,
   assemblyWork,
 })
 
-const deductibleExpenses = expenses
-  .filter((expense) => {
-    const category = String(expense.category || '').toLowerCase()
+const deductibleExpenses = (
+  Array.isArray(expenses)
+    ? expenses
+    : []
+)
+  .filter((expense: any) => {
+    const category = String(
+      expense?.category || ''
+    ).toLowerCase()
 
     return (
       category !== 'privat' &&
-      category !== 'privat / nicht absetzbar' &&
+      category !==
+        'privat / nicht absetzbar' &&
       category !== 'nicht absetzbar'
     )
   })
-  .reduce((sum, expense) => sum + Number(expense.amount || 0), 0)
+  .reduce(
+    (sum: number, expense: any) =>
+      sum +
+      Number(expense?.amount || 0),
+    0
+  )
 
-const estimatedTaxableProfit = Math.max(
-  0,
-  summary.totalIncomes - deductibleExpenses
-)
+const estimatedTaxableProfit =
+  Math.max(
+    0,
+    Number(summary.totalIncomes || 0) -
+      deductibleExpenses
+  )
 
 const reserveRate =
-  taxProfile.reservePercent && taxProfile.reservePercent > 0
+  taxProfile.reservePercent &&
+  taxProfile.reservePercent > 0
     ? taxProfile.reservePercent / 100
     : 0.125
 
-const taxReserve = estimatedTaxableProfit * reserveRate
-const financeAnalysis = getMilaFinanceAnalysis({
-  expenses: expenses || [],
-  incomes: incomes || [],
-  obligations: obligations || [],
-  taxReserve,
-})
-const todayTask = (() => {
-  if (overdueObligations.length > 0) {
-    const item = overdueObligations[0] as any
+const taxReserve =
+  estimatedTaxableProfit * reserveRate
+
+const financeAnalysis =
+  getMilaFinanceAnalysis({
+    expenses: expenses || [],
+    incomes: incomes || [],
+    obligations: obligations || [],
+    taxReserve,
+  })
+
+const dailyInsight =
+  getMilaDailyInsight({
+    expenses: expenses || [],
+    incomes: incomes || [],
+    obligations: obligations || [],
+    goals: goals || [],
+    taxReserve,
+    availableAfterObligations,
+  })
+
+const forecast = getMilaForecast(
+  incomes || [],
+  expenses || []
+)
+
+const financeScore =
+  calculateFinanceScore({
+    balance: summary.balance,
+    totalIncomes:
+      summary.totalIncomes,
+    totalExpenses:
+      summary.totalExpenses,
+    openCount,
+    overdueCount,
+  })
+
+const baseTrafficLight =
+  calculateTrafficLight(
+    financeScore,
+    summary.balance
+  )
+
+let trafficLight = {
+  status: baseTrafficLight.status,
+  color:
+    'bg-emerald-50 border-emerald-200 text-emerald-900',
+  dot: 'bg-emerald-500',
+}
+
+if (
+  baseTrafficLight.level === 'danger'
+) {
+  trafficLight = {
+    status: baseTrafficLight.status,
+    color:
+      'bg-rose-50 border-rose-200 text-rose-900',
+    dot: 'bg-rose-500',
+  }
+}
+
+if (
+  baseTrafficLight.level === 'warning'
+) {
+  trafficLight = {
+    status: baseTrafficLight.status,
+    color:
+      'bg-amber-50 border-amber-200 text-amber-900',
+    dot: 'bg-amber-500',
+  }
+}
+
 const milaMood = (() => {
-  if (overdueObligations.length > 0 || overdueCount > 0) {
+  if (
+    overdueObligations.length > 0 ||
+    overdueCount > 0
+  ) {
     return {
       label: 'Heute aufmerksam',
       message:
@@ -276,9 +357,13 @@ const milaMood = (() => {
     }
   }
 
-  if (dueSoonObligations.length > 0 || openCount > 0) {
+  if (
+    dueSoonObligations.length > 0 ||
+    openCount > 0
+  ) {
     return {
-      label: 'Heute im Blick behalten',
+      label:
+        'Heute im Blick behalten',
       message:
         'Es steht eine Zahlung oder ein offener Eingang an. Alles ist noch überschaubar.',
       color:
@@ -289,7 +374,7 @@ const milaMood = (() => {
   }
 
   if (
-    summary.balance > 0 &&
+    Number(summary.balance || 0) > 0 &&
     availableAfterObligations >= 0 &&
     financeScore >= 70
   ) {
@@ -304,7 +389,11 @@ const milaMood = (() => {
     }
   }
 
-  if (summary.balance < 0 || availableAfterObligations < 0) {
+  if (
+    Number(summary.balance || 0) <
+      0 ||
+    availableAfterObligations < 0
+  ) {
     return {
       label: 'Heute vorsichtig',
       message:
@@ -326,8 +415,16 @@ const milaMood = (() => {
     emoji: '🟣',
   }
 })()
+
+const todayTask = (() => {
+  if (overdueObligations.length > 0) {
+    const item =
+      overdueObligations[0] as any
+
     return {
-      title: item.title || 'Überfällige Verpflichtung prüfen',
+      title:
+        item.title ||
+        'Überfällige Verpflichtung prüfen',
       message: `${formatEuro(
         Number(item.amount || 0)
       )} sind überfällig. Prüfe diese Zahlung zuerst.`,
@@ -337,110 +434,22 @@ const milaMood = (() => {
   }
 
   if (dueSoonObligations.length > 0) {
-    const sortedItems = [...dueSoonObligations].sort(
-      (a: any, b: any) => {
-        const aDate = new Date(
-          a.dueDate || a.due_date || ''
-        ).getTime()
+    const sortedItems = [
+      ...dueSoonObligations,
+    ].sort((a: any, b: any) => {
+      const aDate = new Date(
+        a.dueDate ||
+          a.due_date ||
+          ''
+      ).getTime()
 
-        const bDate = new Date(
-          b.dueDate || b.due_date || ''
-        ).getTime()
+      const bDate = new Date(
+        b.dueDate ||
+          b.due_date ||
+          ''
+      ).getTime()
 
-        return aDate - bDate
-      }
-    )
-
-    const item = sortedItems[0] as any
-    const dueDate = item.dueDate || item.due_date || ''
-
-    const due = new Date(dueDate)
-    due.setHours(0, 0, 0, 0)
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const days = Math.round(
-      (due.getTime() - today.getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-
-    const dueText =
-      days === 0
-        ? 'heute'
-        : days === 1
-          ? 'morgen'
-          : `in ${days} Tagen`
-
-    return {
-      title: item.title || 'Nächste Verpflichtung prüfen',
-      message: `${formatEuro(
-        Number(item.amount || 0)
-      )} werden ${dueText} fällig.`,
-      href: '/verpflichtungen',
-      tone: 'warning' as const,
-    }
-  }
-
-  if (openCount > 0) {
-    return {
-      title: 'Offenen Zahlungseingang prüfen',
-      message: `Du wartest noch auf ${formatEuro(
-        totalOpenAmount
-      )}. Prüfe heute einen offenen Eingang.`,
-      href: '/finanzen',
-      tone: 'info' as const,
-    }
-  }
-
-  if (taxReserve > 0) {
-    return {
-      title: 'Steuer-Rücklage einplanen',
-      message: `Plane ${formatEuro(
-        taxReserve
-      )} als Rücklage ein.`,
-      href: '/finanzen',
-      tone: 'good' as const,
-    }
-  }
-
-  return null
-})()
-const forecast = getMilaForecast(
-  incomes || [],
-  expenses || []
-)
-const financeScore = calculateFinanceScore({
-  balance: summary.balance,
-  totalIncomes: summary.totalIncomes,
-  totalExpenses: summary.totalExpenses,
-  openCount,
-  overdueCount,
-})
-
-const baseTrafficLight = calculateTrafficLight(financeScore, summary.balance)
-
-let trafficLight = {
-  status: baseTrafficLight.status,
-  color: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-  dot: 'bg-emerald-500',
-}
-
-if (baseTrafficLight.level === 'danger') {
-  trafficLight = {
-    status: baseTrafficLight.status,
-    color: 'bg-rose-50 border-rose-200 text-rose-900',
-    dot: 'bg-rose-500',
-  }
-}
-
-if (baseTrafficLight.level === 'warning') {
-  trafficLight = {
-    status: baseTrafficLight.status,
-    color: 'bg-amber-50 border-amber-200 text-amber-900',
-    dot: 'bg-amber-500',
-  }
-}
+      return aDate - b
 const anchorMessage =
   overdueCount > 0
     ? `Es gibt ${overdueCount} überfällige Forderung(en). Kein Drama — aber das ist heute deine wichtigste Baustelle.`
