@@ -359,22 +359,22 @@ annualProfit,
   💾 Profil speichern
 </button>
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              confirm(
-                'Möchtest du dich wirklich abmelden? Lokale Daten können zurückgesetzt werden.'
-              )
-            ) {
-              logout()
-            }
-          }}
-          className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
-        >
-          Abmelden
-        </button>
-      </section>
+  <button
+    type="button"
+    onClick={async () => {
+      if (
+        confirm(
+          'Möchtest du dich wirklich abmelden?'
+        )
+      ) {
+        await handleLogout()
+      }
+    }}
+    className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
+  >
+    Abmelden
+  </button>
+</section>
     </main>
   )
 }
