@@ -468,8 +468,11 @@ setDocuments(
     : []
 )
 
-  const fetchFinanceData =
-    useCallback(
+setProfileLoaded(true)
+}, [])
+
+const fetchFinanceData =
+  useCallback(
       async (uid?: string) => {
         // Gastmodus nutzt ausschließlich
         // die bereits geladenen lokalen Daten.
