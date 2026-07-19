@@ -442,25 +442,27 @@ const [
         setAssemblyWork(false)
       }
 
-setExpenses(
-  Array.isArray(savedExpenses)
-    ? savedExpenses
-    : []
-)
+if (!uid) {
+  setExpenses(
+    Array.isArray(savedExpenses)
+      ? savedExpenses
+      : []
+  )
 
-setIncomes(
-  Array.isArray(savedIncomes)
-    ? savedIncomes
-    : []
-)
+  setIncomes(
+    Array.isArray(savedIncomes)
+      ? savedIncomes
+      : []
+  )
 
-setObligations(
-  Array.isArray(savedObligations)
-    ? savedObligations.map(
-        normalizeObligation
-      )
-    : []
-)
+  setObligations(
+    Array.isArray(savedObligations)
+      ? savedObligations.map(
+          normalizeObligation
+        )
+      : []
+  )
+}
 
 setDocuments(
   Array.isArray(savedDocuments)
