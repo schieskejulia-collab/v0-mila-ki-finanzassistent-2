@@ -105,7 +105,7 @@ userName: string
     name: string,
     status: any
   ) => void
-  logout: () => void
+  logout: () => Promise<void>
 
   summary: any
   budgetStatus: any[]
