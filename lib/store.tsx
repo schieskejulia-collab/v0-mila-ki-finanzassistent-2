@@ -1222,7 +1222,7 @@ const addGoal = useCallback(
   async (goal: MilaGoal) => {
     const normalizedGoal: MilaGoal = {
       ...goal,
-      id: goal.id || crypto.randomUUID(),
+      id: goal.id || createLocalId(),
       title: String(goal.title || '').trim(),
       target: Math.max(0, Number(goal.target || 0)),
       saved: Math.max(0, Number(goal.saved || 0)),
