@@ -313,45 +313,48 @@ const milaTodayMessage = (() => {
   return 'Heute musst du nicht alles lösen. Jede neue Buchung hilft Mila, deine finanzielle Lage genauer einzuordnen.'
 })()
   return (
-    <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.35em] text-purple-600">
-          Heute für dich
+   return (
+  <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.35em] text-purple-600">
+        Heute für dich
+      </p>
+
+      <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950">
+        {greeting}
+        {name ? `, ${name}` : ''} 🌸
+      </h1>
+
+      <p className="mt-3 text-sm font-bold text-slate-500">
+        Status: {getProfileLabel(userStatus)}
+        {industry ? ` (${industry})` : ''} ·{' '}
+        {getVatLabel(vatStatus)}
+      </p>
+    </div>
+
+    <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-pink-50 via-white to-violet-50 p-5">
+      <p className="text-xs font-black uppercase tracking-[0.25em] text-purple-700">
+        🌸 Mila sagt heute
+      </p>
+
+      <h2 className="mt-3 text-xl font-black text-slate-950">
+        {title}
+      </h2>
+
+      <p className="mt-3 text-base font-semibold leading-relaxed text-slate-700">
+        {message}
+      </p>
+
+      <div className="mt-4 rounded-2xl border border-white/80 bg-white/70 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-pink-600">
+          Dein nächster Schritt
         </p>
 
-        <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950">
-          {greeting}
-          {name ? `, ${name}` : ''} 🌸
-        </h1>
-<div className="rounded-3xl border border-pink-100 bg-gradient-to-br from-pink-50 to-violet-50 p-5">
-  <p className="text-xs font-black uppercase tracking-[0.25em] text-pink-600">
-    🌸 Mila sagt heute
-  </p>
-
-  <p className="mt-3 text-base font-bold leading-relaxed text-slate-700">
-    {milaTodayMessage}
-  </p>
-</div>
-        <p className="mt-2 text-sm font-bold text-slate-500">
-          Status: {getProfileLabel(userStatus)}
-          {industry ? ` (${industry})` : ''} ·{' '}
-          {getVatLabel(vatStatus)}
+        <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700">
+          {milaTodayMessage}
         </p>
       </div>
-
-      <div className="rounded-3xl border border-purple-100 bg-purple-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-purple-700">
-          🪬 Heute wichtig
-        </p>
-
-        <h2 className="mt-3 text-xl font-black text-slate-950">
-          {title}
-        </h2>
-
-        <p className="mt-3 text-base font-semibold leading-relaxed text-slate-600">
-          {message}
-        </p>
-      </div>
-    </section>
-  )
+    </div>
+  </section>
+)
 }
