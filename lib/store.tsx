@@ -470,7 +470,12 @@ setDocuments(
     : []
 )
 
-setProfileLoaded(true)
+setDocuments(
+  Array.isArray(savedDocuments)
+    ? savedDocuments
+    : []
+)
+
 }, [])
 
 const fetchFinanceData =
