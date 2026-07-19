@@ -60,36 +60,6 @@ addGoal: (goal: MilaGoal) => void
 updateGoal: (id: string, saved: number) => void
 
 deleteGoal: (id: string) => void
-obligations: Obligation[]
-setObligations: (
-  items: Obligation[]
-) => void
-
-addObligation: (
-  item: Obligation
-) => Promise<void>
-
-updateObligation: (
-  id: string,
-  updates: Partial<Obligation>
-) => Promise<void>
-
-deleteObligation: (
-  id: string
-) => Promise<void>
-
-goals: MilaGoal[]
-
-addGoal: (goal: MilaGoal) => void
-updateGoal: (id: string, saved: number) => void
-deleteGoal: (id: string) => void
-
-documents: MilaDocument[]
-setDocuments: (
-  items: MilaDocument[]
-) => void
-
-deleteDocument: (id: string) => void
 
 userName: string
   setUserName: (value: string) => void
