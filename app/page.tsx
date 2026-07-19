@@ -449,7 +449,73 @@ const todayTask = (() => {
           ''
       ).getTime()
 
-      return aDate - b
+      return aDate - bDate
+    })
+
+    const item = sortedItems[0] as any
+
+    const dueDate =
+      item.dueDate ||
+      item.due_date ||
+      ''
+
+    const due = new Date(dueDate)
+    due.setHours(0, 0, 0, 0)
+
+    const todayDate = new Date()
+    todayDate.setHours(0, 0, 0, 0)
+
+    const days = Math.round(
+      (due.getTime() -
+        todayDate.getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+
+    const dueText =
+      days === 0
+        ? 'heute'
+        : days === 1
+          ? 'morgen'
+          : `in ${days} Tagen`
+
+    return {
+      title:
+        item.title ||
+        'Nächste Verpflichtung prüfen',
+      message: `${formatEuro(
+        Number(item.amount || 0)
+      )} werden ${dueText} fällig.`,
+      href: '/verpflichtungen',
+      tone: 'warning' as const,
+    }
+  }
+
+  if (openCount > 0) {
+    return {
+      title:
+        'Offenen Zahlungseingang prüfen',
+      message: `Du wartest noch auf ${formatEuro(
+        totalOpenAmount
+      )}. Prüfe heute einen offenen Eingang.`,
+      href: '/finanzen',
+      tone: 'info' as const,
+    }
+  }
+
+  if (taxReserve > 0) {
+    return {
+      title:
+        'Steuer-Rücklage einplanen',
+      message: `Plane ${formatEuro(
+        taxReserve
+      )} als Rücklage ein.`,
+      href: '/finanzen',
+      tone: 'good' as const,
+    }
+  }
+
+  return null
+})()
 const anchorMessage =
   overdueCount > 0
     ? `Es gibt ${overdueCount} überfällige Forderung(en). Kein Drama — aber das ist heute deine wichtigste Baustelle.`
