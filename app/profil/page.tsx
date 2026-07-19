@@ -58,7 +58,6 @@ export default function ProfilPage() {
   }
 
   const [taxClass, setTaxClass] = useState('1')
-  const [taxClass, setTaxClass] = useState('1')
   const [federalState, setFederalState] = useState('')
   const [churchTax, setChurchTax] = useState('nein')
   const [children, setChildren] = useState('0')
