@@ -56,16 +56,8 @@ export default function ProfilPage() {
     await logout()
     router.replace('/login')
   }
-  const {
-    userName,
-    setUserName,
-    userStatus,
-    setUserStatus,
-    industry,
-    setIndustry,
-    logout,
-  } = useFinance()
 
+  const [taxClass, setTaxClass] = useState('1')
   const [taxClass, setTaxClass] = useState('1')
   const [federalState, setFederalState] = useState('')
   const [churchTax, setChurchTax] = useState('nein')
