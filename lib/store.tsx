@@ -1369,7 +1369,7 @@ const budgetStatus = useMemo(
   () => [],
   [categories, expenses]
 )
-  const value = useMemo(
+    const value = useMemo(
     () => ({
       expenses,
       incomes,
@@ -1379,11 +1379,8 @@ const budgetStatus = useMemo(
       milaFeedback,
       morningBriefing,
 
-      refreshMorningBriefing:
-        async () => {},
-
-      triggerMilaFeedback:
-        (_category: string) => {},
+      refreshMorningBriefing: async () => {},
+      triggerMilaFeedback: (_category: string) => {},
 
       addExpense,
       deleteExpense,
@@ -1392,7 +1389,8 @@ const budgetStatus = useMemo(
       deleteIncome,
       updateIncomeStatus,
 
-            obligations,
+      obligations,
+      setObligations,
       addObligation,
       updateObligation,
       deleteObligation,
@@ -1403,6 +1401,7 @@ const budgetStatus = useMemo(
       deleteGoal,
 
       documents,
+      setDocuments,
       deleteDocument,
 
       userName,
@@ -1467,8 +1466,14 @@ const budgetStatus = useMemo(
       updateObligation,
       deleteObligation,
 
+      goals,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+
       documents,
-deleteDocument,
+      deleteDocument,
+
       userName,
       userStatus,
       industry,
@@ -1493,9 +1498,7 @@ deleteDocument,
   )
 
   return (
-    <FinanceContext.Provider
-      value={value}
-    >
+    <FinanceContext.Provider value={value}>
       {children}
     </FinanceContext.Provider>
   )
