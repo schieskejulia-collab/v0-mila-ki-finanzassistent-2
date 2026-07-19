@@ -81,7 +81,7 @@ useEffect(() => {
 
   try {
     const profile = JSON.parse(saved)
-
+setUserName(profile.userName || '')
     setUserStatus(profile.userStatus || 'freelancer')
     setIndustry(profile.industry || 'webdesign')
     setAnnualGross(profile.annualGross || '')
@@ -98,10 +98,23 @@ setAnnualProfit(profile.annualProfit || '')
 }, [])
 
 useEffect(() => {
-  localStorage.setItem(
-
-    'mila_profile',
-    JSON.stringify({
+  
+localStorage.setItem(
+  'mila_profile',
+  JSON.stringify({
+    userName,
+    userStatus,
+    industry,
+    annualGross,
+    annualProfit,
+    vatStatus,
+    federalState,
+    churchTax,
+    married,
+    children,
+    assemblyWork,
+  })
+)
   userStatus,
   industry,
   annualGross,
