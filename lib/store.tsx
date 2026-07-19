@@ -513,7 +513,15 @@ supabase
   .select('*')
   .eq('user_id', uid),
         ])
-
+alert(
+  `UID: ${uid}\n` +
+  `Ausgaben: ${expensesResult.data?.length ?? 0}\n` +
+  `Einnahmen: ${incomesResult.data?.length ?? 0}\n` +
+  `Pflichten: ${obligationsResult.data?.length ?? 0}\n` +
+  `Ziele: ${goalsResult.data?.length ?? 0}\n` +
+  `Fehler Ausgaben: ${expensesResult.error?.message || 'nein'}\n` +
+  `Fehler Einnahmen: ${incomesResult.error?.message || 'nein'}`
+)
         if (expensesResult.error) {
           console.error(
             'Ausgaben laden fehlgeschlagen:',
