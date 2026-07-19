@@ -470,12 +470,6 @@ setDocuments(
     : []
 )
 
-setDocuments(
-  Array.isArray(savedDocuments)
-    ? savedDocuments
-    : []
-)
-
 }, [])
 
 const fetchFinanceData =
