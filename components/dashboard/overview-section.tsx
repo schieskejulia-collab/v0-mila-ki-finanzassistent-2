@@ -3,35 +3,6 @@ import { formatEuro } from '@/lib/dashboard-helpers'
 export function OverviewSection({ model }: { model: any }) {
   return (
     <section className="space-y-4 rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className={`rounded-2xl border px-5 py-4 ${model.milaMood.color}`}>
-        <div className="flex items-center gap-3">
-          <span className={`h-3 w-3 rounded-full ${model.milaMood.dot}`} />
-          <p className="font-black">
-            {model.milaMood.emoji} {model.milaMood.label}
-          </p>
-        </div>
-      </div>
-
-      {model.dailyInsight && (
-        <div
-          className={`rounded-2xl border p-5 ${
-            model.dailyInsight.type === 'warning'
-              ? 'border-amber-200 bg-amber-50'
-              : model.dailyInsight.type === 'good'
-                ? 'border-emerald-200 bg-emerald-50'
-                : 'border-violet-200 bg-violet-50'
-          }`}
-        >
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-700">
-            {model.dailyInsight.title}
-          </p>
-
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-700">
-            {model.dailyInsight.message}
-          </p>
-        </div>
-      )}
-
       {model.goals.length > 0 && <GoalCard goal={model.goals[0]} />}
 
       <div className="rounded-[2rem] bg-purple-600 p-5 text-white shadow-md shadow-purple-100">
@@ -85,20 +56,6 @@ export function OverviewSection({ model }: { model: any }) {
           note="Empfohlene Steuer-Rücklage"
           className="border-amber-100 bg-amber-50 text-amber-800"
         />
-      </div>
-
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <p className="text-[10px] font-black uppercase tracking-wider text-purple-600">
-          🔮 Mila Forecast
-        </p>
-
-        <p className="mt-2 text-2xl font-black">
-          {formatEuro(model.forecast.expectedBalance)}
-        </p>
-
-        <p className="mt-2 text-sm font-semibold text-slate-600">
-          {model.forecast.message}
-        </p>
       </div>
     </section>
   )
