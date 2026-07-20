@@ -1,33 +1,69 @@
-# v0-mila-ki-finanzassistent-2
+# 🌸 Mila – Dein KI-Finanzcoach
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+> Mehr als ein Haushaltsbuch.
+> Mila hilft dir, deine Finanzen zu verstehen, Prioritäten zu setzen und bessere Entscheidungen zu treffen.
 
-## Built with v0
+---
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## ✨ Was Mila kann
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_kmjcV6t1LNMSDPH0zYvHwcH4OTpf)
+- 💰 Einnahmen & Ausgaben verwalten
+- 🧾 Verpflichtungen organisieren
+- 📊 Finanzgesundheit berechnen
+- 🤖 KI-gestützte Empfehlungen
+- 📅 Frühzeitige Erinnerung an Verpflichtungen
+- 📈 Finanzprognosen
+- 🎯 Sparziele verfolgen
+- 💬 Persönlicher KI-Finanzcoach
 
-## Getting Started
+---
 
-First, run the development server:
+## 🖥️ Technologie
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+- Next.js 16
+- React
+- TypeScript
+- Supabase
+- Tailwind CSS
+- Vercel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🌸 Philosophie
 
-## Learn More
+Mila soll keine komplizierte Finanzsoftware sein.
 
-To learn more, take a look at the following resources:
+Sie soll Menschen dabei helfen, ihre finanzielle Situation verständlich zu überblicken und mit einfachen Empfehlungen den Alltag leichter zu machen.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+Der Fokus liegt auf Klarheit, Orientierung und einem freundlichen Nutzererlebnis.
+
+---
+
+## 🚀 Roadmap
+
+### ✅ Version 4.0
+
+- Modularisierte Architektur
+- Persönliches Dashboard
+- Finanzübersicht
+- KI-Zusammenfassung
+- Verpflichtungsverwaltung
+- Steuer-Rücklage
+- Finanzprognose
+- Persönlicher Chat
+
+---
+
+## ❤️ Entwickelt mit viel Leidenschaft
+
+Dieses Projekt entsteht Schritt für Schritt mit dem Ziel, moderne KI sinnvoll einzusetzen und Menschen im Alltag zu unterstützen.
+
+Jede Verbesserung orientiert sich an einer einfachen Frage:
+
+> **"Hilft das dem Nutzer wirklich?"**
+
+---
+
+## 📄 Lizenz
+
+Dieses Projekt dient Demonstrations- und Entwicklungszwecken.
