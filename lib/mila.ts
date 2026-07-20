@@ -888,10 +888,23 @@ async function callGroqChat(messages: ChatMessage[]) {
     const data = await res.json()
 
     if (!res.ok) {
-      console.error('Groq Chat Fehler:', data)
-      return 'Mila hat gerade Schwierigkeiten beim Antworten. Bitte versuch es gleich nochmal.'
-    }
+  console.error('Groq Chat Fehler:', {
+    status: res.status,
+    message: data?.error?.message,
+    type: data?.error?.type,
+    code: data?.error?.code,
+  })
 
+  if (res.status === 429) {
+    return 'Ich wurde gerade sehr schnell hintereinander gefragt und brauche einen kurzen Moment. Versuch es bitte gleich noch einmal. 🌸'
+  }
+
+  if (res.status === 413 || res.status === 400) {
+    return 'Unser Gespräch ist gerade etwas zu umfangreich geworden. Setze den Chat bitte einmal zurück und versuch es erneut. 🌸'
+  }
+
+  return 'Meine KI-Verbindung hat die Anfrage gerade abgelehnt. Bitte versuch es gleich noch einmal. 🌸'
+}
     return (
       data.choices?.[0]?.message?.content ||
       'Ich konnte gerade keine sinnvolle Antwort erzeugen.'
