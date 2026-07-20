@@ -46,147 +46,424 @@ function compactEntry(entry: any) {
   }
 }
 
-function buildFinancialContext(contextData?: MilaContextData) {
-  const expenses = contextData?.expenses ?? []
-  const incomes = contextData?.incomes ?? []
-  const obligations = contextData?.obligations ?? []
-  const summary = contextData?.summary ?? {}
+function buildFinancialContext(
+  contextData?: MilaContextData
+) {
+  const expenses = Array.isArray(
+    contextData?.expenses
+  )
+    ? contextData.expenses
+    : []
+
+  const incomes = Array.isArray(
+    contextData?.incomes
+  )
+    ? contextData.incomes
+    : []
+
+  const obligations = Array.isArray(
+    contextData?.obligations
+  )
+    ? contextData.obligations
+    : []
+
+  const summary =
+    contextData?.summary || {}
 
   const expenseTotal =
-    toNumber(summary.totalExpenses) ||
-    expenses.reduce((sum, e) => sum + toNumber(e.amount), 0)
+    typeof summary.totalExpenses !==
+    'undefined'
+      ? toNumber(
+          summary.totalExpenses
+        )
+      : expenses.reduce(
+          (sum, expense) =>
+            sum +
+            toNumber(expense.amount),
+          0
+        )
 
   const incomeTotal =
-    toNumber(summary.totalIncomes) ||
-    incomes.reduce((sum, i) => sum + toNumber(i.amount), 0)
+    typeof summary.totalIncomes !==
+    'undefined'
+      ? toNumber(
+          summary.totalIncomes
+        )
+      : incomes.reduce(
+          (sum, income) =>
+            sum +
+            toNumber(income.amount),
+          0
+        )
 
   const balance =
-    typeof summary.balance !== 'undefined'
+    typeof summary.balance !==
+    'undefined'
       ? toNumber(summary.balance)
       : incomeTotal - expenseTotal
 
-  const openIncomes = incomes.filter((income: any) => {
-    const status = String(income.status || '').toLowerCase()
-    return status === 'offen' || status === 'pending'
-  })
+  const normalizeStatus = (
+    value: unknown
+  ) =>
+    String(value || '')
+      .trim()
+      .toLowerCase()
 
-  const openObligations = obligations.filter((item: any) => {
-    const status = String(item.status || '').toLowerCase()
-    return status !== 'bezahlt' && status !== 'paid'
-  })
+  const openIncomes = incomes.filter(
+    (income: any) => {
+      const status =
+        normalizeStatus(income.status)
 
-  const upcomingObligations = openObligations.slice(0, 8).map((item: any) => ({
-    title: item.title || '',
-    partner: item.partner || item.creditor || '',
-    amount: toNumber(item.amount),
-    dueDate: item.dueDate || item.due_date || '',
-    priority: item.priority || 'normal',
-    status: item.status || 'offen',
-  }))
-
-  const openIncomeTotal = openIncomes.reduce(
-    (sum, income) => sum + toNumber(income.amount),
-    0
+      return (
+        status === 'offen' ||
+        status === 'pending' ||
+        status === 'überfällig' ||
+        status === 'ueberfaellig'
+      )
+    }
   )
 
-  const recentExpenses = expenses.slice(0, 12).map(compactEntry)
-  const recentIncomes = incomes.slice(0, 12).map(compactEntry)
+  const overdueIncomes =
+    openIncomes.filter(
+      (income: any) => {
+        const status =
+          normalizeStatus(
+            income.status
+          )
 
-  const categoryTotals: Record<string, number> = {}
+        return (
+          status === 'überfällig' ||
+          status === 'ueberfaellig'
+        )
+      }
+    )
 
-  const detectedCategories = expenses.map((expense: any) =>
-    getEntryCategory(expense)
-  )
+  const openObligations =
+    obligations.filter(
+      (item: any) => {
+        const status =
+          normalizeStatus(
+            item.status
+          )
 
-  const autoCategoryTotals: Record<string, number> = {}
+        return (
+          status !== 'bezahlt' &&
+          status !== 'paid' &&
+          status !== 'erledigt'
+        )
+      }
+    )
 
-  detectedCategories.forEach((cat) => {
-    autoCategoryTotals[cat] = (autoCategoryTotals[cat] || 0) + 1
-  })
+  const getDueTime = (
+    item: any
+  ) => {
+    const value =
+      item?.dueDate ||
+      item?.due_date ||
+      ''
 
-  const topAutoCategories = Object.entries(autoCategoryTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([category, count]) => ({ category, count }))
+    if (!value) {
+      return Number.POSITIVE_INFINITY
+    }
 
-  expenses.forEach((expense: any) => {
-    const category = expense.category || 'sonstiges'
-    categoryTotals[category] =
-      (categoryTotals[category] || 0) + toNumber(expense.amount)
-  })
+    const timestamp =
+      new Date(value).getTime()
 
-  const topCategories = Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([category, total]) => ({ category, total }))
-
-  const vendorGroups: Record<string, { count: number; total: number }> = {}
-
-  expenses.forEach((expense: any) => {
-    const vendor = String(expense.vendor || expense.title || '').trim()
-    if (!vendor) return
-
-    const key = vendor.toLowerCase()
-    if (!vendorGroups[key]) vendorGroups[key] = { count: 0, total: 0 }
-
-    vendorGroups[key].count += 1
-    vendorGroups[key].total += toNumber(expense.amount)
-  })
-
-  const recurring = Object.entries(vendorGroups)
-    .filter(([, data]) => data.count >= 2)
-    .slice(0, 6)
-    .map(([vendor, data]) => ({
-      vendor,
-      count: data.count,
-      total: data.total,
-      monthlyEstimate: data.total / data.count,
-    }))
-
-  const taxRate =
-    contextData?.userStatus === 'angestellt'
-      ? 0.1
-      : contextData?.userStatus === 'kleinunternehmer'
-      ? 0
-      : 0
-
-  const taxReserve = balance > 0 ? balance * taxRate : 0
-  const freeAfterReserve = balance > 0 ? balance - taxReserve : 0
-
-  const autoCategories = {
-    detectedCategories,
-    topAutoCategories,
+    return Number.isFinite(timestamp)
+      ? timestamp
+      : Number.POSITIVE_INFINITY
   }
+
+  const priorityWeight: Record<
+    string,
+    number
+  > = {
+    existenz: 0,
+    hoch: 1,
+    wichtig: 1,
+    normal: 2,
+    niedrig: 3,
+  }
+
+  const sortedObligations = [
+    ...openObligations,
+  ].sort((a: any, b: any) => {
+    const dateDifference =
+      getDueTime(a) -
+      getDueTime(b)
+
+    if (dateDifference !== 0) {
+      return dateDifference
+    }
+
+    const aPriority =
+      priorityWeight[
+        normalizeStatus(a.priority)
+      ] ?? 2
+
+    const bPriority =
+      priorityWeight[
+        normalizeStatus(b.priority)
+      ] ?? 2
+
+    return aPriority - bPriority
+  })
+
+  const upcomingObligations =
+    sortedObligations
+      .slice(0, 8)
+      .map((item: any) => ({
+        title:
+          item.title ||
+          'Verpflichtung',
+
+        partner:
+          item.partner ||
+          item.creditor ||
+          '',
+
+        amount: toNumber(
+          item.amount
+        ),
+
+        dueDate:
+          item.dueDate ||
+          item.due_date ||
+          '',
+
+        priority:
+          item.priority ||
+          'normal',
+
+        status:
+          item.status ||
+          'offen',
+      }))
+
+  const openObligationTotal =
+    openObligations.reduce(
+      (sum, item: any) =>
+        sum +
+        toNumber(item.amount),
+      0
+    )
+
+  const realisticAvailable =
+    balance -
+    openObligationTotal
+
+  const openIncomeTotal =
+    openIncomes.reduce(
+      (sum, income: any) =>
+        sum +
+        toNumber(income.amount),
+      0
+    )
+
+  const userStatus = String(
+    contextData?.userStatus ||
+      'freelancer'
+  ).toLowerCase()
+
+  const providedTaxReserve =
+    toNumber(
+      contextData?.taxReserve
+    )
+
+  const fallbackReserveRate =
+    userStatus === 'angestellt'
+      ? 0
+      : 0.125
+
+  const taxReserve =
+    providedTaxReserve > 0
+      ? providedTaxReserve
+      : balance > 0
+        ? balance *
+          fallbackReserveRate
+        : 0
+
+  const freeAfterReserve =
+    Math.max(
+      0,
+      realisticAvailable -
+        taxReserve
+    )
+
+  const financeScore =
+    toNumber(
+      contextData?.financeScore ??
+        contextData?.budgetStatus
+          ?.score ??
+        summary?.score
+    )
+
+  const recentExpenses =
+    expenses
+      .slice(0, 12)
+      .map(compactEntry)
+
+  const recentIncomes =
+    incomes
+      .slice(0, 12)
+      .map(compactEntry)
+
+  const categoryTotals: Record<
+    string,
+    number
+  > = {}
+
+  expenses.forEach(
+    (expense: any) => {
+      const category = String(
+        expense.category ||
+          getEntryCategory(
+            expense
+          ) ||
+          'sonstiges'
+      )
+
+      categoryTotals[category] =
+        (categoryTotals[
+          category
+        ] || 0) +
+        toNumber(expense.amount)
+    }
+  )
+
+  const topCategories =
+    Object.entries(
+      categoryTotals
+    )
+      .sort(
+        (a, b) =>
+          b[1] - a[1]
+      )
+      .slice(0, 6)
+      .map(
+        ([category, total]) => ({
+          category,
+          total,
+        })
+      )
+
+  const vendorGroups: Record<
+    string,
+    {
+      name: string
+      count: number
+      total: number
+    }
+  > = {}
+
+  expenses.forEach(
+    (expense: any) => {
+      const vendor = String(
+        expense.vendor ||
+          expense.title ||
+          ''
+      ).trim()
+
+      if (!vendor) return
+
+      const key =
+        vendor.toLowerCase()
+
+      if (!vendorGroups[key]) {
+        vendorGroups[key] = {
+          name: vendor,
+          count: 0,
+          total: 0,
+        }
+      }
+
+      vendorGroups[key].count += 1
+      vendorGroups[key].total +=
+        toNumber(
+          expense.amount
+        )
+    }
+  )
+
+  const recurring =
+    Object.values(
+      vendorGroups
+    )
+      .filter(
+        (data) =>
+          data.count >= 2
+      )
+      .sort(
+        (a, b) =>
+          b.total - a.total
+      )
+      .slice(0, 6)
+      .map((data) => ({
+        vendor: data.name,
+        count: data.count,
+        total: data.total,
+        monthlyEstimate:
+          data.total /
+          data.count,
+      }))
 
   return {
     user: {
-      name: contextData?.userName || 'Julia',
-      status: contextData?.userStatus || 'freelancer',
+      name:
+        contextData?.userName ||
+        '',
+
+      status:
+        contextData?.userStatus ||
+        'freelancer',
     },
+
     totals: {
       incomeTotal,
       expenseTotal,
       balance,
       taxReserve,
+      realisticAvailable,
       freeAfterReserve,
-      openIncomeCount: openIncomes.length,
+      openIncomeCount:
+        openIncomes.length,
+      overdueIncomeCount:
+        overdueIncomes.length,
       openIncomeTotal,
+      openObligationTotal,
     },
+
+    financeScore,
+
     counts: {
       incomes: incomes.length,
       expenses: expenses.length,
+      obligations:
+        obligations.length,
     },
+
     topCategories,
     recurring,
+
     obligations: {
-      openCount: openObligations.length,
-      upcoming: upcomingObligations,
+      openCount:
+        openObligations.length,
+      openTotal:
+        openObligationTotal,
+      upcoming:
+        upcomingObligations,
     },
+
     recentIncomes,
     recentExpenses,
-    budgetStatus: contextData?.budgetStatus ?? [],
-    milaFeedback: contextData?.milaFeedback || '',
-    autoCategories,
+
+    budgetStatus:
+      contextData?.budgetStatus ??
+      null,
+
+    milaFeedback:
+      contextData?.milaFeedback ||
+      '',
   }
 }
 
