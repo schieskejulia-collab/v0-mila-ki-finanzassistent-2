@@ -64,7 +64,32 @@ export function MilaChat() {
   const chatEndRef =
     useRef<HTMLDivElement>(null)
 
-  const financeScore = calculateFinanceScore({
+  const openObligations = Array.isArray(obligations)
+  ? obligations.filter((item: any) => {
+      const status = String(item?.status || '').toLowerCase()
+
+      return (
+        status !== 'bezahlt' &&
+        status !== 'erledigt' &&
+        status !== 'paid'
+      )
+    })
+  : []
+
+const overdueObligationCount = openObligations.filter((item: any) => {
+  const dueDate = item?.dueDate || item?.due_date
+
+  if (!dueDate) return false
+
+  const dueTime = new Date(dueDate).getTime()
+
+  return (
+    Number.isFinite(dueTime) &&
+    dueTime < new Date().setHours(0, 0, 0, 0)
+  )
+}).length
+
+const financeScore = calculateFinanceScore({
   balance: Number(summary?.balance ?? 0),
 
   totalIncomes: Number(
@@ -77,20 +102,11 @@ export function MilaChat() {
     summary?.totalExpenses ?? 0
   ),
 
-  openObligations: Array.isArray(obligations)
-    ? obligations.filter((item: any) => {
-        const status = String(
-          item?.status || ''
-        ).toLowerCase()
+  openCount: openObligations.length,
 
-        return (
-          status !== 'bezahlt' &&
-          status !== 'erledigt' &&
-          status !== 'paid'
-        )
-      }).length
-    : 0,
+  overdueCount: overdueObligationCount,
 })
+
 
   useEffect(() => {
     try {
