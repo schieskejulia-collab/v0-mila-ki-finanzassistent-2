@@ -1,4 +1,4 @@
-# 🌸 Mila – Dein KI-Finanzcoach
+# 🌸 Mila – Dein persönlicher KI-Finanzcoach
 
 > Mehr als ein Haushaltsbuch.
 > Mila hilft dir, deine Finanzen zu verstehen, Prioritäten zu setzen und bessere Entscheidungen zu treffen.
