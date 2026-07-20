@@ -914,27 +914,650 @@ async function callGroqChat(messages: ChatMessage[]) {
     return 'Die Verbindung zu Mila ist gerade unterbrochen.'
   }
 }
+function detectMilaIntent(userMessage: string) {
+  const question = String(userMessage || '')
+    .trim()
+    .toLowerCase()
+
+  const includesAny = (
+    words: string[]
+  ) =>
+    words.some((word) =>
+      question.includes(word)
+    )
+
+  const wantsScore = includesAny([
+    'score',
+    'finanzscore',
+    'bewertung',
+    'punkte',
+  ])
+
+  const wantsMonthlyComparison =
+    includesAny([
+      'monat',
+      'vormonat',
+      'monatsvergleich',
+      'letzten monat',
+      'diesem monat',
+      'vergleich',
+      'entwicklung',
+      'trend',
+      'gestiegen',
+      'gesunken',
+    ])
+
+  const wantsExpenses = includesAny([
+    'ausgabe',
+    'ausgaben',
+    'kosten',
+    'kategorie',
+    'teuer',
+    'größte ausgabe',
+    'höchste ausgabe',
+    'ungewöhnlich',
+    'auffällig',
+    'spare',
+    'sparen',
+  ])
+
+  const wantsIncomes = includesAny([
+    'einnahme',
+    'einnahmen',
+    'verdient',
+    'umsatz',
+    'kunde',
+    'kunden',
+    'zahlungseingang',
+    'zahlungseingänge',
+    'offene einnahme',
+    'überfällige einnahme',
+  ])
+
+  const wantsObligations =
+    includesAny([
+      'verpflichtung',
+      'verpflichtungen',
+      'rechnung',
+      'rechnungen',
+      'fällig',
+      'fälligkeit',
+      'bezahlen',
+      'zahlung',
+      'dringend',
+      'priorität',
+      'zuerst beachten',
+      'heute erledigen',
+    ])
+
+  const wantsRecurring = includesAny([
+    'wiederkehrend',
+    'regelmäßig',
+    'abo',
+    'abonnement',
+    'monatliche zahlung',
+    'fixkosten',
+  ])
+
+  const wantsReserve = includesAny([
+    'rücklage',
+    'steuerrücklage',
+    'steuer-rücklage',
+    'notreserve',
+    'notgroschen',
+    'frei verfügbar',
+    'verfügbar',
+    'puffer',
+  ])
+
+  const wantsRisk = includesAny([
+    'risiko',
+    'gefährlich',
+    'problem',
+    'kritisch',
+    'sorge',
+    'sorgen',
+    'angst',
+    'überfordert',
+    'dringendes',
+  ])
+
+  const wantsStrength = includesAny([
+    'stärke',
+    'gut',
+    'positiv',
+    'läuft gut',
+    'stabil',
+  ])
+
+  const wantsOverview = includesAny([
+    'wie geht es mir',
+    'wie stehe ich',
+    'finanzielle situation',
+    'finanziell',
+    'was fällt dir auf',
+    'überblick',
+    'einschätzung',
+    'was sollte ich',
+    'was ist wichtig',
+  ])
+
+  const isEmotional = includesAny([
+    'sorge',
+    'sorgen',
+    'angst',
+    'überfordert',
+    'panik',
+    'stress',
+    'mut',
+    'beruhige',
+  ])
+
+  const noSpecificIntent =
+    !wantsScore &&
+    !wantsMonthlyComparison &&
+    !wantsExpenses &&
+    !wantsIncomes &&
+    !wantsObligations &&
+    !wantsRecurring &&
+    !wantsReserve &&
+    !wantsRisk &&
+    !wantsStrength &&
+    !wantsOverview
+
+  return {
+    question,
+    wantsScore,
+    wantsMonthlyComparison,
+    wantsExpenses,
+    wantsIncomes,
+    wantsObligations,
+    wantsRecurring,
+    wantsReserve,
+    wantsRisk,
+    wantsStrength,
+    wantsOverview,
+    isEmotional,
+    noSpecificIntent,
+  }
+}
+
+function formatPercentageChange(
+  value: number | null | undefined
+) {
+  if (
+    value === null ||
+    typeof value === 'undefined'
+  ) {
+    return 'nicht berechenbar, weil im Vormonat kein Vergleichswert vorhanden ist'
+  }
+
+  const rounded =
+    Math.round(Number(value) * 10) / 10
+
+  if (!Number.isFinite(rounded)) {
+    return 'nicht berechenbar'
+  }
+
+  if (rounded === 0) {
+    return 'unverändert'
+  }
+
+  if (rounded > 0) {
+    return `um ${rounded.toLocaleString(
+      'de-DE'
+    )} % gestiegen`
+  }
+
+  return `um ${Math.abs(
+    rounded
+  ).toLocaleString(
+    'de-DE'
+  )} % gesunken`
+}
+
+function buildMilaDynamicContext(
+  context: ReturnType<
+    typeof buildFinancialContext
+  >,
+  intent: ReturnType<
+    typeof detectMilaIntent
+  >
+) {
+  const blocks: string[] = []
+
+  /*
+   * Eine kleine Grundübersicht wird immer
+   * mitgeschickt. So kann Mila auch auf
+   * allgemeine Fragen sinnvoll antworten.
+   */
+  blocks.push(`
+BASISDATEN
+Einnahmen: ${money(
+    context.totals.incomeTotal
+  )}
+Ausgaben: ${money(
+    context.totals.expenseTotal
+  )}
+Saldo: ${money(
+    context.totals.balance
+  )}
+Offene Einnahmen: ${
+    context.totals.openIncomeCount
+  } über ${money(
+    context.totals.openIncomeTotal
+  )}
+Offene Verpflichtungen: ${
+    context.obligations.openCount
+  } über ${money(
+    context.totals.openObligationTotal
+  )}
+Realistisch verfügbar nach offenen Verpflichtungen: ${money(
+    context.totals.realisticAvailable
+  )}
+  `.trim())
+
+  if (
+    intent.wantsScore ||
+    intent.wantsOverview ||
+    intent.wantsStrength ||
+    intent.wantsRisk
+  ) {
+    blocks.push(`
+FINANZSCORE
+Aktueller Score: ${
+      context.financeScore > 0
+        ? `${context.financeScore}/100`
+        : 'nicht verfügbar'
+    }
+
+Berechnungslogik:
+- Startwert 50
+- Einnahmen vorhanden: +15
+- Positiver Saldo: +10
+- Negativer Saldo: -25
+- Niedrige Ausgabenquote kann den Score erhöhen
+- Offene Einnahmen reduzieren den Score leicht
+- Überfällige Einnahmen reduzieren ihn stärker
+    `.trim())
+  }
+
+  if (
+    intent.wantsObligations ||
+    intent.wantsOverview ||
+    intent.wantsRisk
+  ) {
+    const obligationsText =
+      context.obligations.upcoming
+        .map((item: any) => {
+          const title =
+            item.title ||
+            'Verpflichtung'
+
+          const partner =
+            item.partner
+              ? ` bei ${item.partner}`
+              : ''
+
+          const dueDate =
+            item.dueDate ||
+            'ohne eingetragenes Datum'
+
+          return `${title}${partner}, ${money(
+            Number(item.amount || 0)
+          )}, fällig ${dueDate}, Priorität ${
+            item.priority || 'normal'
+          }`
+        })
+        .join(' | ') ||
+      'keine offenen Verpflichtungen'
+
+    blocks.push(`
+VERPFLICHTUNGEN
+${obligationsText}
+    `.trim())
+  }
+
+  if (
+    intent.wantsExpenses ||
+    intent.wantsOverview
+  ) {
+    const largestExpense =
+      context.insights.largestExpense
+
+    const largestExpenseText =
+      largestExpense
+        ? `${largestExpense.title ||
+            largestExpense.vendor ||
+            'Ausgabe'}, ${money(
+            largestExpense.amount
+          )}${
+            largestExpense.category
+              ? `, Kategorie ${largestExpense.category}`
+              : ''
+          }${
+            largestExpense.date
+              ? `, Datum ${largestExpense.date}`
+              : ''
+          }`
+        : 'keine Ausgabe erfasst'
+
+    const unusualExpensesText =
+      context.insights
+        .unusualExpenses.length > 0
+        ? context.insights.unusualExpenses
+            .map(
+              (item: any) =>
+                `${
+                  item.title ||
+                  item.vendor ||
+                  'Ausgabe'
+                }, ${money(item.amount)}`
+            )
+            .join(' | ')
+        : context.counts.expenses < 3
+          ? 'zu wenige Ausgaben für eine verlässliche Ausreißeranalyse'
+          : 'keine auffälligen Ausgaben erkannt'
+
+    const categoriesText =
+      context.topCategories.length > 0
+        ? context.topCategories
+            .map(
+              (item: any) =>
+                `${item.category}: ${money(
+                  item.total
+                )}`
+            )
+            .join(' | ')
+        : 'noch keine Kategorien vorhanden'
+
+    blocks.push(`
+AUSGABENANALYSE
+Größte erfasste Ausgabe: ${largestExpenseText}
+Auffällige Ausgaben: ${unusualExpensesText}
+Kategorien: ${categoriesText}
+Anzahl Ausgaben: ${
+      context.counts.expenses
+    }
+
+Wichtig:
+Eine größte Ausgabe ist nicht automatisch ungewöhnlich oder problematisch.
+Bei weniger als drei Ausgaben ist keine belastbare Ausreißeranalyse möglich.
+    `.trim())
+  }
+
+  if (
+    intent.wantsIncomes ||
+    intent.wantsOverview
+  ) {
+    const largestIncome =
+      context.insights.largestIncome
+
+    const largestIncomeText =
+      largestIncome
+        ? `${largestIncome.title ||
+            largestIncome.client ||
+            'Einnahme'}, ${money(
+            largestIncome.amount
+          )}${
+            largestIncome.client
+              ? `, Kunde ${largestIncome.client}`
+              : ''
+          }${
+            largestIncome.date
+              ? `, Datum ${largestIncome.date}`
+              : ''
+          }`
+        : 'keine Einnahme erfasst'
+
+    blocks.push(`
+EINNAHMENANALYSE
+Größte erfasste Einnahme: ${largestIncomeText}
+Offene Einnahmen: ${
+      context.totals.openIncomeCount
+    }
+Überfällige Einnahmen: ${
+      context.totals
+        .overdueIncomeCount
+    }
+Offener Gesamtbetrag: ${money(
+      context.totals.openIncomeTotal
+    )}
+Anzahl Einnahmen: ${
+      context.counts.incomes
+    }
+    `.trim())
+  }
+
+  if (intent.wantsRecurring) {
+    const recurringText =
+      context.recurring.length > 0
+        ? context.recurring
+            .map((item: any) => {
+              const title =
+                item.title ||
+                item.partner ||
+                'Regelmäßige Zahlung'
+
+              return `${title}, ${money(
+                Number(item.amount || 0)
+              )}, ${
+                item.frequency ||
+                'regelmäßig'
+              }`
+            })
+            .join(' | ')
+        : 'keine sicher erkannten wiederkehrenden Zahlungen'
+
+    blocks.push(`
+WIEDERKEHRENDE ZAHLUNGEN
+${recurringText}
+
+Nur Zahlungen aus diesem Abschnitt dürfen als wiederkehrend bezeichnet werden.
+Eine einzelne Rate ist nicht automatisch regelmäßig.
+    `.trim())
+  }
+
+  if (
+    intent.wantsReserve ||
+    intent.wantsOverview
+  ) {
+    blocks.push(`
+RÜCKLAGEN UND FREIER BETRAG
+Empfohlene Steuer-Rücklage: ${money(
+      context.totals.taxReserve
+    )}
+Nach offenen Verpflichtungen verfügbar: ${money(
+      context.totals.realisticAvailable
+    )}
+Nach offenen Verpflichtungen und empfohlener Steuer-Rücklage verfügbar: ${money(
+      context.totals.freeAfterReserve
+    )}
+
+Die Steuer-Rücklage ist eine Empfehlung und nicht automatisch bereits angespart.
+Eine tatsächlich angesparte Notreserve ist in den Daten nicht separat erfasst.
+    `.trim())
+  }
+
+  if (
+    intent.wantsMonthlyComparison
+  ) {
+    const comparison =
+      context.insights
+        .monthlyComparison
+
+    const categories =
+      comparison.categoryChanges
+        .length > 0
+        ? comparison.categoryChanges
+            .map((item: any) => {
+              const difference =
+                Number(
+                  item.difference || 0
+                )
+
+              return `${item.category}: aktuell ${money(
+                item.current
+              )}, Vormonat ${money(
+                item.previous
+              )}, Unterschied ${money(
+                difference
+              )}`
+            })
+            .join(' | ')
+        : 'keine ausreichenden Kategorievergleiche'
+
+    blocks.push(`
+MONATSVERGLEICH
+Aktueller Monat:
+- Einnahmen: ${money(
+      comparison.currentMonth
+        .incomeTotal
+    )}
+- Ausgaben: ${money(
+      comparison.currentMonth
+        .expenseTotal
+    )}
+- Anzahl Einnahmen: ${
+      comparison.currentMonth
+        .incomeCount
+    }
+- Anzahl Ausgaben: ${
+      comparison.currentMonth
+        .expenseCount
+    }
+
+Vormonat:
+- Einnahmen: ${money(
+      comparison.previousMonth
+        .incomeTotal
+    )}
+- Ausgaben: ${money(
+      comparison.previousMonth
+        .expenseTotal
+    )}
+- Anzahl Einnahmen: ${
+      comparison.previousMonth
+        .incomeCount
+    }
+- Anzahl Ausgaben: ${
+      comparison.previousMonth
+        .expenseCount
+    }
+
+Veränderung Einnahmen: ${formatPercentageChange(
+      comparison.incomeChangePercent
+    )}
+Veränderung Ausgaben: ${formatPercentageChange(
+      comparison.expenseChangePercent
+    )}
+
+Kategorievergleich:
+${categories}
+
+Bei wenigen Buchungen ist der Vergleich noch kein stabiler langfristiger Trend.
+    `.trim())
+  }
+
+  if (
+    intent.wantsRisk ||
+    intent.wantsStrength ||
+    intent.wantsOverview
+  ) {
+    const hasLimitedData =
+      context.counts.expenses < 3 ||
+      context.counts.incomes < 2
+
+    blocks.push(`
+GESAMTEINSCHÄTZUNG
+Datenlage: ${
+      hasLimitedData
+        ? 'noch begrenzt'
+        : 'für eine erste Einschätzung ausreichend'
+    }
+
+Positive Faktoren:
+- Saldo: ${money(
+      context.totals.balance
+    )}
+- Finanzscore: ${
+      context.financeScore > 0
+        ? `${context.financeScore}/100`
+        : 'nicht verfügbar'
+    }
+
+Zu beachten:
+- Offene Verpflichtungen: ${
+      context.obligations.openCount
+    }
+- Überfällige Einnahmen: ${
+      context.totals
+        .overdueIncomeCount
+    }
+- Realistisch verfügbar: ${money(
+      context.totals.realisticAvailable
+    )}
+
+Bei begrenzter Datenlage darf kein langfristiges Risiko oder Muster erfunden werden.
+    `.trim())
+  }
+
+  return blocks.join('\n\n')
+}
+
 export async function getMilaChatResponse(
   userMessage: string,
   history: ChatMessage[] = [],
   contextData?: MilaContextData
 ) {
-  const safeHistory: ChatMessage[] = Array.isArray(history)
-    ? history
-        .filter(
-          (message) =>
-            (message.role === 'user' ||
-              message.role === 'assistant') &&
-            typeof message.content === 'string'
-        )
-        .map((message) => ({
-          role: message.role,
-          content: message.content.slice(0, 1200),
-        }))
-        .slice(-8)
-    : []
+  const cleanMessage = String(
+    userMessage || ''
+  ).trim()
 
-  const context = buildFinancialContext(contextData)
+  if (!cleanMessage) {
+    return 'Schreib mir kurz, wobei ich dir helfen soll. 🌸'
+  }
+
+  /*
+   * Nur die letzten drei Nachrichten.
+   * Das spart viele Tokens und reicht für
+   * einen kurzen Gesprächszusammenhang.
+   */
+  const safeHistory: ChatMessage[] =
+    Array.isArray(history)
+      ? history
+          .filter(
+            (message) =>
+              (message.role === 'user' ||
+                message.role ===
+                  'assistant') &&
+              typeof message.content ===
+                'string'
+          )
+          .map((message) => ({
+            role: message.role,
+            content:
+              message.content.slice(
+                0,
+                700
+              ),
+          }))
+          .slice(-3)
+      : []
+
+  const context =
+    buildFinancialContext(
+      contextData
+    )
+
+  const intent =
+    detectMilaIntent(cleanMessage)
+
+  const dynamicContext =
+    buildMilaDynamicContext(
+      context,
+      intent
+    )
 
   const cleanName = String(
     contextData?.userName ||
@@ -942,335 +1565,15 @@ export async function getMilaChatResponse(
       ''
   ).trim()
 
-  const personLabel = cleanName || 'die Person'
-
-  const upcomingObligations =
-    context.obligations.upcoming
-      .map(
-        (obligation: any) =>
-          `${obligation.title || 'Verpflichtung'}${
-            obligation.partner
-              ? ` bei ${obligation.partner}`
-              : ''
-          }, ${money(
-            Number(obligation.amount || 0)
-          )}, fällig ${
-            obligation.dueDate ||
-            'ohne eingetragenes Datum'
-          }`
-      )
-      .join(' | ') || 'keine'
-
-  const topCategories =
-    context.topCategories
-      .map((item: any) => item.category)
-      .filter(Boolean)
-      .slice(0, 3)
-      .join(', ') || 'noch nicht genug Daten'
-  const largestExpenseText =
-    context.insights.largestExpense
-      ? [
-          context.insights.largestExpense.title ||
-            context.insights.largestExpense.vendor ||
-            'Ausgabe',
-          money(
-            context.insights.largestExpense.amount
-          ),
-          context.insights.largestExpense.category
-            ? `Kategorie: ${context.insights.largestExpense.category}`
-            : '',
-          context.insights.largestExpense.date
-            ? `Datum: ${context.insights.largestExpense.date}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join(', ')
-      : 'keine Ausgabe erfasst'
-
-  const largestIncomeText =
-    context.insights.largestIncome
-      ? [
-          context.insights.largestIncome.title ||
-            context.insights.largestIncome.client ||
-            'Einnahme',
-          money(
-            context.insights.largestIncome.amount
-          ),
-          context.insights.largestIncome.client
-            ? `Kunde: ${context.insights.largestIncome.client}`
-            : '',
-          context.insights.largestIncome.date
-            ? `Datum: ${context.insights.largestIncome.date}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join(', ')
-      : 'keine Einnahme erfasst'
-
-  const recurringText =
-    context.recurring.length > 0
-      ? context.recurring
-          .map((entry: any) => {
-            const label =
-              entry.title ||
-              entry.partner ||
-              'Regelmäßige Zahlung'
-
-            return `${label}, ${money(
-              entry.amount
-            )}, ${entry.frequency}`
-          })
-          .join(' | ')
-      : 'keine sicher erkannten wiederkehrenden Zahlungen'
-
-  const unusualExpensesText =
-    context.insights.unusualExpenses.length > 0
-      ? context.insights.unusualExpenses
-          .map(
-            (entry: any) =>
-              `${
-                entry.title ||
-                entry.vendor ||
-                'Ausgabe'
-              }, ${money(entry.amount)}`
-          )
-          .join(' | ')
-      : context.counts.expenses < 3
-        ? 'zu wenige Ausgaben für eine verlässliche Ausreißeranalyse'
-        : 'keine auffälligen Ausgaben erkannt'
-  const monthlyComparison =
-    context.insights
-      .monthlyComparison
-
-  const formatPercentage = (
-    value: number | null
-  ) => {
-    if (value === null) {
-      return 'nicht sinnvoll berechenbar, weil im Vormonat kein Vergleichswert vorhanden ist'
-    }
-
-    const rounded =
-      Math.round(value * 10) / 10
-
-    if (rounded === 0) {
-      return 'unverändert'
-    }
-
-    return rounded > 0
-      ? `um ${rounded.toLocaleString(
-          'de-DE'
-        )} % gestiegen`
-      : `um ${Math.abs(
-          rounded
-        ).toLocaleString(
-          'de-DE'
-        )} % gesunken`
-  }
-
-  const categoryComparisonText =
-    monthlyComparison.categoryChanges
-      .length > 0
-      ? monthlyComparison.categoryChanges
-          .map((item: any) => {
-            const direction =
-              item.difference > 0
-                ? 'mehr'
-                : item.difference < 0
-                  ? 'weniger'
-                  : 'unverändert'
-
-            return `${item.category}: aktuell ${money(
-              item.current
-            )}, zuvor ${money(
-              item.previous
-            )}, ${direction} um ${money(
-              Math.abs(
-                item.difference
-              )
-            )}`
-          })
-          .join(' | ')
-      : 'keine Kategorien mit ausreichenden Vergleichsdaten'
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-
-  const getDaysUntil = (value: unknown) => {
-    if (!value) return null
-
-    const date = new Date(String(value))
-
-    if (Number.isNaN(date.getTime())) {
-      return null
-    }
-
-    date.setHours(0, 0, 0, 0)
-
-    return Math.round(
-      (date.getTime() -
-        todayStart.getTime()) /
-        86_400_000
+  const optionalInstruction =
+    String(
+      contextData?.systemInstruction ||
+        ''
     )
-  }
+      .trim()
+      .slice(0, 900)
 
-  const obligationTimeline =
-    context.obligations.upcoming
-      .map((obligation: any) => ({
-        ...obligation,
-        daysUntil: getDaysUntil(
-          obligation.dueDate
-        ),
-      }))
-      .sort((a: any, b: any) => {
-        const aDays =
-          a.daysUntil ??
-          Number.POSITIVE_INFINITY
-
-        const bDays =
-          b.daysUntil ??
-          Number.POSITIVE_INFINITY
-
-        return aDays - bDays
-      })
-
-  const overdueObligations =
-    obligationTimeline.filter(
-      (obligation: any) =>
-        typeof obligation.daysUntil ===
-          'number' &&
-        obligation.daysUntil < 0
-    )
-
-  const dueTodayObligations =
-    obligationTimeline.filter(
-      (obligation: any) =>
-        obligation.daysUntil === 0
-    )
-
-  const dueSoonObligations =
-    obligationTimeline.filter(
-      (obligation: any) =>
-        typeof obligation.daysUntil ===
-          'number' &&
-        obligation.daysUntil > 0 &&
-        obligation.daysUntil <= 7
-    )
-
-  const nextObligation =
-    obligationTimeline[0] || null
-
-  const expenseRatio =
-    context.totals.incomeTotal > 0
-      ? context.totals.expenseTotal /
-        context.totals.incomeTotal
-      : null
-
-  const hasEnoughBasicData =
-    context.counts.incomes +
-      context.counts.expenses >=
-    3
-
-  const financialStrength = (() => {
-    if (
-      context.totals.balance > 0 &&
-      expenseRatio !== null &&
-      expenseRatio <= 0.4
-    ) {
-      return `Die aktuell stärkste Seite ist der positive Überschuss von ${money(
-        context.totals.balance
-      )}. Die erfassten Ausgaben beanspruchen nur einen kleinen Teil der Einnahmen.`
-    }
-
-    if (
-      context.totals.balance > 0
-    ) {
-      return `Die aktuell stärkste Seite ist der positive Überschuss von ${money(
-        context.totals.balance
-      )}.`
-    }
-
-    if (
-      overdueObligations.length === 0 &&
-      context.obligations.openCount === 0
-    ) {
-      return 'Aktuell sind keine offenen oder überfälligen Verpflichtungen erfasst.'
-    }
-
-    if (context.financeScore > 0) {
-      return `Der Finanzscore von ${context.financeScore}/100 liefert aktuell die stärkste positive Einordnung.`
-    }
-
-    return 'Für eine belastbare finanzielle Stärke fehlen derzeit noch ausreichend Buchungen.'
-  })()
-
-    const financialRisk = (() => {
-    if (overdueObligations.length > 0) {
-      const obligation =
-        overdueObligations[0]
-
-      return `${
-        obligation.title ||
-        'Eine Verpflichtung'
-      } über ${money(
-        Number(
-          obligation.amount || 0
-        )
-      )} ist überfällig und hat aktuell die höchste Priorität.`
-    }
-
-    if (
-      context.totals
-        .overdueIncomeCount > 0
-    ) {
-      return `${
-        context.totals
-          .overdueIncomeCount
-      } überfällige Einnahme${
-        context.totals
-          .overdueIncomeCount === 1
-          ? ''
-          : 'n'
-      } sollten zuerst geprüft werden.`
-    }
-
-    if (
-      context.totals
-        .realisticAvailable < 0
-    ) {
-      return `Nach Berücksichtigung der offenen Verpflichtungen fehlen aktuell ${money(
-        Math.abs(
-          context.totals
-            .realisticAvailable
-        )
-      )}.`
-    }
-
-    if (!hasEnoughBasicData) {
-      return 'Das größte aktuelle Risiko ist keine bestimmte Ausgabe, sondern die noch geringe Datenmenge. Dadurch sind langfristige Muster noch nicht zuverlässig erkennbar.'
-    }
-
-    if (
-      context.obligations.openCount > 0
-    ) {
-      return `Es sind offene Verpflichtungen über insgesamt ${money(
-        context.totals
-          .openObligationTotal
-      )} erfasst. Sie sollten entsprechend ihrer Fälligkeit im Blick behalten werden.`
-    }
-
-    if (
-      context.totals.balance < 0
-    ) {
-      return `Der aktuelle Saldo liegt bei ${money(
-        context.totals.balance
-      )}. Die Ausgaben übersteigen damit momentan die Einnahmen.`
-    }
-
-    return 'Aktuell ist anhand der erfassten Daten kein akutes finanzielles Risiko erkennbar.'
-  })()
-  const messages: ChatMessage[] = [
-    {
-      role: 'system',
-      content: `
+  const systemPrompt = `
 Du bist Mila 🌸, eine persönliche Finanzbegleiterin.
 
 Name:
@@ -1279,269 +1582,78 @@ ${cleanName || 'nicht angegeben'}
 Status:
 ${context.user.status || 'nicht angegeben'}
 
-${contextData?.systemInstruction || ''}
+AUFGABE
 
-SPRACHE UND TON
+Hilf der Person, ihre Finanzdaten zu verstehen, Stress zu reduzieren und den nächsten sinnvollen Schritt zu erkennen.
 
-- Sprich warm, ruhig, direkt und natürlich.
-- Beginne nicht automatisch mit „Hallo ${personLabel}“.
-- Verwende den Namen nur gelegentlich, nicht in jeder Antwort.
-- Klinge wie eine aufmerksame Begleiterin, nicht wie ein Behördenschreiben oder eine allgemeine KI.
-- Vermeide monotone Satzanfänge wie „Du hast ...“ in mehreren Sätzen hintereinander.
-- Nutze Formulierungen wie:
-  „Ich sehe gerade ...“
-  „Im Moment fällt auf ...“
-  „Heute würde ich zuerst ...“
-  „Das gibt dir aktuell etwas Luft.“
-- Sage nicht ständig „Keine Sorge“. Beruhige nur, wenn die Daten tatsächlich keinen akuten Grund zur Panik zeigen.
+GRUNDREGELN
 
-ANTWORTLÄNGE
-
-- Antworte normalerweise in höchstens 6 bis 8 Sätzen.
-- Nutze keine langen nummerierten Listen.
-- Stelle höchstens eine Rückfrage.
-- Wiederhole nicht unnötig alle vorhandenen Zahlen.
-- Nutze nur die Werte, die für die konkrete Frage wichtig sind.
-
-DATENREGELN
-
-- Nutze ausschließlich Daten aus dem Finanzkontext und dem Chatverlauf.
-- Erfinde niemals Beträge, Fristen, Kunden, Kategorien, Rücklagen oder Bewertungen.
-- Wenn Angaben fehlen, sage klar und knapp, welche Information fehlt.
-- Formuliere Unsicherheit nur dann, wenn die Daten wirklich fehlen.
-- Ist ein Wert vorhanden, erkläre ihn klar und selbstbewusst.
-
-RÜCKLAGEN
-
-Unterscheide immer zwischen:
-
-1. empfohlener Steuer-Rücklage,
-2. tatsächlich bereits zurückgelegtem Geld,
-3. Notreserve,
-4. frei verfügbarem Betrag.
-
-Die Zahl im Feld „Steuer-Rücklage“ ist eine Empfehlung und nicht automatisch bereits angespart.
-
-Sage deshalb nicht:
-„Du hast keine Rücklage.“
-
-Sage stattdessen beispielsweise:
-„Aktuell ist noch keine tatsächlich angesparte Rücklage erfasst.“
-oder:
-„Mila empfiehlt derzeit eine Steuer-Rücklage von ...“
-Stelle nur dann eine Rückfrage,
-wenn sie dem Nutzer wirklich weiterhilft.
-
-Viele Antworten dürfen auch einfach
-mit einer kurzen Zusammenfassung enden.
-VERPFLICHTUNGEN UND FRISTEN
-
-- Prüfe zuerst überfällige Verpflichtungen.
-- Danach heute fällige Verpflichtungen.
-- Danach bald fällige Verpflichtungen.
-- Sprich ruhig und ohne Angst zu erzeugen.
-- Sage nicht pauschal „Du musst das heute bezahlen“, wenn die Zahlung erst später fällig ist.
-- Verwende lieber:
-  „im Blick behalten“
-  „einplanen“
-  „priorisieren“
-  „rechtzeitig vorbereiten“
-- Bei kleinen, noch nicht fälligen Beträgen darfst du nicht unnötig Dringlichkeit erzeugen.
-
-OFFENE EINNAHMEN
-
-Wenn offene oder überfällige Einnahmen vorhanden sind:
-
-- erwähne sie, wenn sie für die Frage relevant sind,
-- priorisiere überfällige Einnahmen vor allgemeinen Spartipps,
-- schlage höchstens einen konkreten nächsten Schritt vor.
-
-EMOTIONALE LOGIK
-
-Bei Sorgen:
-
-- Prüfe zuerst die tatsächlichen Zahlen.
-- Beruhige nur auf Grundlage dieser Daten.
-- Nenne anschließend genau einen machbaren nächsten Schritt.
-- Frage danach höchstens einmal, was die Person konkret belastet.
-
-Bei Überforderung:
-
-- Reduziere die Situation auf den nächsten sinnvollen Schritt.
-- Verlange nicht, alles gleichzeitig zu lösen.
-
-Bei Mutbedarf:
-
-- Sei bestärkend, aber realistisch.
-- Erfinde keine positive Entwicklung, die nicht aus den Daten hervorgeht.
+- Nutze ausschließlich die bereitgestellten Finanzdaten.
+- Erfinde niemals Beträge, Fristen, Trends, Rücklagen, Risiken oder Kategorien.
+- Antworte warm, ruhig, konkret und natürlich.
+- Beginne nicht automatisch mit „Hallo“.
+- Verwende den Namen nur gelegentlich.
+- Antworte normalerweise mit höchstens 6 Sätzen.
+- Stelle nur dann eine Rückfrage, wenn sie wirklich weiterhilft.
+- Keine verbindliche Steuer-, Rechts- oder Anlageberatung.
+- Sage offen, wenn noch zu wenige Daten vorhanden sind.
+- Wiederhole nicht unnötig alle Zahlen.
+- Nenne zuerst das, was für die konkrete Frage am wichtigsten ist.
 
 FINANZSCORE
 
-Wenn nach dem Finanzscore gefragt wird:
+- Erkläre nur Faktoren, die aus der tatsächlichen Berechnungslogik oder den gelieferten Daten hervorgehen.
+- Offene Einträge können den Score leicht reduzieren.
+- Überfällige Einträge können ihn stärker reduzieren.
+- Eine fehlende Rücklage beeinflusst den Score nicht automatisch.
 
-- Nutze den vorhandenen Score aus dem Kontext.
-- Erkläre konkret, welche vorhandenen Daten ihn positiv oder negativ beeinflussen.
-- Sage nicht, dass der Score durch eine fehlende Rücklage gedrückt wird, sofern die Berechnungslogik das nicht ausdrücklich belegt.
-- Formuliere lieber:
-  „Der gute Wert entsteht vor allem durch ...“
-  „Abzüge entstehen aktuell durch ...“
-- Erfinde keine Bestandteile der Score-Berechnung.
-Wenn ein Finanzscore vorhanden ist:
+RÜCKLAGEN
 
-- Erkläre sowohl die positiven als auch die negativen Einflussfaktoren.
-- Nutze ausschließlich die Berechnungslogik der App.
-- Bei offenen Verpflichtungen erwähne, dass sie den Score leicht reduzieren können.
-- Bei überfälligen Verpflichtungen erkläre, dass sie stärker ins Gewicht fallen.
-- Erfinde keine weiteren Faktoren.
-ANALYSEVERHALTEN
+- Unterscheide zwischen empfohlener Steuer-Rücklage, tatsächlich angespartem Geld, Notreserve und frei verfügbarem Betrag.
+- Eine empfohlene Steuer-Rücklage ist nicht automatisch bereits angespart.
+- Verwende bei einer Steuer-Rücklage die Wörter „einplanen“, „bilden“ oder „zurücklegen“, niemals „investieren“.
 
-Wenn nach Auffälligkeiten gefragt wird:
+VERPFLICHTUNGEN
 
-- Vergleiche zuerst die vorhandenen Einnahmen, Ausgaben und Verpflichtungen.
-- Wenn keine Auffälligkeit existiert, sage das klar.
-- Wenn sehr wenige Daten vorhanden sind, erkläre, dass die Analyse deshalb begrenzt ist.
-- Nutze vorhandene Kategorien.
-- Nutze wiederkehrende Zahlungen.
-- Nutze offene Verpflichtungen.
-- Nutze offene Einnahmen.
-- Erfinde niemals Trends.
+- Prüfe zuerst überfällige, dann heute fällige und anschließend bald fällige Einträge.
+- Erzeuge keine unnötige Dringlichkeit.
+- Verwende Formulierungen wie „im Blick behalten“, „einplanen“ oder „priorisieren“.
 
-DATENGRENZEN
+EMOTIONALE FRAGEN
 
-- Eine Zahlung darf nur als wiederkehrend bezeichnet werden, wenn sie im Feld recurring enthalten ist oder ausdrücklich als regelmäßig gespeichert wurde.
-- Eine einzelne Rate oder Verpflichtung ist nicht automatisch wiederkehrend.
-- Erfinde keine fehlende Notreserve und kein finanzielles Risiko, wenn dafür keine gespeicherten Daten vorliegen.
-- Wenn zu wenige Buchungen für eine verlässliche Analyse vorhanden sind, sage das ausdrücklich.
-- Sage bei einer Steuer-Rücklage „einplanen“, „bilden“ oder „zurücklegen“.
-- Verwende für eine Steuer-Rücklage niemals das Wort „investieren“.
-- Wenn nur eine Ausgabe vorhanden ist, nenne sie als größte vorhandene Ausgabe, aber bezeichne sie nicht automatisch als ungewöhnlich.
-FINANZKONTEXT
-Finanzscore:
-${
-  context.financeScore > 0
-    ? `${context.financeScore}/100`
-    : 'nicht verfügbar'
-}
-Einnahmen:
-${money(context.totals.incomeTotal)}
+- Prüfe zuerst die Zahlen.
+- Beruhige nur, wenn die Daten das tatsächlich rechtfertigen.
+- Nenne anschließend genau einen machbaren nächsten Schritt.
 
-Ausgaben:
-${money(context.totals.expenseTotal)}
+ANALYSEN
 
-Überschuss:
-${money(context.totals.balance)}
+- Eine größte Ausgabe ist nicht automatisch ungewöhnlich.
+- Eine einzelne Zahlung ist nicht automatisch wiederkehrend.
+- Bei wenigen Buchungen darf kein langfristiger Trend behauptet werden.
+- Wenn Daten fehlen, sage klar, was noch nicht zuverlässig beurteilt werden kann.
 
-Empfohlene Steuer-Rücklage:
-${money(context.totals.taxReserve)}
+${optionalInstruction}
 
-Offene Einnahmen:
-${context.totals.openIncomeCount} über insgesamt ${money(
-        context.totals.openIncomeTotal
-      )}
+FINANZDATEN FÜR DIESE FRAGE
 
-Offene Verpflichtungen:
-${context.obligations.openCount}
+${dynamicContext}
+  `.trim()
 
-Nächste Verpflichtungen:
-${upcomingObligations}
-
-Häufige Kategorien:
-${topCategories}
-BERECHNETE ANALYSEWERTE
-
-Größte erfasste Ausgabe:
-${largestExpenseText}
-
-Größte erfasste Einnahme:
-${largestIncomeText}
-
-Sicher erkannte wiederkehrende Zahlungen:
-${recurringText}
-
-Auffällige Ausgaben:
-${unusualExpensesText}
-
-Anzahl erfasster Ausgaben:
-${context.counts.expenses}
-
-Anzahl erfasster Einnahmen:
-${context.counts.incomes}
-
-REGELN FÜR ANALYSEFRAGEN
-
-- Bei „größte Ausgabe“, „höchste Ausgabe“ oder „welche Ausgabe kostet am meisten“ nutze ausschließlich den Wert „Größte erfasste Ausgabe“.
-- Formuliere unterschiedliche Fragen mit derselben Bedeutung inhaltlich gleich.
-- Behaupte niemals, es seien keine Ausgaben vorhanden, wenn eine größte Ausgabe angegeben ist.
-- Eine Zahlung ist nur wiederkehrend, wenn sie unter „Sicher erkannte wiederkehrende Zahlungen“ steht.
-- Eine einzelne Rate ohne Wiederholungsmerkmal ist nicht automatisch monatlich.
-- Bei weniger als drei Ausgaben darfst du keine belastbare Ausreißer- oder Trendanalyse behaupten.
-- Eine größte Ausgabe ist nicht automatisch ungewöhnlich oder problematisch.
-- Beurteile eine Ausgabe nicht als gut, schlecht oder unnötig, wenn dafür keine ausreichenden Daten vorliegen.
-MONATSVERGLEICH
-
-Aktueller Monat – Einnahmen:
-${money(
-  monthlyComparison.currentMonth.incomeTotal
-)}
-
-Aktueller Monat – Ausgaben:
-${money(
-  monthlyComparison.currentMonth.expenseTotal
-)}
-
-Vormonat – Einnahmen:
-${money(
-  monthlyComparison.previousMonth.incomeTotal
-)}
-
-Vormonat – Ausgaben:
-${money(
-  monthlyComparison.previousMonth.expenseTotal
-)}
-
-Veränderung der Einnahmen:
-${formatPercentage(
-  monthlyComparison.incomeChangePercent
-)}
-
-Veränderung der Ausgaben:
-${formatPercentage(
-  monthlyComparison.expenseChangePercent
-)}
-
-Kategorievergleich:
-${categoryComparisonText}
-
-REGELN FÜR MONATSVERGLEICHE
-
-- Nutze bei Fragen nach diesem Monat oder dem Vormonat ausschließlich die Werte aus dem Abschnitt „MONATSVERGLEICH“.
-- Erfinde keine Trends aus den Gesamtsummen.
-- Eine prozentuale Veränderung darf nur genannt werden, wenn sie berechnet werden konnte.
-- Wenn im Vormonat der Vergleichswert 0 war, nenne stattdessen die absoluten Beträge.
-- Unterscheide klar zwischen Einnahmen und Ausgaben.
-- Sage nicht pauschal, dass sich die finanzielle Lage verbessert oder verschlechtert hat, wenn nur sehr wenige Buchungen vorhanden sind.
-- Bei wenigen Daten formuliere: „Der Vergleich zeigt die erfassten Buchungen, ist aber noch kein stabiler langfristiger Trend.“
-- Eine Kategorie gilt nicht automatisch als problematisch, nur weil sie gestiegen ist.
-ZIEL
-
-Die Person soll:
-
-- Klarheit gewinnen,
-- weniger Stress empfinden,
-- den nächsten sinnvollen Schritt erkennen,
-- sich begleitet statt bewertet fühlen.
-
-Du gibst Orientierung, aber keine verbindliche Steuer-, Rechts- oder Anlageberatung.
-      `.trim(),
+  const messages: ChatMessage[] = [
+    {
+      role: 'system',
+      content: systemPrompt,
     },
 
     ...safeHistory,
 
     {
       role: 'user',
-      content: userMessage,
+      content: cleanMessage,
     },
   ]
 
-  return await callGroqChat(messages)
+  return await callGroqChat(
+    messages
+  )
 }
