@@ -313,7 +313,6 @@ const milaTodayMessage = (() => {
   return 'Heute musst du nicht alles lösen. Jede neue Buchung hilft Mila, deine finanzielle Lage genauer einzuordnen.'
 })()
   return (
-   return (
   <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
     <div>
       <p className="text-xs font-black uppercase tracking-[0.35em] text-purple-600">
