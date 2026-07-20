@@ -896,8 +896,8 @@ async function callGroqChat(messages: ChatMessage[]) {
   })
 
   if (res.status === 429) {
-    return 'Ich beantworte jede Frage sorgfältig. 🌸
-Gib mir bitte nur einen kurzen Moment, dann geht es direkt weiter.'
+   return `Ich beantworte jede Frage sorgfältig. 🌸
+Gib mir bitte nur einen kurzen Moment, dann geht es direkt weiter.`
   }
 
   if (res.status === 413 || res.status === 400) {
