@@ -539,29 +539,19 @@ const anchorMessage =
   availableAfterObligations={availableAfterObligations}
 />
 
-{/* --- MILA-STIMMUNG --- */}
+{/* --- MILA-STATUS --- */}
 <div
-  className={`rounded-2xl border p-5 shadow-sm ${milaMood.color}`}
+  className={`rounded-2xl border px-5 py-4 shadow-sm ${milaMood.color}`}
 >
   <div className="flex items-center gap-3">
     <span
-      className={`h-3 w-3 shrink-0 rounded-full ${milaMood.dot} animate-pulse`}
+      className={`h-3 w-3 shrink-0 rounded-full ${milaMood.dot}`}
     />
 
-    <div>
-      <p className="text-xs font-black uppercase tracking-[0.2em] opacity-70">
-        {milaMood.emoji} Mila heute
-      </p>
-
-      <p className="mt-1 text-xl font-black">
-        {milaMood.label}
-      </p>
-    </div>
+    <p className="text-base font-bold">
+      {milaMood.emoji} {milaMood.label}
+    </p>
   </div>
-
-  <p className="mt-3 text-sm font-semibold leading-relaxed opacity-80">
-    {milaMood.message}
-  </p>
 </div>
 {/* --- MILA HAT ETWAS ERKANNT --- */}
 {dailyInsight && (
