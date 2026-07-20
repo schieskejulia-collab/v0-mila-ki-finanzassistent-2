@@ -1078,6 +1078,163 @@ export async function getMilaChatResponse(
           })
           .join(' | ')
       : 'keine Kategorien mit ausreichenden Vergleichsdaten'
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const getDaysUntil = (value: unknown) => {
+    if (!value) return null
+
+    const date = new Date(String(value))
+
+    if (Number.isNaN(date.getTime())) {
+      return null
+    }
+
+    date.setHours(0, 0, 0, 0)
+
+    return Math.round(
+      (date.getTime() -
+        todayStart.getTime()) /
+        86_400_000
+    )
+  }
+
+  const obligationTimeline =
+    context.obligations.upcoming
+      .map((obligation: any) => ({
+        ...obligation,
+        daysUntil: getDaysUntil(
+          obligation.dueDate
+        ),
+      }))
+      .sort((a: any, b: any) => {
+        const aDays =
+          a.daysUntil ??
+          Number.POSITIVE_INFINITY
+
+        const bDays =
+          b.daysUntil ??
+          Number.POSITIVE_INFINITY
+
+        return aDays - bDays
+      })
+
+  const overdueObligations =
+    obligationTimeline.filter(
+      (obligation: any) =>
+        typeof obligation.daysUntil ===
+          'number' &&
+        obligation.daysUntil < 0
+    )
+
+  const dueTodayObligations =
+    obligationTimeline.filter(
+      (obligation: any) =>
+        obligation.daysUntil === 0
+    )
+
+  const dueSoonObligations =
+    obligationTimeline.filter(
+      (obligation: any) =>
+        typeof obligation.daysUntil ===
+          'number' &&
+        obligation.daysUntil > 0 &&
+        obligation.daysUntil <= 7
+    )
+
+  const nextObligation =
+    obligationTimeline[0] || null
+
+  const expenseRatio =
+    context.totals.incomeTotal > 0
+      ? context.totals.expenseTotal /
+        context.totals.incomeTotal
+      : null
+
+  const hasEnoughBasicData =
+    context.counts.incomes +
+      context.counts.expenses >=
+    3
+
+  const financialStrength = (() => {
+    if (
+      context.totals.balance > 0 &&
+      expenseRatio !== null &&
+      expenseRatio <= 0.4
+    ) {
+      return `Die aktuell stärkste Seite ist der positive Überschuss von ${money(
+        context.totals.balance
+      )}. Die erfassten Ausgaben beanspruchen nur einen kleinen Teil der Einnahmen.`
+    }
+
+    if (
+      context.totals.balance > 0
+    ) {
+      return `Die aktuell stärkste Seite ist der positive Überschuss von ${money(
+        context.totals.balance
+      )}.`
+    }
+
+    if (
+      overdueObligations.length === 0 &&
+      context.obligations.openCount === 0
+    ) {
+      return 'Aktuell sind keine offenen oder überfälligen Verpflichtungen erfasst.'
+    }
+
+    if (context.financeScore > 0) {
+      return `Der Finanzscore von ${context.financeScore}/100 liefert aktuell die stärkste positive Einordnung.`
+    }
+
+    return 'Für eine belastbare finanzielle Stärke fehlen derzeit noch ausreichend Buchungen.'
+  })()
+
+  const financialRisk = (() => {
+    if (overdueObligations.length > 0) {
+      const obligation =
+        overdueObligations[0]
+
+      return `${obligation.title || 'Eine Verpflichtung'} über ${money(
+        Number(
+          obligation.amount || 0
+        )
+      )} ist überfällig und hat aktuell die höchste Priorität.`
+    }
+
+    if (
+      context.totals
+        .overdueIncomeCount > 0
+    ) {
+      return `${context.totals.overdueIncomeCount} überfällige Einnahme${
+        context.totals
+          .overdueIncomeCount === 1
+          ? ''
+          : 'n'
+      } sollten zuerst geprüft werden.`
+    }
+
+    if (
+      context.totals
+        .realisticAvailable < 0
+    ) {
+      return `Nach Berücksichtigung der offenen Verpflichtungen fehlen aktuell ${money(
+        Math.abs(
+          context.totals
+            .realisticAvailable
+        )
+      )}.`
+    }
+
+    if (!hasEnoughBasicData) {
+      return 'Das größte aktuelle Risiko ist keine bestimmte Ausgabe, sondern die noch geringe Datenmenge. Dadurch sind langfristige Muster noch nicht zuverlässig erkennbar.'
+    }
+
+    if (
+      context.obligations.openCount > 0
+    ) {
+      return `Es sind offene Verpflichtungen über insgesamt ${money(
+        context.totals
+          .openObligation
   const messages: ChatMessage[] = [
     {
       role: 'system',
