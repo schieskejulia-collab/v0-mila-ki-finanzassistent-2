@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react'
-
+import { calculateFinanceScore } from '../../lib/calculations'
 import { useFinance } from '../../lib/store'
 
 interface Message {
