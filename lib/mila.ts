@@ -1654,7 +1654,60 @@ ${dynamicContext}
     },
   ]
 
-  return await callGroqChat(
-    messages
+  const reply = await callGroqChat(
+  messages
+)
+
+const suggestions: string[] = []
+
+const nextObligation =
+  context.obligations.upcoming[0]
+
+if (nextObligation) {
+  suggestions.push(
+    `💡 Nebenbei: ${
+      nextObligation.title ||
+      'Eine Verpflichtung'
+    } über ${money(
+      Number(
+        nextObligation.amount || 0
+      )
+    )} ist am ${
+      nextObligation.dueDate ||
+      'eingetragenen Termin'
+    } fällig. Im Moment reicht es, sie im Blick zu behalten.`
   )
+}
+
+if (
+  context.counts.expenses < 5 ||
+  context.counts.incomes < 5
+) {
+  suggestions.push(
+    '🌸 Je mehr Buchungen du erfasst, desto genauer werden meine Auswertungen.'
+  )
+}
+
+if (
+  context.totals.taxReserve > 0 &&
+  context.totals.balance > 0
+) {
+  suggestions.push(
+    `💰 Aktuell sind ${money(
+      context.totals.taxReserve
+    )} als empfohlene Steuer-Rücklage eingeplant.`
+  )
+}
+
+const shouldAddInsight =
+  !intent.wantsObligations &&
+  !intent.wantsReserve &&
+  !intent.wantsRecurring &&
+  suggestions.length > 0
+
+if (shouldAddInsight) {
+  return `${reply}\n\n${suggestions[0]}`
+}
+
+return reply
 }
