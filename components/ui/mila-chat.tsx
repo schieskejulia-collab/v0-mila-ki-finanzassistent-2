@@ -64,12 +64,33 @@ export function MilaChat() {
   const chatEndRef =
     useRef<HTMLDivElement>(null)
 
-  const financeScore =
-    Number(
-      budgetStatus?.score ??
-        summary?.score ??
-        0
-    ) || 0
+  const financeScore = calculateFinanceScore({
+  balance: Number(summary?.balance ?? 0),
+
+  totalIncomes: Number(
+    summary?.totalIncomes ??
+      summary?.totalIncome ??
+      0
+  ),
+
+  totalExpenses: Number(
+    summary?.totalExpenses ?? 0
+  ),
+
+  openObligations: Array.isArray(obligations)
+    ? obligations.filter((item: any) => {
+        const status = String(
+          item?.status || ''
+        ).toLowerCase()
+
+        return (
+          status !== 'bezahlt' &&
+          status !== 'erledigt' &&
+          status !== 'paid'
+        )
+      }).length
+    : 0,
+})
 
   useEffect(() => {
     try {
