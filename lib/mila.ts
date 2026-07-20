@@ -10,13 +10,15 @@ type ChatMessage = {
 type MilaContextData = {
   expenses?: Expense[]
   incomes?: Income[]
-obligations?: any[]
+  obligations?: any[]
   userName?: string
   userStatus?: string
   systemInstruction?: string
   summary?: any
-  budgetStatus?: any[]
+  budgetStatus?: any
   milaFeedback?: string
+  financeScore?: number
+  taxReserve?: number
 }
 
 function money(value: number) {
