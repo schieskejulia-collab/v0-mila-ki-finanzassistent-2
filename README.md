@@ -1,69 +1,131 @@
 # 🌸 Mila – Dein persönlicher KI-Finanzcoach
 
-> Mehr als ein Haushaltsbuch.
-> Mila hilft dir, deine Finanzen zu verstehen, Prioritäten zu setzen und bessere Entscheidungen zu treffen.
+> **Ein persönlicher KI-Finanzcoach, der Zahlen in verständliche Entscheidungen verwandelt.**
+
+Mila unterstützt dich dabei, deine Finanzen einfach zu organisieren, Verpflichtungen im Blick zu behalten und bessere finanzielle Entscheidungen zu treffen.
+
+Anstatt nur Zahlen anzuzeigen, erklärt Mila deine finanzielle Situation verständlich und priorisiert das, was heute wirklich wichtig ist.
 
 ---
 
-## ✨ Was Mila kann
+# ✨ Funktionen
 
-- 💰 Einnahmen & Ausgaben verwalten
-- 🧾 Verpflichtungen organisieren
-- 📊 Finanzgesundheit berechnen
-- 🤖 KI-gestützte Empfehlungen
-- 📅 Frühzeitige Erinnerung an Verpflichtungen
-- 📈 Finanzprognosen
-- 🎯 Sparziele verfolgen
-- 💬 Persönlicher KI-Finanzcoach
+## 💜 Persönliches Dashboard
+
+- Begrüßung mit Tagesübersicht
+- KI-Zusammenfassung
+- Finanzübersicht
+- Frei verfügbarer Betrag
+- Finanzgesundheit
 
 ---
 
-## 🖥️ Technologie
+## 💰 Einnahmen & Ausgaben
 
-- Next.js 16
+- Einnahmen verwalten
+- Ausgaben erfassen
+- Kategorien
+- Statistiken
+
+---
+
+## 🧾 Verpflichtungen
+
+- Verpflichtungen verwalten
+- Offene Beträge
+- Fälligkeiten
+- Prioritäten
+- Erinnerungen
+
+---
+
+## 🤖 KI-Unterstützung
+
+Mila hilft unter anderem bei:
+
+- Prioritäten setzen
+- Finanzübersicht
+- Rücklagen
+- Steuerplanung
+- täglichen Empfehlungen
+- intelligenten Hinweisen
+
+---
+
+## 🎯 Sparziele
+
+- Ziele definieren
+- Fortschritt verfolgen
+- Motivation
+
+---
+
+## 💬 Mila Chat
+
+Der integrierte KI-Assistent beantwortet Fragen rund um deine Finanzen und erklärt Zusammenhänge in verständlicher Sprache.
+
+---
+
+# 🛠️ Technologie
+
+- Next.js
 - React
 - TypeScript
-- Supabase
 - Tailwind CSS
+- Supabase
 - Vercel
 
 ---
 
-## 🌸 Philosophie
+# 🌸 Philosophie
 
-Mila soll keine komplizierte Finanzsoftware sein.
+Viele Finanz-Apps zeigen lediglich Zahlen.
 
-Sie soll Menschen dabei helfen, ihre finanzielle Situation verständlich zu überblicken und mit einfachen Empfehlungen den Alltag leichter zu machen.
+Mila geht einen Schritt weiter.
 
-Der Fokus liegt auf Klarheit, Orientierung und einem freundlichen Nutzererlebnis.
+Der Fokus liegt darauf, Informationen verständlich aufzubereiten und daraus konkrete Handlungsempfehlungen abzuleiten.
+
+Nicht mehr Daten.
+
+Mehr Orientierung.
 
 ---
 
-## 🚀 Roadmap
+# 🚀 Roadmap
 
-### ✅ Version 4.0
+## ✅ Version 4.0
 
-- Modularisierte Architektur
-- Persönliches Dashboard
-- Finanzübersicht
-- KI-Zusammenfassung
+- Neues Dashboard
+- Persönliche KI-Zusammenfassung
 - Verpflichtungsverwaltung
+- Finanzübersicht
 - Steuer-Rücklage
-- Finanzprognose
-- Persönlicher Chat
+- Sparziele
+- KI-Chat
+- Modularisierte Architektur
 
 ---
 
-## ❤️ Entwickelt mit viel Leidenschaft
+## 🔮 Geplante Erweiterungen
 
-Dieses Projekt entsteht Schritt für Schritt mit dem Ziel, moderne KI sinnvoll einzusetzen und Menschen im Alltag zu unterstützen.
-
-Jede Verbesserung orientiert sich an einer einfachen Frage:
-
-> **"Hilft das dem Nutzer wirklich?"**
+- PDF-Analyse
+- Intelligente Erinnerungen
+- Erweiterte Finanzprognosen
+- Premium-Funktionen
+- Mehr KI-Unterstützung
 
 ---
 
-## 📄 Lizenz
+# ❤️ Warum Mila?
 
-Dieses Projekt dient Demonstrations- und Entwicklungszwecken.
+Mila entstand aus der Idee, dass Finanzsoftware nicht kompliziert sein muss.
+
+Sie soll Menschen helfen, ihre finanzielle Situation besser zu verstehen und mit mehr Sicherheit Entscheidungen zu treffen.
+
+---
+
+# 📄 Lizenz
+
+Copyright © Julia Schieske
+
+Alle Rechte vorbehalten.
