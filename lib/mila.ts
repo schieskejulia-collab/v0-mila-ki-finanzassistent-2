@@ -701,7 +701,77 @@ export async function getMilaChatResponse(
       .filter(Boolean)
       .slice(0, 3)
       .join(', ') || 'noch nicht genug Daten'
+  const largestExpenseText =
+    context.insights.largestExpense
+      ? [
+          context.insights.largestExpense.title ||
+            context.insights.largestExpense.vendor ||
+            'Ausgabe',
+          money(
+            context.insights.largestExpense.amount
+          ),
+          context.insights.largestExpense.category
+            ? `Kategorie: ${context.insights.largestExpense.category}`
+            : '',
+          context.insights.largestExpense.date
+            ? `Datum: ${context.insights.largestExpense.date}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : 'keine Ausgabe erfasst'
 
+  const largestIncomeText =
+    context.insights.largestIncome
+      ? [
+          context.insights.largestIncome.title ||
+            context.insights.largestIncome.client ||
+            'Einnahme',
+          money(
+            context.insights.largestIncome.amount
+          ),
+          context.insights.largestIncome.client
+            ? `Kunde: ${context.insights.largestIncome.client}`
+            : '',
+          context.insights.largestIncome.date
+            ? `Datum: ${context.insights.largestIncome.date}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : 'keine Einnahme erfasst'
+
+  const recurringText =
+    context.recurring.length > 0
+      ? context.recurring
+          .map((entry: any) => {
+            const label =
+              entry.title ||
+              entry.partner ||
+              'Regelmäßige Zahlung'
+
+            return `${label}, ${money(
+              entry.amount
+            )}, ${entry.frequency}`
+          })
+          .join(' | ')
+      : 'keine sicher erkannten wiederkehrenden Zahlungen'
+
+  const unusualExpensesText =
+    context.insights.unusualExpenses.length > 0
+      ? context.insights.unusualExpenses
+          .map(
+            (entry: any) =>
+              `${
+                entry.title ||
+                entry.vendor ||
+                'Ausgabe'
+              }, ${money(entry.amount)}`
+          )
+          .join(' | ')
+      : context.counts.expenses < 3
+        ? 'zu wenige Ausgaben für eine verlässliche Ausreißeranalyse'
+        : 'keine auffälligen Ausgaben erkannt'
   const messages: ChatMessage[] = [
     {
       role: 'system',
@@ -840,6 +910,7 @@ Wenn nach Auffälligkeiten gefragt wird:
 - Nutze offene Verpflichtungen.
 - Nutze offene Einnahmen.
 - Erfinde niemals Trends.
+
 DATENGRENZEN
 
 - Eine Zahlung darf nur als wiederkehrend bezeichnet werden, wenn sie im Feld recurring enthalten ist oder ausdrücklich als regelmäßig gespeichert wurde.
@@ -881,7 +952,36 @@ ${upcomingObligations}
 
 Häufige Kategorien:
 ${topCategories}
+BERECHNETE ANALYSEWERTE
 
+Größte erfasste Ausgabe:
+${largestExpenseText}
+
+Größte erfasste Einnahme:
+${largestIncomeText}
+
+Sicher erkannte wiederkehrende Zahlungen:
+${recurringText}
+
+Auffällige Ausgaben:
+${unusualExpensesText}
+
+Anzahl erfasster Ausgaben:
+${context.counts.expenses}
+
+Anzahl erfasster Einnahmen:
+${context.counts.incomes}
+
+REGELN FÜR ANALYSEFRAGEN
+
+- Bei „größte Ausgabe“, „höchste Ausgabe“ oder „welche Ausgabe kostet am meisten“ nutze ausschließlich den Wert „Größte erfasste Ausgabe“.
+- Formuliere unterschiedliche Fragen mit derselben Bedeutung inhaltlich gleich.
+- Behaupte niemals, es seien keine Ausgaben vorhanden, wenn eine größte Ausgabe angegeben ist.
+- Eine Zahlung ist nur wiederkehrend, wenn sie unter „Sicher erkannte wiederkehrende Zahlungen“ steht.
+- Eine einzelne Rate ohne Wiederholungsmerkmal ist nicht automatisch monatlich.
+- Bei weniger als drei Ausgaben darfst du keine belastbare Ausreißer- oder Trendanalyse behaupten.
+- Eine größte Ausgabe ist nicht automatisch ungewöhnlich oder problematisch.
+- Beurteile eine Ausgabe nicht als gut, schlecht oder unnötig, wenn dafür keine ausreichenden Daten vorliegen.
 ZIEL
 
 Die Person soll:
