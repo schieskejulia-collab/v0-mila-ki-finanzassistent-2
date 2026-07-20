@@ -1189,12 +1189,15 @@ export async function getMilaChatResponse(
     return 'Für eine belastbare finanzielle Stärke fehlen derzeit noch ausreichend Buchungen.'
   })()
 
-  const financialRisk = (() => {
+    const financialRisk = (() => {
     if (overdueObligations.length > 0) {
       const obligation =
         overdueObligations[0]
 
-      return `${obligation.title || 'Eine Verpflichtung'} über ${money(
+      return `${
+        obligation.title ||
+        'Eine Verpflichtung'
+      } über ${money(
         Number(
           obligation.amount || 0
         )
@@ -1205,7 +1208,10 @@ export async function getMilaChatResponse(
       context.totals
         .overdueIncomeCount > 0
     ) {
-      return `${context.totals.overdueIncomeCount} überfällige Einnahme${
+      return `${
+        context.totals
+          .overdueIncomeCount
+      } überfällige Einnahme${
         context.totals
           .overdueIncomeCount === 1
           ? ''
@@ -1234,7 +1240,20 @@ export async function getMilaChatResponse(
     ) {
       return `Es sind offene Verpflichtungen über insgesamt ${money(
         context.totals
-          .openObligation
+          .openObligationTotal
+      )} erfasst. Sie sollten entsprechend ihrer Fälligkeit im Blick behalten werden.`
+    }
+
+    if (
+      context.totals.balance < 0
+    ) {
+      return `Der aktuelle Saldo liegt bei ${money(
+        context.totals.balance
+      )}. Die Ausgaben übersteigen damit momentan die Einnahmen.`
+    }
+
+    return 'Aktuell ist anhand der erfassten Daten kein akutes finanzielles Risiko erkennbar.'
+  })()
   const messages: ChatMessage[] = [
     {
       role: 'system',
