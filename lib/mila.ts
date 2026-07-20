@@ -465,7 +465,7 @@ function buildFinancialContext(
       contextData?.milaFeedback ||
       '',
 }
-
+}
 async function callGroqChat(messages: ChatMessage[]) {
   const apiKey = process.env.GROQ_API_KEY
 
