@@ -385,34 +385,161 @@ function buildFinancialContext(
     }
   )
 
-  const recurring =
-    Object.values(
-      vendorGroups
+    const hasRecurringMarker = (item: any) => {
+    const frequency = String(
+      item.frequency ||
+        item.interval ||
+        item.recurrence ||
+        item.repeat ||
+        ''
     )
-      .filter(
-        (data) =>
-          data.count >= 2
-      )
-      .sort(
-        (a, b) =>
-          b.total - a.total
-      )
-      .slice(0, 6)
-      .map((data) => ({
-        vendor: data.name,
-        count: data.count,
-        total: data.total,
-        monthlyEstimate:
-          data.total /
-          data.count,
-      }))
-const largestExpense =
-  expenses.length > 0
-    ? [...expenses].sort(
-        (a: any, b: any) =>
-          toNumber(b.amount) - toNumber(a.amount)
-      )[0]
+      .trim()
+      .toLowerCase()
+
+    return (
+      item.recurring === true ||
+      item.isRecurring === true ||
+      item.repeat === true ||
+      frequency === 'monatlich' ||
+      frequency === 'monthly' ||
+      frequency === 'wöchentlich' ||
+      frequency === 'weekly' ||
+      frequency === 'jährlich' ||
+      frequency === 'yearly'
+    )
+  }
+
+  const repeatedExpenseGroups = Object.values(vendorGroups)
+    .filter((data) => data.count >= 2)
+    .map((data) => ({
+      type: 'expense',
+      title: data.name,
+      partner: data.name,
+      count: data.count,
+      total: data.total,
+      amount: data.total / data.count,
+      frequency: 'aus mehreren Buchungen erkannt',
+      source: 'pattern',
+    }))
+
+  const explicitlyRecurringExpenses = expenses
+    .filter(hasRecurringMarker)
+    .map((expense: any) => ({
+      type: 'expense',
+      title:
+        expense.title ||
+        expense.vendor ||
+        'Regelmäßige Ausgabe',
+      partner:
+        expense.vendor ||
+        expense.partner ||
+        '',
+      count: 1,
+      total: toNumber(expense.amount),
+      amount: toNumber(expense.amount),
+      frequency:
+        expense.frequency ||
+        expense.interval ||
+        expense.recurrence ||
+        'regelmäßig',
+      source: 'explicit',
+    }))
+
+  const explicitlyRecurringObligations = obligations
+    .filter(hasRecurringMarker)
+    .map((obligation: any) => ({
+      type: 'obligation',
+      title:
+        obligation.title ||
+        'Regelmäßige Verpflichtung',
+      partner:
+        obligation.partner ||
+        obligation.creditor ||
+        '',
+      count: 1,
+      total: toNumber(obligation.amount),
+      amount: toNumber(obligation.amount),
+      frequency:
+        obligation.frequency ||
+        obligation.interval ||
+        obligation.recurrence ||
+        'regelmäßig',
+      source: 'explicit',
+    }))
+
+  const recurringMap = new Map<string, any>()
+
+  ;[
+    ...repeatedExpenseGroups,
+    ...explicitlyRecurringExpenses,
+    ...explicitlyRecurringObligations,
+  ].forEach((entry) => {
+    const key = [
+      entry.type,
+      String(entry.title || '').toLowerCase(),
+      String(entry.partner || '').toLowerCase(),
+      toNumber(entry.amount),
+    ].join('|')
+
+    if (!recurringMap.has(key)) {
+      recurringMap.set(key, entry)
+    }
+  })
+
+  const recurring = Array.from(recurringMap.values())
+    .sort(
+      (a, b) =>
+        toNumber(b.total) -
+        toNumber(a.total)
+    )
+    .slice(0, 8)
+
+  const largestExpenseEntry =
+    expenses.length > 0
+      ? [...expenses].sort(
+          (a: any, b: any) =>
+            toNumber(b.amount) -
+            toNumber(a.amount)
+        )[0]
+      : null
+
+  const largestIncomeEntry =
+    incomes.length > 0
+      ? [...incomes].sort(
+          (a: any, b: any) =>
+            toNumber(b.amount) -
+            toNumber(a.amount)
+        )[0]
+      : null
+
+  const largestExpense = largestExpenseEntry
+    ? compactEntry(largestExpenseEntry)
     : null
+
+  const largestIncome = largestIncomeEntry
+    ? compactEntry(largestIncomeEntry)
+    : null
+
+  const averageExpense =
+    expenses.length > 0
+      ? expenseTotal / expenses.length
+      : 0
+
+  const unusualExpenses =
+    expenses.length >= 3 && averageExpense > 0
+      ? expenses
+          .filter(
+            (expense: any) =>
+              toNumber(expense.amount) >=
+              averageExpense * 2
+          )
+          .map(compactEntry)
+          .sort(
+            (a, b) =>
+              b.amount - a.amount
+          )
+          .slice(0, 5)
+      : []
   return {
     user: {
       name:
@@ -448,18 +575,18 @@ const largestExpense =
         obligations.length,
     },
 
-    topCategories,
-recurring,
+        topCategories,
+    recurring,
 
-insights: {
-  largestExpense: largestExpense
-    ? {
-        title: largestExpense.title,
-        amount: largestExpense.amount,
-        category: largestExpense.category,
-      }
-    : null,
-},
+    insights: {
+      largestExpense,
+      largestIncome,
+      unusualExpenses,
+      averageExpense,
+      dataIsLimited:
+        expenses.length < 3 ||
+        incomes.length < 2,
+    },
 
 obligations: {
       openCount:
