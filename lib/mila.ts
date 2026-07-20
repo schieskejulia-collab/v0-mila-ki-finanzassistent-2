@@ -444,16 +444,7 @@ function buildFinancialContext(
 
     topCategories,
     recurring,
-insights: {
-  largestExpense,
-  largestIncome,
-  unusualExpenses,
-  overdueIncome,
-  overdueObligations,
-  upcomingThisWeek,
-  recurringSubscriptions,
-  spendingTrend,
-},
+
     obligations: {
       openCount:
         openObligations.length,
@@ -473,9 +464,6 @@ insights: {
     milaFeedback:
       contextData?.milaFeedback ||
       '',
-financeScore:
-  Number(contextData?.financeScore ?? 0),
-  }
 }
 
 async function callGroqChat(messages: ChatMessage[]) {
