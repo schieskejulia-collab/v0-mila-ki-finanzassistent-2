@@ -452,8 +452,8 @@ insights: {
     overdueObligations,
     upcomingThisWeek,
     recurringSubscriptions,
-    spendingTrend
-}
+    spendingTrend,
+},
     obligations: {
       openCount:
         openObligations.length,
