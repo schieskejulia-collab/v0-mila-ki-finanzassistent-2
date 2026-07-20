@@ -679,7 +679,12 @@ Wenn nach dem Finanzscore gefragt wird:
 - Erfinde keine Bestandteile der Score-Berechnung.
 
 FINANZKONTEXT
-
+Finanzscore:
+${
+  context.financeScore > 0
+    ? `${context.financeScore}/100`
+    : 'nicht verfügbar'
+}
 Einnahmen:
 ${money(context.totals.incomeTotal)}
 
