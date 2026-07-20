@@ -240,12 +240,13 @@ function getMood(input: any) {
 
   if (Number(balance || 0) > 0 && availableAfterObligations >= 0 && financeScore >= 70) {
     return {
-      label: 'Heute ruhig',
-      message: 'Deine finanzielle Lage wirkt stabil. Aktuell gibt es nichts Dringendes.',
-      color: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-      dot: 'bg-emerald-500',
-      emoji: '🟢',
-    }
+  label: 'Heute entspannt',
+  message:
+    '🌸 Heute besteht kein akuter Handlungsbedarf. Deine Finanzen wirken aktuell stabil.',
+  color: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  dot: 'bg-emerald-500',
+  emoji: '🟢',
+}
   }
 
   if (Number(balance || 0) < 0 || availableAfterObligations < 0) {
@@ -298,8 +299,10 @@ function getTodayTask(input: any) {
     const dueText = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`
 
     return {
-      title: item.title || 'Nächste Verpflichtung prüfen',
-      message: `${formatEuro(Number(item.amount || 0))} werden ${dueText} fällig.`,
+      title: item.title || 'Nächste Zahlung',
+      message: `Rate über ${formatEuro(
+  Number(item.amount || 0)
+)} wird ${dueText} fällig.`
       href: '/verpflichtungen',
       tone: 'warning' as const,
     }
@@ -316,8 +319,10 @@ function getTodayTask(input: any) {
 
   if (taxReserve > 0) {
     return {
-      title: 'Steuer-Rücklage einplanen',
-      message: `Plane ${formatEuro(taxReserve)} als Rücklage ein.`,
+      title: 'Heute etwas zurücklegen',
+      message: `Lege heute ${formatEuro(
+  taxReserve
+)} für deine Steuer zurück.`
       href: '/finanzen',
       tone: 'good' as const,
     }
