@@ -464,6 +464,8 @@ function buildFinancialContext(
     milaFeedback:
       contextData?.milaFeedback ||
       '',
+financeScore:
+  Number(contextData?.financeScore ?? 0),
   }
 }
 
