@@ -319,13 +319,13 @@ function getTodayTask(input: any) {
 
   if (taxReserve > 0) {
     return {
-      title: 'Heute etwas zurücklegen',
-      message: `Lege heute ${formatEuro(
-  taxReserve
-)} für deine Steuer zurück.`
-      href: '/finanzen',
-      tone: 'good' as const,
-    }
+  title: 'Heute etwas zurücklegen',
+  message: `Lege heute ${formatEuro(
+    taxReserve
+  )} für deine Steuer zurück.`,
+  href: '/finanzen',
+  tone: 'good' as const,
+}
   }
 
   return null
