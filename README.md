@@ -1,5 +1,20 @@
+<p align="center">
+  <img src="./F435FD05-3B0C-4B1D-9466-2FE6A74A2453.png" alt="Mila 4.0" width="100%">
+</p>
+
+# 🌸 Mila 4.0
+
+**Dein persönlicher KI-Finanzcoach**
+
+Mila hilft dabei,
+- 💜 Finanzen zu verstehen
+- 📅 Verpflichtungen im Blick zu behalten
+- 📈 Cashflow zu analysieren
+- 🤖 KI-gestützte Empfehlungen zu erhalten
+- 🎯 bessere finanzielle Entscheidungen zu treffen
+
+---
 # 🌸 Mila – Dein persönlicher KI-Finanzcoach
-![Mila Banner](images/mila-banner.png)
 > **Ein persönlicher KI-Finanzcoach, der Zahlen in verständliche Entscheidungen verwandelt.**
 
 Mila unterstützt dich dabei, deine Finanzen einfach zu organisieren, Verpflichtungen im Blick zu behalten und bessere finanzielle Entscheidungen zu treffen.
