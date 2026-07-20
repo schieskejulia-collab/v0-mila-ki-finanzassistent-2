@@ -406,7 +406,13 @@ function buildFinancialContext(
           data.total /
           data.count,
       }))
-
+const largestExpense =
+  expenses.length > 0
+    ? [...expenses].sort(
+        (a: any, b: any) =>
+          toNumber(b.amount) - toNumber(a.amount)
+      )[0]
+    : null
   return {
     user: {
       name:
@@ -443,9 +449,19 @@ function buildFinancialContext(
     },
 
     topCategories,
-    recurring,
+recurring,
 
-    obligations: {
+insights: {
+  largestExpense: largestExpense
+    ? {
+        title: largestExpense.title,
+        amount: largestExpense.amount,
+        category: largestExpense.category,
+      }
+    : null,
+},
+
+obligations: {
       openCount:
         openObligations.length,
       openTotal:
