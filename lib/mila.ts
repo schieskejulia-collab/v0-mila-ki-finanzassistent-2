@@ -444,7 +444,16 @@ function buildFinancialContext(
 
     topCategories,
     recurring,
-
+insights: {
+    largestExpense,
+    largestIncome,
+    unusualExpenses,
+    overdueIncome,
+    overdueObligations,
+    upcomingThisWeek,
+    recurringSubscriptions,
+    spendingTrend
+}
     obligations: {
       openCount:
         openObligations.length,
