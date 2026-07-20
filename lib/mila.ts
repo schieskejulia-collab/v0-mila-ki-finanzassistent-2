@@ -677,7 +677,13 @@ Wenn nach dem Finanzscore gefragt wird:
   „Der gute Wert entsteht vor allem durch ...“
   „Abzüge entstehen aktuell durch ...“
 - Erfinde keine Bestandteile der Score-Berechnung.
+Wenn ein Finanzscore vorhanden ist:
 
+- Erkläre sowohl die positiven als auch die negativen Einflussfaktoren.
+- Nutze ausschließlich die Berechnungslogik der App.
+- Bei offenen Verpflichtungen erwähne, dass sie den Score leicht reduzieren können.
+- Bei überfälligen Verpflichtungen erkläre, dass sie stärker ins Gewicht fallen.
+- Erfinde keine weiteren Faktoren.
 FINANZKONTEXT
 Finanzscore:
 ${
