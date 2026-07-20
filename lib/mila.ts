@@ -524,7 +524,222 @@ function buildFinancialContext(
     expenses.length > 0
       ? expenseTotal / expenses.length
       : 0
+  const parseEntryDate = (entry: any) => {
+    const rawDate =
+      entry?.date ||
+      entry?.createdAt ||
+      entry?.created_at ||
+      ''
 
+    if (!rawDate) return null
+
+    const parsedDate = new Date(rawDate)
+
+    return Number.isNaN(parsedDate.getTime())
+      ? null
+      : parsedDate
+  }
+
+  const now = new Date()
+
+  const currentMonthStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  )
+
+  const nextMonthStart = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    1
+  )
+
+  const previousMonthStart = new Date(
+    now.getFullYear(),
+    now.getMonth() - 1,
+    1
+  )
+
+  const isInsidePeriod = (
+    entry: any,
+    start: Date,
+    end: Date
+  ) => {
+    const date = parseEntryDate(entry)
+
+    return Boolean(
+      date &&
+        date >= start &&
+        date < end
+    )
+  }
+
+  const currentMonthExpenses =
+    expenses.filter((expense: any) =>
+      isInsidePeriod(
+        expense,
+        currentMonthStart,
+        nextMonthStart
+      )
+    )
+
+  const previousMonthExpenses =
+    expenses.filter((expense: any) =>
+      isInsidePeriod(
+        expense,
+        previousMonthStart,
+        currentMonthStart
+      )
+    )
+
+  const currentMonthIncomes =
+    incomes.filter((income: any) =>
+      isInsidePeriod(
+        income,
+        currentMonthStart,
+        nextMonthStart
+      )
+    )
+
+  const previousMonthIncomes =
+    incomes.filter((income: any) =>
+      isInsidePeriod(
+        income,
+        previousMonthStart,
+        currentMonthStart
+      )
+    )
+
+  const sumEntries = (entries: any[]) =>
+    entries.reduce(
+      (sum, entry) =>
+        sum + toNumber(entry.amount),
+      0
+    )
+
+  const currentMonthExpenseTotal =
+    sumEntries(currentMonthExpenses)
+
+  const previousMonthExpenseTotal =
+    sumEntries(previousMonthExpenses)
+
+  const currentMonthIncomeTotal =
+    sumEntries(currentMonthIncomes)
+
+  const previousMonthIncomeTotal =
+    sumEntries(previousMonthIncomes)
+
+  const calculatePercentageChange = (
+    currentValue: number,
+    previousValue: number
+  ) => {
+    if (previousValue === 0) {
+      return currentValue === 0
+        ? 0
+        : null
+    }
+
+    return (
+      ((currentValue - previousValue) /
+        previousValue) *
+      100
+    )
+  }
+
+  const expenseChangePercent =
+    calculatePercentageChange(
+      currentMonthExpenseTotal,
+      previousMonthExpenseTotal
+    )
+
+  const incomeChangePercent =
+    calculatePercentageChange(
+      currentMonthIncomeTotal,
+      previousMonthIncomeTotal
+    )
+
+  const buildCategoryTotals = (
+    entries: any[]
+  ) => {
+    const totals: Record<
+      string,
+      number
+    > = {}
+
+    entries.forEach((entry: any) => {
+      const category = String(
+        entry.category ||
+          getEntryCategory(entry) ||
+          'Sonstiges'
+      )
+
+      totals[category] =
+        (totals[category] || 0) +
+        toNumber(entry.amount)
+    })
+
+    return totals
+  }
+
+  const currentCategoryTotals =
+    buildCategoryTotals(
+      currentMonthExpenses
+    )
+
+  const previousCategoryTotals =
+    buildCategoryTotals(
+      previousMonthExpenses
+    )
+
+  const categoryNames =
+    Array.from(
+      new Set([
+        ...Object.keys(
+          currentCategoryTotals
+        ),
+        ...Object.keys(
+          previousCategoryTotals
+        ),
+      ])
+    )
+
+  const categoryChanges = categoryNames
+    .map((category) => {
+      const current =
+        currentCategoryTotals[
+          category
+        ] || 0
+
+      const previous =
+        previousCategoryTotals[
+          category
+        ] || 0
+
+      return {
+        category,
+        current,
+        previous,
+        difference:
+          current - previous,
+        percentage:
+          calculatePercentageChange(
+            current,
+            previous
+          ),
+      }
+    })
+    .sort(
+      (a, b) =>
+        Math.abs(b.difference) -
+        Math.abs(a.difference)
+    )
+    .slice(0, 6)
+
+  const hasMonthlyComparisonData =
+    currentMonthExpenses.length > 0 ||
+    previousMonthExpenses.length > 0 ||
+    currentMonthIncomes.length > 0 ||
+    previousMonthIncomes.length > 0
   const unusualExpenses =
     expenses.length >= 3 && averageExpense > 0
       ? expenses
@@ -578,14 +793,52 @@ function buildFinancialContext(
         topCategories,
     recurring,
 
-    insights: {
+        insights: {
       largestExpense,
       largestIncome,
       unusualExpenses,
       averageExpense,
+
       dataIsLimited:
         expenses.length < 3 ||
         incomes.length < 2,
+
+      monthlyComparison: {
+        hasData:
+          hasMonthlyComparisonData,
+
+        currentMonth: {
+          expenseTotal:
+            currentMonthExpenseTotal,
+
+          incomeTotal:
+            currentMonthIncomeTotal,
+
+          expenseCount:
+            currentMonthExpenses.length,
+
+          incomeCount:
+            currentMonthIncomes.length,
+        },
+
+        previousMonth: {
+          expenseTotal:
+            previousMonthExpenseTotal,
+
+          incomeTotal:
+            previousMonthIncomeTotal,
+
+          expenseCount:
+            previousMonthExpenses.length,
+
+          incomeCount:
+            previousMonthIncomes.length,
+        },
+
+        expenseChangePercent,
+        incomeChangePercent,
+        categoryChanges,
+      },
     },
 
 obligations: {
@@ -772,6 +1025,59 @@ export async function getMilaChatResponse(
       : context.counts.expenses < 3
         ? 'zu wenige Ausgaben für eine verlässliche Ausreißeranalyse'
         : 'keine auffälligen Ausgaben erkannt'
+  const monthlyComparison =
+    context.insights
+      .monthlyComparison
+
+  const formatPercentage = (
+    value: number | null
+  ) => {
+    if (value === null) {
+      return 'nicht sinnvoll berechenbar, weil im Vormonat kein Vergleichswert vorhanden ist'
+    }
+
+    const rounded =
+      Math.round(value * 10) / 10
+
+    if (rounded === 0) {
+      return 'unverändert'
+    }
+
+    return rounded > 0
+      ? `um ${rounded.toLocaleString(
+          'de-DE'
+        )} % gestiegen`
+      : `um ${Math.abs(
+          rounded
+        ).toLocaleString(
+          'de-DE'
+        )} % gesunken`
+  }
+
+  const categoryComparisonText =
+    monthlyComparison.categoryChanges
+      .length > 0
+      ? monthlyComparison.categoryChanges
+          .map((item: any) => {
+            const direction =
+              item.difference > 0
+                ? 'mehr'
+                : item.difference < 0
+                  ? 'weniger'
+                  : 'unverändert'
+
+            return `${item.category}: aktuell ${money(
+              item.current
+            )}, zuvor ${money(
+              item.previous
+            )}, ${direction} um ${money(
+              Math.abs(
+                item.difference
+              )
+            )}`
+          })
+          .join(' | ')
+      : 'keine Kategorien mit ausreichenden Vergleichsdaten'
   const messages: ChatMessage[] = [
     {
       role: 'system',
@@ -982,6 +1288,51 @@ REGELN FÜR ANALYSEFRAGEN
 - Bei weniger als drei Ausgaben darfst du keine belastbare Ausreißer- oder Trendanalyse behaupten.
 - Eine größte Ausgabe ist nicht automatisch ungewöhnlich oder problematisch.
 - Beurteile eine Ausgabe nicht als gut, schlecht oder unnötig, wenn dafür keine ausreichenden Daten vorliegen.
+MONATSVERGLEICH
+
+Aktueller Monat – Einnahmen:
+${money(
+  monthlyComparison.currentMonth.incomeTotal
+)}
+
+Aktueller Monat – Ausgaben:
+${money(
+  monthlyComparison.currentMonth.expenseTotal
+)}
+
+Vormonat – Einnahmen:
+${money(
+  monthlyComparison.previousMonth.incomeTotal
+)}
+
+Vormonat – Ausgaben:
+${money(
+  monthlyComparison.previousMonth.expenseTotal
+)}
+
+Veränderung der Einnahmen:
+${formatPercentage(
+  monthlyComparison.incomeChangePercent
+)}
+
+Veränderung der Ausgaben:
+${formatPercentage(
+  monthlyComparison.expenseChangePercent
+)}
+
+Kategorievergleich:
+${categoryComparisonText}
+
+REGELN FÜR MONATSVERGLEICHE
+
+- Nutze bei Fragen nach diesem Monat oder dem Vormonat ausschließlich die Werte aus dem Abschnitt „MONATSVERGLEICH“.
+- Erfinde keine Trends aus den Gesamtsummen.
+- Eine prozentuale Veränderung darf nur genannt werden, wenn sie berechnet werden konnte.
+- Wenn im Vormonat der Vergleichswert 0 war, nenne stattdessen die absoluten Beträge.
+- Unterscheide klar zwischen Einnahmen und Ausgaben.
+- Sage nicht pauschal, dass sich die finanzielle Lage verbessert oder verschlechtert hat, wenn nur sehr wenige Buchungen vorhanden sind.
+- Bei wenigen Daten formuliere: „Der Vergleich zeigt die erfassten Buchungen, ist aber noch kein stabiler langfristiger Trend.“
+- Eine Kategorie gilt nicht automatisch als problematisch, nur weil sie gestiegen ist.
 ZIEL
 
 Die Person soll:
