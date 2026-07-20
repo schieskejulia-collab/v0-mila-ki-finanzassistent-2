@@ -1,5 +1,5 @@
 # 🌸 Mila – Dein persönlicher KI-Finanzcoach
-
+![Mila Banner](images/mila-banner.png)
 > **Ein persönlicher KI-Finanzcoach, der Zahlen in verständliche Entscheidungen verwandelt.**
 
 Mila unterstützt dich dabei, deine Finanzen einfach zu organisieren, Verpflichtungen im Blick zu behalten und bessere finanzielle Entscheidungen zu treffen.
