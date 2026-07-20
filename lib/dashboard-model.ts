@@ -299,13 +299,13 @@ function getTodayTask(input: any) {
     const dueText = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`
 
     return {
-      title: item.title || 'Nächste Zahlung',
-      message: `Rate über ${formatEuro(
-  Number(item.amount || 0)
-)} wird ${dueText} fällig.`
-      href: '/verpflichtungen',
-      tone: 'warning' as const,
-    }
+  title: 'Nächste Zahlung',
+  message: `Rate über ${formatEuro(
+    Number(item.amount || 0)
+  )} wird ${dueText} fällig.`,
+  href: '/verpflichtungen',
+  tone: 'warning' as const,
+}
   }
 
   if (openCount > 0) {
