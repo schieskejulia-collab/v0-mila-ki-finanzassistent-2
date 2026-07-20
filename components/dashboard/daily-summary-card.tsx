@@ -4,20 +4,17 @@ export function DailySummaryCard({ model }: { model: any }) {
   const next = model.nextObligation
   const days = next ? daysUntil(next.dueDate || next.due_date) : null
 
-  const nextText = next
-    ? days === 0
-      ? `Heute wird „${next.title || 'eine Zahlung'}“ über ${formatEuro(next.amount)} fällig.`
-      : days === 1
-        ? `Morgen wird „${next.title || 'eine Zahlung'}“ über ${formatEuro(next.amount)} fällig.`
-        : `In ${days} Tagen wird „${next.title || 'eine Zahlung'}“ über ${formatEuro(next.amount)} fällig.`
-    : 'Aktuell ist keine fällige Verpflichtung eingetragen.'
+  let nextText = 'Aktuell steht keine Verpflichtung an.'
 
-  const actionText =
-    model.buckets.overdue.length > 0
-      ? 'Heute solltest du die älteste überfällige Zahlung prüfen.'
-      : model.milaMood.label === 'Heute ruhig'
-        ? 'Heute besteht kein akuter Handlungsbedarf.'
-        : model.milaMood.message
+  if (next) {
+    if (days === 0) {
+      nextText = `Heute wird ${formatEuro(next.amount)} fällig.`
+    } else if (days === 1) {
+      nextText = `Morgen werden ${formatEuro(next.amount)} fällig.`
+    } else {
+      nextText = `In ${days} Tagen werden ${formatEuro(next.amount)} fällig.`
+    }
+  }
 
   return (
     <section className="rounded-[2rem] border border-violet-100 bg-white p-6 shadow-sm">
@@ -32,17 +29,29 @@ export function DailySummaryCard({ model }: { model: any }) {
 
       <div className="mt-6 rounded-3xl bg-violet-50 p-5">
         <p className="text-sm font-black text-violet-700">
-          {model.milaMood.emoji} Mila fasst zusammen
+          💜 Mila fasst zusammen
         </p>
 
-        <p className="mt-3 text-base font-bold leading-relaxed text-slate-800">
-          Nach offenen Verpflichtungen und Rücklage sind voraussichtlich{' '}
-          {formatEuro(model.availableAfterReserve)} frei verfügbar.
+        <p className="mt-4 text-base leading-relaxed font-semibold text-slate-700">
+          Nach allen offenen Verpflichtungen und deiner empfohlenen Rücklage
+          kannst du aktuell
         </p>
 
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          {nextText} {actionText}
+        <p className="mt-4 text-4xl font-black text-slate-950">
+          {formatEuro(model.availableAfterReserve)}
         </p>
+
+        <p className="mt-4 text-sm leading-relaxed text-slate-600">
+          {nextText}
+        </p>
+
+        <div className="mt-5 rounded-2xl bg-white p-4">
+          <p className="text-sm font-semibold text-slate-700">
+            {model.milaMood.label === 'Heute ruhig'
+              ? '🌸 Heute besteht kein akuter Handlungsbedarf.'
+              : model.milaMood.message}
+          </p>
+        </div>
       </div>
     </section>
   )
