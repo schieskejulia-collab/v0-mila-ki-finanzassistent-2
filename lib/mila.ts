@@ -1815,18 +1815,38 @@ const nextObligation =
   context.obligations.upcoming[0]
 
 if (nextObligation) {
+  let advice =
+    'Behalte sie im Blick.'
+
+  if (
+    nextObligation.dueState ===
+    'überfällig'
+  ) {
+    advice =
+      'Sie sollte möglichst zeitnah geprüft werden.'
+  } else if (
+    nextObligation.dueState ===
+    'heute'
+  ) {
+    advice =
+      'Sie sollte heute eingeplant werden.'
+  } else if (
+    nextObligation.dueState ===
+    'bald'
+  ) {
+    advice =
+      'Plane sie für die nächsten Tage ein.'
+  }
+
   suggestions.push(
-    `💡 Nebenbei: ${
+    `💡 ${
       nextObligation.title ||
       'Eine Verpflichtung'
     } über ${money(
       Number(
         nextObligation.amount || 0
       )
-    )} ist am ${
-      nextObligation.dueDate ||
-      'eingetragenen Termin'
-    } fällig. Im Moment reicht es, sie im Blick zu behalten.`
+    )} (${nextObligation.dueDate || 'ohne Datum'}). ${advice}`
   )
 }
 
