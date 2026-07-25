@@ -313,12 +313,35 @@ const getDueState = (
           item.priority ||
           'normal',
 
-        status:
-          item.status ||
-          'offen',
-      }))
-dueState:
-  getDueState(item),
+              status:
+        item.status ||
+        'offen',
+
+      dueState:
+        getDueState(item),
+    }))
+
+  const overdueObligations =
+    openObligations.filter(
+      (item: any) =>
+        getDueState(item) ===
+        'überfällig'
+    )
+
+  const dueTodayObligations =
+    openObligations.filter(
+      (item: any) =>
+        getDueState(item) ===
+        'heute'
+    )
+
+  const dueSoonObligations =
+    openObligations.filter(
+      (item: any) =>
+        getDueState(item) ===
+        'bald'
+    )
+
   const openObligationTotal =
     openObligations.reduce(
       (sum, item: any) =>
