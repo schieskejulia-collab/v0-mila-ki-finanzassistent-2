@@ -317,7 +317,8 @@ const getDueState = (
           item.status ||
           'offen',
       }))
-
+dueState:
+  getDueState(item),
   const openObligationTotal =
     openObligations.reduce(
       (sum, item: any) =>
