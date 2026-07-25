@@ -944,13 +944,24 @@ const getDueState = (
     },
 
 obligations: {
-      openCount:
-        openObligations.length,
-      openTotal:
-        openObligationTotal,
-      upcoming:
-        upcomingObligations,
-    },
+  openCount:
+    openObligations.length,
+
+  openTotal:
+    openObligationTotal,
+
+  overdueCount:
+    overdueObligations.length,
+
+  dueTodayCount:
+    dueTodayObligations.length,
+
+  dueSoonCount:
+    dueSoonObligations.length,
+
+  upcoming:
+    upcomingObligations,
+},
 
     recentIncomes,
     recentExpenses,
