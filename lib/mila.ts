@@ -1317,11 +1317,27 @@ Berechnungslogik:
             item.dueDate ||
             'ohne eingetragenes Datum'
 
-          return `${title}${partner}, ${money(
-            Number(item.amount || 0)
-          )}, fällig ${dueDate}, Priorität ${
-            item.priority || 'normal'
-          }`
+          const dueStateLabels: Record<
+  string,
+  string
+> = {
+  überfällig: 'überfällig',
+  heute: 'heute fällig',
+  bald: 'innerhalb der nächsten 7 Tage fällig',
+  später: 'später fällig',
+  ohne_datum: 'ohne gültiges Fälligkeitsdatum',
+}
+
+const dueState =
+  dueStateLabels[
+    String(item.dueState || '')
+  ] || 'Fälligkeit nicht eingeordnet'
+
+return `${title}${partner}, ${money(
+  Number(item.amount || 0)
+)}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
+  item.priority || 'normal'
+}`
         })
         .join(' | ') ||
       'keine offenen Verpflichtungen'
