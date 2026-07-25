@@ -1297,75 +1297,79 @@ Berechnungslogik:
   }
 
   if (
-    intent.wantsObligations ||
-    intent.wantsOverview ||
-    intent.wantsRisk
-  ) {
+  intent.wantsObligations ||
+  intent.wantsOverview ||
+  intent.wantsRisk
+) {
   const obligationsText =
-  context.obligations.upcoming
-    .map((item: any) => {
-      const title =
-        item.title ||
-        'Verpflichtung'
+    context.obligations.upcoming
+      .map((item: any) => {
+        const title =
+          item.title ||
+          'Verpflichtung'
 
-      const partner =
-        item.partner
-          ? ` bei ${item.partner}`
-          : ''
+        const partner =
+          item.partner
+            ? ` bei ${item.partner}`
+            : ''
 
-      const dueDate =
-        item.dueDate ||
-        'ohne eingetragenes Datum'
+        const dueDate =
+          item.dueDate ||
+          'ohne eingetragenes Datum'
 
-      const dueStateLabels: Record<
-        string,
-        string
-      > = {
-        überfällig:
-          'überfällig',
-        heute:
-          'heute fällig',
-        bald:
-          'innerhalb der nächsten 7 Tage fällig',
-        später:
-          'später fällig',
-        ohne_datum:
-          'ohne gültiges Fälligkeitsdatum',
-      }
+        const dueStateLabels: Record<
+          string,
+          string
+        > = {
+          überfällig:
+            'überfällig',
 
-      const dueState =
-        dueStateLabels[
-          String(
-            item.dueState || ''
-          )
-        ] ||
-        'Fälligkeit nicht eingeordnet'
+          heute:
+            'heute fällig',
 
-      return `${title}${partner}, ${money(
-        Number(item.amount || 0)
-      )}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
-        item.priority || 'normal'
-      }`
-    })
-    .join(' | ') ||
-  'keine offenen Verpflichtungen'
+          bald:
+            'innerhalb der nächsten 7 Tage fällig',
 
-blocks.push(`
+          später:
+            'später fällig',
+
+          ohne_datum:
+            'ohne gültiges Fälligkeitsdatum',
+        }
+
+        const dueState =
+          dueStateLabels[
+            String(
+              item.dueState || ''
+            )
+          ] ||
+          'Fälligkeit nicht eingeordnet'
+
+        return `${title}${partner}, ${money(
+          Number(item.amount || 0)
+        )}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
+          item.priority || 'normal'
+        }`
+      })
+      .join(' | ') ||
+    'keine offenen Verpflichtungen'
+
+  blocks.push(`
 VERPFLICHTUNGEN
 Überfällig: ${
-  context.obligations.overdueCount
-}
+    context.obligations.overdueCount
+  }
 Heute fällig: ${
-  context.obligations.dueTodayCount
-}
+    context.obligations.dueTodayCount
+  }
 Innerhalb der nächsten 7 Tage: ${
-  context.obligations.dueSoonCount
-}
+    context.obligations.dueSoonCount
+  }
 
 Einträge:
 ${obligationsText}
-    `.trim())
-
+  `.trim())
+}
   if (
     intent.wantsExpenses ||
     intent.wantsOverview
