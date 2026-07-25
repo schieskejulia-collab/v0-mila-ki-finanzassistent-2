@@ -1328,6 +1328,17 @@ Berechnungslogik:
 
     blocks.push(`
 VERPFLICHTUNGEN
+Überfällig: ${
+  context.obligations.overdueCount
+}
+Heute fällig: ${
+  context.obligations.dueTodayCount
+}
+Innerhalb der nächsten 7 Tage: ${
+  context.obligations.dueSoonCount
+}
+
+Einträge:
 ${obligationsText}
     `.trim())
   }
