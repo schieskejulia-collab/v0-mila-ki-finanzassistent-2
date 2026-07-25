@@ -1301,48 +1301,56 @@ Berechnungslogik:
     intent.wantsOverview ||
     intent.wantsRisk
   ) {
-    const obligationsText =
-      context.obligations.upcoming
-        .map((item: any) => {
-          const title =
-            item.title ||
-            'Verpflichtung'
+  const obligationsText =
+  context.obligations.upcoming
+    .map((item: any) => {
+      const title =
+        item.title ||
+        'Verpflichtung'
 
-          const partner =
-            item.partner
-              ? ` bei ${item.partner}`
-              : ''
+      const partner =
+        item.partner
+          ? ` bei ${item.partner}`
+          : ''
 
-          const dueDate =
-            item.dueDate ||
-            'ohne eingetragenes Datum'
+      const dueDate =
+        item.dueDate ||
+        'ohne eingetragenes Datum'
 
-          const dueStateLabels: Record<
-  string,
-  string
-> = {
-  überfällig: 'überfällig',
-  heute: 'heute fällig',
-  bald: 'innerhalb der nächsten 7 Tage fällig',
-  später: 'später fällig',
-  ohne_datum: 'ohne gültiges Fälligkeitsdatum',
-}
+      const dueStateLabels: Record<
+        string,
+        string
+      > = {
+        überfällig:
+          'überfällig',
+        heute:
+          'heute fällig',
+        bald:
+          'innerhalb der nächsten 7 Tage fällig',
+        später:
+          'später fällig',
+        ohne_datum:
+          'ohne gültiges Fälligkeitsdatum',
+      }
 
-const dueState =
-  dueStateLabels[
-    String(item.dueState || '')
-  ] || 'Fälligkeit nicht eingeordnet'
+      const dueState =
+        dueStateLabels[
+          String(
+            item.dueState || ''
+          )
+        ] ||
+        'Fälligkeit nicht eingeordnet'
 
-return `${title}${partner}, ${money(
-  Number(item.amount || 0)
-)}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
-  item.priority || 'normal'
-}`
-        })
-        .join(' | ') ||
-      'keine offenen Verpflichtungen'
+      return `${title}${partner}, ${money(
+        Number(item.amount || 0)
+      )}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
+        item.priority || 'normal'
+      }`
+    })
+    .join(' | ') ||
+  'keine offenen Verpflichtungen'
 
-    blocks.push(`
+blocks.push(`
 VERPFLICHTUNGEN
 Überfällig: ${
   context.obligations.overdueCount
@@ -1357,7 +1365,6 @@ Innerhalb der nächsten 7 Tage: ${
 Einträge:
 ${obligationsText}
     `.trim())
-  }
 
   if (
     intent.wantsExpenses ||
