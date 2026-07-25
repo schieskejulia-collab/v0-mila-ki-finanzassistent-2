@@ -154,26 +154,104 @@ function buildFinancialContext(
       }
     )
 
-  const getDueTime = (
-    item: any
-  ) => {
-    const value =
-      item?.dueDate ||
+  const parseDueDate = (
+  item: any
+): Date | null => {
+  const value = String(
+    item?.dueDate ||
       item?.due_date ||
       ''
+  ).trim()
 
-    if (!value) {
-      return Number.POSITIVE_INFINITY
-    }
-
-    const timestamp =
-      new Date(value).getTime()
-
-    return Number.isFinite(timestamp)
-      ? timestamp
-      : Number.POSITIVE_INFINITY
+  if (!value) {
+    return null
   }
 
+  /*
+   * YYYY-MM-DD bewusst als lokales Datum
+   * behandeln, damit keine Verschiebung
+   * durch Zeitzonen entsteht.
+   */
+  const localDateMatch = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
+  )
+
+  if (localDateMatch) {
+    const [, year, month, day] =
+      localDateMatch
+
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day)
+    )
+
+    date.setHours(0, 0, 0, 0)
+
+    return date
+  }
+
+  const parsedDate = new Date(value)
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return null
+  }
+
+  parsedDate.setHours(0, 0, 0, 0)
+
+  return parsedDate
+}
+
+const getDueTime = (
+  item: any
+) => {
+  const date = parseDueDate(item)
+
+  return date
+    ? date.getTime()
+    : Number.POSITIVE_INFINITY
+}
+
+const getDueState = (
+  item: any
+) => {
+  const dueDate = parseDueDate(item)
+
+  if (!dueDate) {
+    return 'ohne_datum'
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(
+    tomorrow.getDate() + 1
+  )
+
+  const nextWeek = new Date(today)
+  nextWeek.setDate(
+    nextWeek.getDate() + 8
+  )
+
+  if (dueDate < today) {
+    return 'überfällig'
+  }
+
+  if (dueDate < tomorrow) {
+    return 'heute'
+  }
+
+  if (dueDate < nextWeek) {
+    return 'bald'
+  }
+
+  return 'später'
+}
   const priorityWeight: Record<
     string,
     number
