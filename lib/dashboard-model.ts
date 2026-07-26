@@ -91,8 +91,10 @@ export function buildDashboardModel(data: any) {
   )
 
   const reserveRate =
-    taxProfile.reservePercent && taxProfile.reservePercent > 0
-      ? taxProfile.reservePercent / 100
+    taxProfile.reserveRateMax > 0
+      ? (taxProfile.reserveRateMin +
+          taxProfile.reserveRateMax) /
+        2
       : 0.125
 
   const taxReserve = estimatedTaxableProfit * reserveRate

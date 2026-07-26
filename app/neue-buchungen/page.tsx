@@ -272,11 +272,11 @@ const rememberedCategory =
   !rememberedMerchant &&
   Boolean(scannedData.needsConfirmation)
 
-    const alternatives = Array.isArray(
+    const alternatives: string[] = Array.isArray(
       scannedData.alternatives
     )
       ? Array.from(
-          new Set(
+          new Set<string>(
             scannedData.alternatives
               .map((item: unknown) =>
                 String(item || '').trim()
@@ -572,7 +572,13 @@ const rememberedCategory =
             category === INKASSO_LABEL
               ? 'inkasso'
               : detectCategory(category),
-          taxHint: taxStatus,
+          taxHint:
+            taxStatus === 'wahrscheinlich ja'
+              ? 'likely'
+              : taxStatus ===
+                  'wahrscheinlich nein / private Verpflichtung'
+                ? 'private'
+                : 'depends',
         })
       }
 

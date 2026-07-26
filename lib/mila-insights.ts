@@ -476,7 +476,7 @@ const obligationInsights = getObligationInsights(
 )
 
 obligationInsights.forEach((item) => {
-  if (item.severity === 'high') {
+  if (item.level === 'important') {
     urgent.push({
       id: item.id,
       title: item.title,
@@ -486,7 +486,7 @@ obligationInsights.forEach((item) => {
     return
   }
 
-  if (item.severity === 'medium') {
+  if (item.level === 'reminder') {
     important.push({
       id: item.id,
       title: item.title,
@@ -504,3 +504,4 @@ obligationInsights.forEach((item) => {
   })
 })
   return [...urgent, ...important, ...helpful].slice(0, 6)
+}

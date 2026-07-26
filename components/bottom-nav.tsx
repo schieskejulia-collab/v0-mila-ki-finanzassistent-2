@@ -38,6 +38,10 @@ const navItems = [
 export function BottomNav() {
   const pathname = usePathname()
 
+  if (pathname === '/login') {
+    return null
+  }
+
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3">
       <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between rounded-[2rem] border border-violet-100 bg-white/95 px-2 py-2 shadow-xl backdrop-blur">

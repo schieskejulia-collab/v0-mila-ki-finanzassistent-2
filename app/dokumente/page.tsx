@@ -42,6 +42,13 @@ export default function DokumentePage() {
             Scanne einen Beleg oder lade eine Rechnung hoch.
             Mila legt sie dann hier ab.
           </p>
+
+          <Link
+            href="/neue-buchungen"
+            className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white"
+          >
+            Beleg scannen oder hochladen
+          </Link>
         </section>
       )}
 

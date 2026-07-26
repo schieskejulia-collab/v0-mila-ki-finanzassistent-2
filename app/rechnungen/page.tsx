@@ -39,6 +39,10 @@ export default function RechnungenPage() {
 
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
+      <Link href="/buchungen" className="inline-flex text-sm font-bold text-slate-500">
+        ← Zurück zu Finanzen
+      </Link>
+
       <section className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-3xl font-black tracking-tight">Rechnungen</h1>

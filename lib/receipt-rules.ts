@@ -73,7 +73,7 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'War die Fahrzeugausgabe beruflich oder privat veranlasst?',
   },
   {
-    category: 'arbeitsmittel',
+    category: 'werkzeug',
     keywords: [
       'baumarkt',
       'werkzeug',
@@ -135,7 +135,7 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'War das eine private Gesundheitsausgabe oder besteht ein beruflicher Zusammenhang?',
   },
   {
-    category: 'buerobedarf',
+    category: 'material',
     keywords: [
       'druckerpapier',
       'druckerpatrone',
@@ -168,7 +168,7 @@ export const MILA_RECEIPT_RULES: MilaReceiptRule[] = [
       'Wird der Anschluss vollständig oder teilweise beruflich genutzt?',
   },
   {
-    category: 'versicherungen',
+    category: 'versicherung',
     keywords: [
       'haftpflicht',
       'unfallversicherung',
@@ -301,8 +301,8 @@ export function classifyReceipt(
     text.includes('vollstreckung')
   ) {
     return {
-      category: 'verpflichtung',
-      taxHint: 'nicht absetzbar / privat',
+      category: 'inkasso',
+      taxHint: 'private',
       confidence: 0.95,
       needsReview: false,
       source: 'category',
@@ -346,7 +346,7 @@ export function classifyReceipt(
       taxHint: learnedResult.taxHint,
       confidence: 0.7,
       needsReview:
-        learnedResult.taxHint !== 'yes',
+        learnedResult.taxHint !== 'likely',
       source: 'merchant',
     }
   }

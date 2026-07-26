@@ -154,104 +154,26 @@ function buildFinancialContext(
       }
     )
 
-  const parseDueDate = (
-  item: any
-): Date | null => {
-  const value = String(
-    item?.dueDate ||
+  const getDueTime = (
+    item: any
+  ) => {
+    const value =
+      item?.dueDate ||
       item?.due_date ||
       ''
-  ).trim()
 
-  if (!value) {
-    return null
+    if (!value) {
+      return Number.POSITIVE_INFINITY
+    }
+
+    const timestamp =
+      new Date(value).getTime()
+
+    return Number.isFinite(timestamp)
+      ? timestamp
+      : Number.POSITIVE_INFINITY
   }
 
-  /*
-   * YYYY-MM-DD bewusst als lokales Datum
-   * behandeln, damit keine Verschiebung
-   * durch Zeitzonen entsteht.
-   */
-  const localDateMatch = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})$/
-  )
-
-  if (localDateMatch) {
-    const [, year, month, day] =
-      localDateMatch
-
-    const date = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    )
-
-    date.setHours(0, 0, 0, 0)
-
-    return date
-  }
-
-  const parsedDate = new Date(value)
-
-  if (
-    Number.isNaN(
-      parsedDate.getTime()
-    )
-  ) {
-    return null
-  }
-
-  parsedDate.setHours(0, 0, 0, 0)
-
-  return parsedDate
-}
-
-const getDueTime = (
-  item: any
-) => {
-  const date = parseDueDate(item)
-
-  return date
-    ? date.getTime()
-    : Number.POSITIVE_INFINITY
-}
-
-const getDueState = (
-  item: any
-) => {
-  const dueDate = parseDueDate(item)
-
-  if (!dueDate) {
-    return 'ohne_datum'
-  }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(
-    tomorrow.getDate() + 1
-  )
-
-  const nextWeek = new Date(today)
-  nextWeek.setDate(
-    nextWeek.getDate() + 8
-  )
-
-  if (dueDate < today) {
-    return 'überfällig'
-  }
-
-  if (dueDate < tomorrow) {
-    return 'heute'
-  }
-
-  if (dueDate < nextWeek) {
-    return 'bald'
-  }
-
-  return 'später'
-}
   const priorityWeight: Record<
     string,
     number
@@ -313,34 +235,10 @@ const getDueState = (
           item.priority ||
           'normal',
 
-              status:
-        item.status ||
-        'offen',
-
-      dueState:
-        getDueState(item),
-    }))
-
-  const overdueObligations =
-    openObligations.filter(
-      (item: any) =>
-        getDueState(item) ===
-        'überfällig'
-    )
-
-  const dueTodayObligations =
-    openObligations.filter(
-      (item: any) =>
-        getDueState(item) ===
-        'heute'
-    )
-
-  const dueSoonObligations =
-    openObligations.filter(
-      (item: any) =>
-        getDueState(item) ===
-        'bald'
-    )
+        status:
+          item.status ||
+          'offen',
+      }))
 
   const openObligationTotal =
     openObligations.reduce(
@@ -944,24 +842,13 @@ const getDueState = (
     },
 
 obligations: {
-  openCount:
-    openObligations.length,
-
-  openTotal:
-    openObligationTotal,
-
-  overdueCount:
-    overdueObligations.length,
-
-  dueTodayCount:
-    dueTodayObligations.length,
-
-  dueSoonCount:
-    dueSoonObligations.length,
-
-  upcoming:
-    upcomingObligations,
-},
+      openCount:
+        openObligations.length,
+      openTotal:
+        openObligationTotal,
+      upcoming:
+        upcomingObligations,
+    },
 
     recentIncomes,
     recentExpenses,
@@ -1297,79 +1184,41 @@ Berechnungslogik:
   }
 
   if (
-  intent.wantsObligations ||
-  intent.wantsOverview ||
-  intent.wantsRisk
-) {
-  const obligationsText =
-    context.obligations.upcoming
-      .map((item: any) => {
-        const title =
-          item.title ||
-          'Verpflichtung'
+    intent.wantsObligations ||
+    intent.wantsOverview ||
+    intent.wantsRisk
+  ) {
+    const obligationsText =
+      context.obligations.upcoming
+        .map((item: any) => {
+          const title =
+            item.title ||
+            'Verpflichtung'
 
-        const partner =
-          item.partner
-            ? ` bei ${item.partner}`
-            : ''
+          const partner =
+            item.partner
+              ? ` bei ${item.partner}`
+              : ''
 
-        const dueDate =
-          item.dueDate ||
-          'ohne eingetragenes Datum'
+          const dueDate =
+            item.dueDate ||
+            'ohne eingetragenes Datum'
 
-        const dueStateLabels: Record<
-          string,
-          string
-        > = {
-          überfällig:
-            'überfällig',
+          return `${title}${partner}, ${money(
+            Number(item.amount || 0)
+          )}, fällig ${dueDate}, Priorität ${
+            item.priority || 'normal'
+          }`
+        })
+        .join(' | ') ||
+      'keine offenen Verpflichtungen'
 
-          heute:
-            'heute fällig',
-
-          bald:
-            'innerhalb der nächsten 7 Tage fällig',
-
-          später:
-            'später fällig',
-
-          ohne_datum:
-            'ohne gültiges Fälligkeitsdatum',
-        }
-
-        const dueState =
-          dueStateLabels[
-            String(
-              item.dueState || ''
-            )
-          ] ||
-          'Fälligkeit nicht eingeordnet'
-
-        return `${title}${partner}, ${money(
-          Number(item.amount || 0)
-        )}, Datum ${dueDate}, Status der Frist: ${dueState}, Priorität ${
-          item.priority || 'normal'
-        }`
-      })
-      .join(' | ') ||
-    'keine offenen Verpflichtungen'
-
-  blocks.push(`
+    blocks.push(`
 VERPFLICHTUNGEN
-Überfällig: ${
-    context.obligations.overdueCount
-  }
-Heute fällig: ${
-    context.obligations.dueTodayCount
-  }
-Innerhalb der nächsten 7 Tage: ${
-    context.obligations.dueSoonCount
+${obligationsText}
+    `.trim())
   }
 
-Einträge:
-${obligationsText}
-  `.trim())
-}
   if (
     intent.wantsExpenses ||
     intent.wantsOverview
@@ -1815,38 +1664,18 @@ const nextObligation =
   context.obligations.upcoming[0]
 
 if (nextObligation) {
-  let advice =
-    'Behalte sie im Blick.'
-
-  if (
-    nextObligation.dueState ===
-    'überfällig'
-  ) {
-    advice =
-      'Sie sollte möglichst zeitnah geprüft werden.'
-  } else if (
-    nextObligation.dueState ===
-    'heute'
-  ) {
-    advice =
-      'Sie sollte heute eingeplant werden.'
-  } else if (
-    nextObligation.dueState ===
-    'bald'
-  ) {
-    advice =
-      'Plane sie für die nächsten Tage ein.'
-  }
-
   suggestions.push(
-    `💡 ${
+    `💡 Nebenbei: ${
       nextObligation.title ||
       'Eine Verpflichtung'
     } über ${money(
       Number(
         nextObligation.amount || 0
       )
-    )} (${nextObligation.dueDate || 'ohne Datum'}). ${advice}`
+    )} ist am ${
+      nextObligation.dueDate ||
+      'eingetragenen Termin'
+    } fällig. Im Moment reicht es, sie im Blick zu behalten.`
   )
 }
 

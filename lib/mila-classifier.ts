@@ -72,8 +72,8 @@ export function classifyEntry(
     text.includes('vollstreckung')
   ) {
     return {
-      category: 'verpflichtung',
-      taxHint: 'nicht absetzbar / privat',
+      category: 'inkasso',
+      taxHint: 'private',
       source: 'category',
     }
   }

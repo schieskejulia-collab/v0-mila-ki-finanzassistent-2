@@ -1,8 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useFinance, CATEGORY_LABELS, inferCategory } from '@/lib/store'
+import { useFinance } from '@/lib/store'
+import { CATEGORIES, detectCategory } from '@/lib/categories'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
+
+const CATEGORY_LABELS: Record<string, string> =
+  Object.fromEntries(
+    Object.values(CATEGORIES).map((category) => [
+      category.id,
+      category.label,
+    ])
+  )
+
+const inferCategory = detectCategory
 
 function formatEuro(value: number) {
   return value.toLocaleString('de-DE', {
@@ -111,6 +122,41 @@ export function BookingForm() {
 
       return sameAmount && sameClient && amountNumber > 0
     })
+  }
+
+  function isDuplicateExpense() {
+    if (type !== 'expense') return false
+
+    return expenses.some((expense) => {
+      const sameAmount =
+        Number(expense.amount) === amountNumber
+      const samePartner =
+        String(
+          expense.vendor ||
+            expense.title ||
+            ''
+        )
+          .toLowerCase()
+          .trim() ===
+        String(partner || title)
+          .toLowerCase()
+          .trim()
+
+      return (
+        sameAmount &&
+        samePartner &&
+        amountNumber > 0
+      )
+    })
+  }
+
+  function resetForm() {
+    setAmount('')
+    setTitle('')
+    setPartner('')
+    setCategory('sonstiges')
+    setNote('')
+    setScanMessage('')
   }
 
   async function speichern() {

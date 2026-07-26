@@ -55,7 +55,7 @@ export const demoExpenses: Expense[] = [
   { id: id('e'), amount: 20, category: 'software', date: iso(0, 4), vendor: 'Notion', vat: 3.19, hasReceipt: true, recurring: true },
   { id: id('e'), amount: 33, category: 'software', date: iso(0, 5), vendor: 'Vercel Pro', vat: 5.27, hasReceipt: true, recurring: true },
   { id: id('e'), amount: 280, category: 'marketing', date: iso(0, 6), vendor: 'Meta Ads', vat: 44.7, notes: 'Kampagne Frühling', hasReceipt: true },
-  { id: id('e'), amount: 64, category: 'buerobedarf', date: iso(0, 8), vendor: 'Manufactum', vat: 10.22, hasReceipt: false },
+  { id: id('e'), amount: 64, category: 'material', date: iso(0, 8), vendor: 'Manufactum', vat: 10.22, hasReceipt: false },
   { id: id('e'), amount: 149, category: 'weiterbildung', date: iso(0, 9), vendor: 'Online-Kurs UX', vat: 23.79, hasReceipt: true },
   { id: id('e'), amount: 38, category: 'reisen', date: iso(0, 11), vendor: 'Deutsche Bahn', vat: 2.49, notes: 'Kundentermin Berlin', hasReceipt: true },
 
@@ -65,7 +65,7 @@ export const demoExpenses: Expense[] = [
   { id: id('e'), amount: 24, category: 'software', date: iso(-1, 3), vendor: 'Adobe Creative Cloud', vat: 3.83, hasReceipt: true, recurring: true },
   { id: id('e'), amount: 20, category: 'software', date: iso(-1, 4), vendor: 'Notion', vat: 3.19, hasReceipt: true, recurring: true },
   { id: id('e'), amount: 120, category: 'marketing', date: iso(-1, 7), vendor: 'Meta Ads', vat: 19.16, hasReceipt: true },
-  { id: id('e'), amount: 45, category: 'buerobedarf', date: iso(-1, 10), vendor: 'Office Discount', vat: 7.18, hasReceipt: true },
+  { id: id('e'), amount: 45, category: 'material', date: iso(-1, 10), vendor: 'Office Discount', vat: 7.18, hasReceipt: true },
   { id: id('e'), amount: 210, category: 'reisen', date: iso(-1, 14), vendor: 'Lufthansa', vat: 13.77, hasReceipt: true },
 
   // --- Two months ago ---
@@ -103,7 +103,7 @@ export const demoBudgets: Budget[] = [
   { category: 'miete', limit: 950, warnThreshold: 80 },
   { category: 'software', limit: 100, warnThreshold: 80 },
   { category: 'marketing', limit: 300, warnThreshold: 80 },
-  { category: 'buerobedarf', limit: 80, warnThreshold: 80 },
+  { category: 'material', limit: 80, warnThreshold: 80 },
   { category: 'reisen', limit: 150, warnThreshold: 80 },
   { category: 'weiterbildung', limit: 150, warnThreshold: 80 },
 ]

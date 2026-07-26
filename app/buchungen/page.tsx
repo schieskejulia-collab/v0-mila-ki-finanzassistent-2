@@ -209,6 +209,17 @@ const handleDelete = async (t: any) => {
   </Link>
 
   <Link
+    href="/rechnungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">📄</p>
+    <p className="mt-2 font-black text-slate-900">Rechnungen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Offen, bezahlt und überfällig
+    </p>
+  </Link>
+
+  <Link
     href="/verpflichtungen"
     className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
   >
@@ -221,7 +232,7 @@ const handleDelete = async (t: any) => {
 
   <Link
     href="/dokumente"
-    className="col-span-2 rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
   >
     <p className="text-2xl">📂</p>
     <p className="mt-2 font-black text-slate-900">Dokumente</p>

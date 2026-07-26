@@ -327,8 +327,7 @@ export function getMilaPatterns(
 
   const openObligations = obligations.filter(
     (item) =>
-      item.status !== 'bezahlt' &&
-      item.status !== 'erledigt'
+      item.status !== 'bezahlt'
   )
 
   if (openObligations.length >= 5) {

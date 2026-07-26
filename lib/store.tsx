@@ -16,6 +16,8 @@ import type { MilaGoal } from '@/lib/mila-goals'
 import type { Obligation } from './mila-obligations'
 import type { MilaDocument } from './mila-documents'
 
+export type { Expense, Income } from './types'
+
 interface FinanceContextValue {
   expenses: any[]
   incomes: any[]

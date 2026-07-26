@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { ReceiptUpload } from "@/components/ui/receipt-upload"
-import { formatEuro } from '@/lib/utils'
 import { useFinance } from '@/lib/store'
 
 export function TransactionForm({
@@ -138,6 +137,10 @@ export function TransactionForm({
     Produktverkauf: 'produktverkauf',
 
   }
+
+  return map[label] || label.toLowerCase()
+}
+
 const detectCategoryFromText = (text: string) => {
 
   const lower = text.toLowerCase()
@@ -228,19 +231,18 @@ const detectCategoryFromText = (text: string) => {
     return found || ""
   }
 
+  useEffect(() => {
+    if (type !== 'expense') return
+
+    const detected = detectCategoryFromText(title)
+
+    if (detected && (!category || category === 'Sonstiges')) {
+      setCategory(detected)
+    }
+  }, [title, type, category])
+
   // Wird aufgerufen, wenn Mila den Beleg erfolgreich ausgelesen hat
   const handleScanSuccess = (data: { amount: number; vendor: string; category: string; title: string }) => {
-
-useEffect(() => {
-  if (type !== 'expense') return
-
-  const detected = detectCategoryFromText(`${title}`)
-
-  if (detected && (!category || category === 'Sonstiges')) {
-    setCategory(detected)
-  }
-}, [title, type, category])
-
     setType('expense') // Belege sind immer Ausgaben
     setAmount(data.amount.toString())
     setTitle(data.vendor || data.title)
