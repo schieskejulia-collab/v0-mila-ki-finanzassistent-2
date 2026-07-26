@@ -273,7 +273,7 @@ function buildFinancialContext(
   const fallbackReserveRate =
     userStatus === 'angestellt'
       ? 0
-      : 0.125
+      : 0.225
 
   const taxReserve =
     providedTaxReserve > 0
