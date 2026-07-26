@@ -1,0 +1,42 @@
+name: Mila 4.0 installieren
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installieren:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Alten Stand sichern
+        run: |
+          git push origin HEAD:refs/heads/backup-vor-mila4-2026-07-26 || true
+
+      - name: Mila 4.0 einsetzen
+        run: |
+          rm -rf /tmp/mila4-upload
+          mkdir -p /tmp/mila4-upload
+          unzip -q Mila4.zip -d /tmp/mila4-upload
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='Mila4.zip' \
+            /tmp/mila4-upload/v0-mila-ki-finanzassistent-2-main/ ./
+          rm -f Mila4.zip
+
+      - name: Fertigen Stand speichern
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Mila 4.0 nutzbaren Stand deployen"
+          git push origin main
