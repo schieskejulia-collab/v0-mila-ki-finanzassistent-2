@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { supabase } from '@/lib/supabase'
 const USER_TYPES = [
   {
     key: 'angestellt',
@@ -66,6 +67,7 @@ export default function ProfilPage() {
   const [annualProfit, setAnnualProfit] = useState('')
   const [assemblyWork, setAssemblyWork] = useState('nein')
 const [vatStatus, setVatStatus] = useState('kleinunternehmer')
+const [isSaving, setIsSaving] = useState(false)
   const missing: string[] = []
 if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
   if (!userName) missing.push('Name')
@@ -127,6 +129,82 @@ useEffect(() => {
   children,
   assemblyWork,
 ])
+
+const handleSaveProfile = async () => {
+  if (!userName.trim()) {
+    alert('Bitte gib zuerst deinen Namen ein.')
+    return
+  }
+
+  setIsSaving(true)
+
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError) {
+      throw userError
+    }
+
+    if (!user) {
+      throw new Error(
+        'Du bist nicht angemeldet. Bitte melde dich erneut an.'
+      )
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: user.id,
+          display_name: userName.trim(),
+          user_status: userStatus,
+          industry,
+          tax_class: taxClass,
+          annual_gross: Number(annualGross) || 0,
+          annual_profit: Number(annualProfit) || 0,
+          vat_status: vatStatus,
+          federal_state: federalState.trim(),
+          church_tax: churchTax === 'ja',
+          married: married === 'ja',
+          children: Number(children) || 0,
+          assembly_work: assemblyWork === 'ja',
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'id',
+        }
+      )
+
+    if (error) {
+      throw error
+    }
+
+    localStorage.setItem(
+      'mila-profile-saved',
+      new Date().toISOString()
+    )
+
+    alert('✅ Dein Mila-Profil wurde gespeichert')
+
+    router.replace('/')
+  } catch (error) {
+    console.error(
+      'Profil konnte nicht gespeichert werden:',
+      error
+    )
+
+    alert(
+      error instanceof Error
+        ? `❌ Profil konnte nicht gespeichert werden: ${error.message}`
+        : '❌ Profil konnte nicht gespeichert werden.'
+    )
+  } finally {
+    setIsSaving(false)
+  }
+}
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -358,23 +436,26 @@ useEffect(() => {
   "
 >
   💾 Profil speichern
+<button
+  type="button"
+  onClick={handleSaveProfile}
+  disabled={isSaving}
+  className="
+    w-full rounded-[2rem]
+    bg-gradient-to-r from-purple-600 to-violet-500
+    p-5
+    text-xl
+    font-black
+    text-white
+    shadow-lg
+    disabled:cursor-not-allowed
+    disabled:opacity-60
+  "
+>
+  {isSaving
+    ? '⏳ Profil wird gespeichert ...'
+    : '💾 Profil speichern'}
 </button>
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-  <button
-    type="button"
-    onClick={async () => {
-      if (
-        confirm(
-          'Möchtest du dich wirklich abmelden?'
-        )
-      ) {
-        await handleLogout()
-      }
-    }}
-    className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
-  >
-    Abmelden
-  </button>
 </section>
     </main>
   )
