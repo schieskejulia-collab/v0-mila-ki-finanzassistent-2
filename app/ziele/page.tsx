@@ -55,7 +55,7 @@ export default function ZielePage() {
     setDueDate('')
   }
 
-  function createGoal() {
+  async function createGoal() {
     const targetNumber = numberFromInput(target)
     const savedNumber = numberFromInput(saved)
 
@@ -93,8 +93,17 @@ export default function ZielePage() {
       dueDate: dueDate || undefined,
     }
 
-    addGoal(newGoal)
-    resetForm()
+    try {
+  await addGoal(newGoal)
+  resetForm()
+  alert('✅ Ziel wurde gespeichert')
+} catch (error: any) {
+  alert(
+    `❌ Ziel konnte nicht gespeichert werden: ${
+      error?.message || JSON.stringify(error)
+    }`
+  )
+}
   }
 
   function addSaving(goal: MilaGoal) {
