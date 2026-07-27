@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 const PREMIUM_FEATURES = [
   {
@@ -33,39 +34,55 @@ export default function PremiumPage() {
   const [error, setError] = useState('')
 
   const startCheckout = async () => {
-    setIsLoading(true)
-    setError('')
+  setIsLoading(true)
+  setError('')
 
-    try {
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-      })
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error || 'Stripe Checkout konnte nicht gestartet werden.'
-        )
-      }
-
-      if (!data?.url) {
-        throw new Error('Stripe hat keine Checkout-Adresse zurückgegeben.')
-      }
-
-      window.location.href = data.url
-    } catch (checkoutError) {
-      console.error('Checkout-Fehler:', checkoutError)
-
-      setError(
-        checkoutError instanceof Error
-          ? checkoutError.message
-          : 'Beim Starten des Checkouts ist ein Fehler aufgetreten.'
-      )
-
-      setIsLoading(false)
+    if (sessionError) {
+      throw sessionError
     }
+
+    if (!session?.access_token) {
+      throw new Error('Bitte melde dich zuerst an.')
+    }
+
+    const response = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || 'Stripe Checkout konnte nicht gestartet werden.'
+      )
+    }
+
+    if (!data?.url) {
+      throw new Error('Stripe hat keine Checkout-Adresse zurückgegeben.')
+    }
+
+    window.location.href = data.url
+  } catch (checkoutError) {
+    console.error('Checkout-Fehler:', checkoutError)
+
+    setError(
+      checkoutError instanceof Error
+        ? checkoutError.message
+        : 'Beim Starten des Checkouts ist ein Fehler aufgetreten.'
+    )
+
+    setIsLoading(false)
   }
+}
 
   return (
     <main className="min-h-screen bg-[#fbf9ff] px-4 pb-16 pt-4 text-slate-950">
