@@ -522,6 +522,27 @@ supabase
   .eq('user_id', uid),
         ])
 
+if (profileResult.error) {
+  console.error(
+    'Profil laden fehlgeschlagen:',
+    profileResult.error
+  )
+} else {
+  const profile = profileResult.data
+
+  setUserName(profile?.display_name || '')
+  setUserStatus(profile?.user_status || '')
+  setIndustry(profile?.industry || 'sonstiges')
+  setTaxClass(profile?.tax_class || '1')
+  setAnnualGross(Number(profile?.annual_gross || 0))
+  setAnnualProfit(Number(profile?.annual_profit || 0))
+  setVatStatus(profile?.vat_status || '')
+  setFederalState(profile?.federal_state || '')
+  setChurchTax(Boolean(profile?.church_tax))
+  setMarried(Boolean(profile?.married))
+  setChildren(Number(profile?.children || 0))
+  setAssemblyWork(Boolean(profile?.assembly_work))
+}
         if (expensesResult.error) {
           console.error(
             'Ausgaben laden fehlgeschlagen:',
