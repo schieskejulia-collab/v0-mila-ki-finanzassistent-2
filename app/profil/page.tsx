@@ -416,26 +416,7 @@ const handleSaveProfile = async () => {
           Steuerberatung und werden aktuell nur für Orientierung genutzt.
         </p>
       </section>
-<button
-  onClick={() => {
-    localStorage.setItem(
-      'mila-profile-saved',
-      new Date().toISOString()
-    )
 
-    alert('✅ Dein Mila-Profil wurde gespeichert')
-  }}
-  className="
-    w-full rounded-[2rem]
-    bg-gradient-to-r from-purple-600 to-violet-500
-    p-5
-    text-xl
-    font-black
-    text-white
-    shadow-lg
-  "
->
-  💾 Profil speichern
 <button
   type="button"
   onClick={handleSaveProfile}
