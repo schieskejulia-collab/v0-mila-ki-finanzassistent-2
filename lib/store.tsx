@@ -630,8 +630,6 @@ useEffect(() => {
       return
     }
 
-    // Persönliche Profildaten lokal laden.
-    loadLocalProfile(uid)
 
     // Finanzdaten danach verbindlich aus Supabase holen.
     await fetchFinanceData(uid)
@@ -663,7 +661,6 @@ useEffect(() => {
           return
         }
 
-        loadLocalProfile(uid)
         await fetchFinanceData(uid)
 
         if (mounted) {
