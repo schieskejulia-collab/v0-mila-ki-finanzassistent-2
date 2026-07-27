@@ -52,12 +52,32 @@ export default function LoginPage() {
     }
 
     // Kurz warten bis Supabase die Session gesetzt hat
-    await supabase.auth.getSession()
+    const {
+  data: { session },
+} = await supabase.auth.getSession()
 
-    setMessage('Login erfolgreich.')
-    setLoading(false)
+const userId = session?.user?.id
 
-    router.replace('/')
+if (!userId) {
+  setMessage('Login fehlgeschlagen.')
+  setLoading(false)
+  return
+}
+
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('display_name, user_status')
+  .eq('id', userId)
+  .maybeSingle()
+
+setMessage('Login erfolgreich.')
+setLoading(false)
+
+const profileComplete =
+  profile?.display_name?.trim() &&
+  profile?.user_status?.trim()
+
+router.replace(profileComplete ? '/' : '/profil')
   }
 
   return (
