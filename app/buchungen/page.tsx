@@ -287,9 +287,9 @@ const handleDelete = async (t: any) => {
                               
                               {/* Kompakte Sub-Infos im geschlossenen Zustand */}
                               {!isExpanded && (
-                                <p className="text-[11px] text-slate-400 font-medium">
-                                  {t.party} · {formatDate(t.date)}
-                                </p>
+                              <p className="text-[11px] text-slate-500">
+  {t.party} • {formatDate(t.dueDate || t.date)}
+</p>
                               )}
                             </div>
 
