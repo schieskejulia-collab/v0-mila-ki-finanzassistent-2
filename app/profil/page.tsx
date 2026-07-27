@@ -1,9 +1,10 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
+
 const USER_TYPES = [
   {
     key: 'angestellt',
@@ -53,11 +54,6 @@ export default function ProfilPage() {
     logout,
   } = useFinance()
 
-  const handleLogout = async () => {
-    await logout()
-    router.replace('/login')
-  }
-
   const [taxClass, setTaxClass] = useState('1')
   const [federalState, setFederalState] = useState('')
   const [churchTax, setChurchTax] = useState('nein')
@@ -66,145 +62,221 @@ export default function ProfilPage() {
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
   const [assemblyWork, setAssemblyWork] = useState('nein')
-const [vatStatus, setVatStatus] = useState('kleinunternehmer')
-const [isSaving, setIsSaving] = useState(false)
+  const [vatStatus, setVatStatus] = useState('kleinunternehmer')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const [isPremium, setIsPremium] = useState(false)
+  const [premiumLoading, setPremiumLoading] = useState(true)
+
   const missing: string[] = []
-if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
-  if (!userName) missing.push('Name')
-  if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
-  if (!federalState) missing.push('Bundesland')
-  if (!annualGross && userStatus === 'angestellt') missing.push('Jahresbrutto')
-  if (!annualProfit && userStatus !== 'angestellt') missing.push('Jahresgewinn')
+
+  if (userStatus !== 'angestellt' && !vatStatus) {
+    missing.push('Umsatzsteuerstatus')
+  }
+
+  if (!userName) {
+    missing.push('Name')
+  }
+
+  if (userStatus === 'angestellt' && !taxClass) {
+    missing.push('Steuerklasse')
+  }
+
+  if (!federalState) {
+    missing.push('Bundesland')
+  }
+
+  if (!annualGross && userStatus === 'angestellt') {
+    missing.push('Jahresbrutto')
+  }
+
+  if (!annualProfit && userStatus !== 'angestellt') {
+    missing.push('Jahresgewinn')
+  }
 
   const completeness = Math.max(20, 100 - missing.length * 15)
-useEffect(() => {
-  const saved = localStorage.getItem('mila_profile')
-  if (!saved) return
 
-  try {
-    const profile = JSON.parse(saved)
-setUserName(profile.userName || '')
-    setUserStatus(profile.userStatus || 'freelancer')
-    setIndustry(profile.industry || 'webdesign')
-    setAnnualGross(profile.annualGross || '')
-setAnnualProfit(profile.annualProfit || '')
-    setVatStatus(profile.vatStatus || 'kleinunternehmer')
-    setFederalState(profile.federalState || 'Sachsen-Anhalt')
-    setChurchTax(profile.churchTax || 'nein')
-    setMarried(profile.married || 'nein')
-    setChildren(profile.children || '')
-    setAssemblyWork(profile.assemblyWork || 'nein')
-  } catch (error) {
-    console.error('Fehler beim Laden des Profils', error)
-  }
-}, [])
-
-useEffect(() => {
-  localStorage.setItem(
-    'mila_profile',
-    JSON.stringify({
-      userName,
-      userStatus,
-      industry,
-      annualGross,
-      annualProfit,
-      vatStatus,
-      federalState,
-      churchTax,
-      married,
-      children,
-      assemblyWork,
-    })
-  )
-}, [
-  userName,
-  userStatus,
-  industry,
-  annualGross,
-  annualProfit,
-  vatStatus,
-  federalState,
-  churchTax,
-  married,
-  children,
-  assemblyWork,
-])
-
-const handleSaveProfile = async () => {
-  if (!userName.trim()) {
-    alert('Bitte gib zuerst deinen Namen ein.')
-    return
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/login')
   }
 
-  setIsSaving(true)
+  useEffect(() => {
+    const saved = localStorage.getItem('mila_profile')
 
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError) {
-      throw userError
+    if (!saved) {
+      return
     }
 
-    if (!user) {
-      throw new Error(
-        'Du bist nicht angemeldet. Bitte melde dich erneut an.'
-      )
+    try {
+      const profile = JSON.parse(saved)
+
+      setUserName(profile.userName || '')
+      setUserStatus(profile.userStatus || 'freiberufler')
+      setIndustry(profile.industry || 'digital')
+      setAnnualGross(profile.annualGross || '')
+      setAnnualProfit(profile.annualProfit || '')
+      setVatStatus(profile.vatStatus || 'kleinunternehmer')
+      setFederalState(profile.federalState || 'Sachsen-Anhalt')
+      setChurchTax(profile.churchTax || 'nein')
+      setMarried(profile.married || 'nein')
+      setChildren(profile.children || '')
+      setAssemblyWork(profile.assemblyWork || 'nein')
+    } catch (error) {
+      console.error('Fehler beim Laden des Profils:', error)
     }
+  }, [setIndustry, setUserName, setUserStatus])
 
-    const { error } = await supabase
-      .from('profiles')
-      .upsert(
-        {
-          id: user.id,
-          display_name: userName.trim(),
-          user_status: userStatus,
-          industry,
-          tax_class: taxClass,
-          annual_gross: Number(annualGross) || 0,
-          annual_profit: Number(annualProfit) || 0,
-          vat_status: vatStatus,
-          federal_state: federalState.trim(),
-          church_tax: churchTax === 'ja',
-          married: married === 'ja',
-          children: Number(children) || 0,
-          assembly_work: assemblyWork === 'ja',
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'id',
-        }
-      )
-
-    if (error) {
-      throw error
-    }
-
+  useEffect(() => {
     localStorage.setItem(
-      'mila-profile-saved',
-      new Date().toISOString()
+      'mila_profile',
+      JSON.stringify({
+        userName,
+        userStatus,
+        industry,
+        annualGross,
+        annualProfit,
+        vatStatus,
+        federalState,
+        churchTax,
+        married,
+        children,
+        assemblyWork,
+      })
     )
+  }, [
+    userName,
+    userStatus,
+    industry,
+    annualGross,
+    annualProfit,
+    vatStatus,
+    federalState,
+    churchTax,
+    married,
+    children,
+    assemblyWork,
+  ])
 
-    alert('✅ Dein Mila-Profil wurde gespeichert')
+  useEffect(() => {
+    const loadPremiumStatus = async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
 
-    router.replace('/')
-  } catch (error) {
-    console.error(
-      'Profil konnte nicht gespeichert werden:',
-      error
-    )
+        if (userError || !user) {
+          setPremiumLoading(false)
+          return
+        }
 
-    alert(
-  error instanceof Error
-    ? `❌ ${error.message}`
-    : `❌ ${JSON.stringify(error)}`
-)
-  } finally {
-    setIsSaving(false)
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_premium, subscription_status')
+          .eq('id', user.id)
+          .single()
+
+        if (error) {
+          console.error(
+            'Premium-Status konnte nicht geladen werden:',
+            error
+          )
+
+          setPremiumLoading(false)
+          return
+        }
+
+        setIsPremium(
+          data?.is_premium === true &&
+            data?.subscription_status === 'active'
+        )
+      } catch (error) {
+        console.error('Premium-Prüfung fehlgeschlagen:', error)
+      } finally {
+        setPremiumLoading(false)
+      }
+    }
+
+    loadPremiumStatus()
+  }, [])
+
+  const handleSaveProfile = async () => {
+    if (!userName.trim()) {
+      alert('Bitte gib zuerst deinen Namen ein.')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError) {
+        throw userError
+      }
+
+      if (!user) {
+        throw new Error(
+          'Du bist nicht angemeldet. Bitte melde dich erneut an.'
+        )
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: user.id,
+            display_name: userName.trim(),
+            user_status: userStatus,
+            industry,
+            tax_class: taxClass,
+            annual_gross: Number(annualGross) || 0,
+            annual_profit: Number(annualProfit) || 0,
+            vat_status: vatStatus,
+            federal_state: federalState.trim(),
+            church_tax: churchTax === 'ja',
+            married: married === 'ja',
+            children: Number(children) || 0,
+            assembly_work: assemblyWork === 'ja',
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'id',
+          }
+        )
+
+      if (error) {
+        throw error
+      }
+
+      localStorage.setItem(
+        'mila-profile-saved',
+        new Date().toISOString()
+      )
+
+      alert('✅ Dein Mila-Profil wurde gespeichert')
+
+      router.replace('/')
+    } catch (error) {
+      console.error(
+        'Profil konnte nicht gespeichert werden:',
+        error
+      )
+
+      alert(
+        error instanceof Error
+          ? `❌ ${error.message}`
+          : `❌ ${JSON.stringify(error)}`
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
+
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -217,9 +289,67 @@ const handleSaveProfile = async () => {
         </h1>
 
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Je besser dein Profil ausgefüllt ist, desto genauer kann Mila Rücklagen,
-          Hinweise und Erinnerungen einschätzen.
+          Je besser dein Profil ausgefüllt ist, desto genauer kann Mila
+          Rücklagen, Hinweise und Erinnerungen einschätzen.
         </p>
+      </section>
+
+      <section
+        className={
+          isPremium
+            ? 'rounded-[2rem] bg-gradient-to-br from-violet-700 to-fuchsia-500 p-5 text-white shadow-lg shadow-violet-200'
+            : 'rounded-[2rem] bg-white p-5 shadow-sm'
+        }
+      >
+        {premiumLoading ? (
+          <p className="text-sm font-bold text-slate-500">
+            Premium-Status wird geprüft …
+          </p>
+        ) : isPremium ? (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
+              Dein Tarif
+            </p>
+
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black">
+                  Mila Premium ✨
+                </h2>
+
+                <p className="mt-1 text-sm font-semibold text-white/80">
+                  Dein Premium-Abo ist aktiv.
+                </p>
+              </div>
+
+              <div className="rounded-full bg-white/20 px-4 py-2 text-xs font-black">
+                AKTIV
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
+              Dein Tarif
+            </p>
+
+            <h2 className="mt-3 text-2xl font-black">
+              Mila Free
+            </h2>
+
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              Schalte zusätzliche Analysen und Premium-Funktionen frei.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push('/premium')}
+              className="mt-4 w-full rounded-2xl bg-violet-600 px-5 py-4 font-black text-white"
+            >
+              Mila Premium ansehen
+            </button>
+          </>
+        )}
       </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -252,7 +382,7 @@ const handleSaveProfile = async () => {
 
         <input
           value={userName}
-          onChange={(e) => setUserName(e.target.value)}
+          onChange={(event) => setUserName(event.target.value)}
           placeholder="Dein Name"
           className="mt-2 w-full rounded-2xl border border-violet-100 bg-white p-4 text-lg font-bold outline-none"
         />
@@ -305,7 +435,9 @@ const handleSaveProfile = async () => {
 
         <select
           value={industry}
-          onChange={(e) => setIndustry(e.target.value as any)}
+          onChange={(event) =>
+            setIndustry(event.target.value as typeof industry)
+          }
           className="mt-3 w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold text-slate-700 outline-none"
         >
           {INDUSTRIES.map(([value, label]) => (
@@ -326,7 +458,9 @@ const handleSaveProfile = async () => {
             <>
               <select
                 value={taxClass}
-                onChange={(e) => setTaxClass(e.target.value)}
+                onChange={(event) =>
+                  setTaxClass(event.target.value)
+                }
                 className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
               >
                 <option value="1">Steuerklasse I</option>
@@ -339,45 +473,64 @@ const handleSaveProfile = async () => {
 
               <input
                 value={annualGross}
-                onChange={(e) => setAnnualGross(e.target.value)}
+                onChange={(event) =>
+                  setAnnualGross(event.target.value)
+                }
                 inputMode="decimal"
-                placeholder="Jahresbrutto z.B. 38000"
+                placeholder="Jahresbrutto z. B. 38000"
                 className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
               />
             </>
           )}
 
           {userStatus !== 'angestellt' && (
-            <input
-              value={annualProfit}
-              onChange={(e) => setAnnualProfit(e.target.value)}
-              inputMode="decimal"
-              placeholder="Geschätzter Jahresgewinn"
-              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
-            />
+            <>
+              <input
+                value={annualProfit}
+                onChange={(event) =>
+                  setAnnualProfit(event.target.value)
+                }
+                inputMode="decimal"
+                placeholder="Geschätzter Jahresgewinn"
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              />
+
+              <select
+                value={vatStatus}
+                onChange={(event) =>
+                  setVatStatus(event.target.value)
+                }
+                className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+              >
+                <option value="kleinunternehmer">
+                  Kleinunternehmer (§19 UStG)
+                </option>
+
+                <option value="regelbesteuerung_19">
+                  Regelbesteuerung 19 %
+                </option>
+
+                <option value="ermaessigt_7">
+                  Ermäßigter Satz 7 %
+                </option>
+              </select>
+            </>
           )}
-{userStatus !== 'angestellt' && (
-  <select
-    value={vatStatus}
-    onChange={(e) => setVatStatus(e.target.value)}
-    className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
-  >
-    <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
-    <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
-    <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
-  </select>
-)}
 
           <input
             value={federalState}
-            onChange={(e) => setFederalState(e.target.value)}
+            onChange={(event) =>
+              setFederalState(event.target.value)
+            }
             placeholder="Bundesland"
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
           />
 
           <select
             value={churchTax}
-            onChange={(e) => setChurchTax(e.target.value)}
+            onChange={(event) =>
+              setChurchTax(event.target.value)
+            }
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
           >
             <option value="nein">Keine Kirchensteuer</option>
@@ -386,7 +539,9 @@ const handleSaveProfile = async () => {
 
           <select
             value={married}
-            onChange={(e) => setMarried(e.target.value)}
+            onChange={(event) =>
+              setMarried(event.target.value)
+            }
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
           >
             <option value="nein">Nicht verheiratet</option>
@@ -395,7 +550,9 @@ const handleSaveProfile = async () => {
 
           <input
             value={children}
-            onChange={(e) => setChildren(e.target.value)}
+            onChange={(event) =>
+              setChildren(event.target.value)
+            }
             inputMode="numeric"
             placeholder="Kinderanzahl"
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
@@ -403,11 +560,18 @@ const handleSaveProfile = async () => {
 
           <select
             value={assemblyWork}
-            onChange={(e) => setAssemblyWork(e.target.value)}
+            onChange={(event) =>
+              setAssemblyWork(event.target.value)
+            }
             className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
           >
-            <option value="nein">Keine Montage/Außendienst</option>
-            <option value="ja">Montage/Außendienst vorhanden</option>
+            <option value="nein">
+              Keine Montage/Außendienst
+            </option>
+
+            <option value="ja">
+              Montage/Außendienst vorhanden
+            </option>
           </select>
         </div>
 
@@ -417,44 +581,34 @@ const handleSaveProfile = async () => {
         </p>
       </section>
 
-<button
-  type="button"
-  onClick={handleSaveProfile}
-  disabled={isSaving}
-  className="
-    w-full rounded-[2rem]
-    bg-gradient-to-r from-purple-600 to-violet-500
-    p-5
-    text-xl
-    font-black
-    text-white
-    shadow-lg
-    disabled:cursor-not-allowed
-    disabled:opacity-60
-  "
->
-  {isSaving
-    ? '⏳ Profil wird gespeichert ...'
-    : '💾 Profil speichern'}
-</button>
+      <button
+        type="button"
+        onClick={handleSaveProfile}
+        disabled={isSaving}
+        className="w-full rounded-[2rem] bg-gradient-to-r from-purple-600 to-violet-500 p-5 text-xl font-black text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSaving
+          ? '⏳ Profil wird gespeichert ...'
+          : '💾 Profil speichern'}
+      </button>
 
-<section className="rounded-[2rem] bg-white p-5 shadow-sm">
-  <button
-    type="button"
-    onClick={async () => {
-      if (
-        confirm(
-          'Möchtest du dich wirklich abmelden?'
-        )
-      ) {
-        await handleLogout()
-      }
-    }}
-    className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
-  >
-    Abmelden
-  </button>
-</section>
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <button
+          type="button"
+          onClick={async () => {
+            const shouldLogout = confirm(
+              'Möchtest du dich wirklich abmelden?'
+            )
+
+            if (shouldLogout) {
+              await handleLogout()
+            }
+          }}
+          className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
+        >
+          Abmelden
+        </button>
+      </section>
     </main>
   )
 }
