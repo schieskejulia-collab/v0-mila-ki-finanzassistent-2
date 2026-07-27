@@ -197,10 +197,10 @@ const handleSaveProfile = async () => {
     )
 
     alert(
-      error instanceof Error
-        ? `❌ Profil konnte nicht gespeichert werden: ${error.message}`
-        : '❌ Profil konnte nicht gespeichert werden.'
-    )
+  error instanceof Error
+    ? `❌ ${error.message}`
+    : `❌ ${JSON.stringify(error)}`
+)
   } finally {
     setIsSaving(false)
   }
