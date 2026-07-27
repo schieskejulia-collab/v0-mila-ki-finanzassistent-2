@@ -1301,28 +1301,47 @@ const addGoal = useCallback(
     }
 
     if (normalizedGoal.target <= 0) {
-      throw new Error('Der Zielbetrag muss größer als 0 sein.')
+      throw new Error(
+        'Der Zielbetrag muss größer als 0 sein.'
+      )
     }
 
-    if (userId) {
-      const { error } = await supabase
-        .from('goals')
-        .insert({
-          id: normalizedGoal.id,
-          user_id: userId,
-          title: normalizedGoal.title,
-          target: normalizedGoal.target,
-          saved: normalizedGoal.saved,
-          due_date: normalizedGoal.dueDate || null,
-        })
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-      if (error) {
-        console.error(
-          'Ziel speichern fehlgeschlagen:',
-          error
-        )
-        throw error
-      }
+    if (authError) {
+      console.error(
+        'Benutzer konnte nicht geladen werden:',
+        authError
+      )
+      throw authError
+    }
+
+    if (!user) {
+      throw new Error(
+        'Du bist nicht angemeldet. Bitte melde dich erneut an.'
+      )
+    }
+
+    const { error } = await supabase
+      .from('goals')
+      .insert({
+        id: normalizedGoal.id,
+        user_id: user.id,
+        title: normalizedGoal.title,
+        target: normalizedGoal.target,
+        saved: normalizedGoal.saved,
+        due_date: normalizedGoal.dueDate || null,
+      })
+
+    if (error) {
+      console.error(
+        'Ziel speichern fehlgeschlagen:',
+        error
+      )
+      throw error
     }
 
     setGoals((previous) => [
@@ -1330,7 +1349,7 @@ const addGoal = useCallback(
       normalizedGoal,
     ])
   },
-  [userId]
+  []
 )
 
 const updateGoal = useCallback(
