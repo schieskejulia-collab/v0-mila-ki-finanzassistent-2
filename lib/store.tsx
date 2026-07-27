@@ -481,12 +481,18 @@ const fetchFinanceData =
         // die bereits geladenen lokalen Daten.
         if (!uid) return
 
-       const [
+     const [
+  profileResult,
   expensesResult,
   incomesResult,
   obligationsResult,
   goalsResult,
 ] = await Promise.all([
+supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', uid)
+  .maybeSingle(),
           supabase
             .from('expenses')
             .select('*')
