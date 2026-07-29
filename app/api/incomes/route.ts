@@ -3,13 +3,23 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { requireSupabaseUser } from '@/lib/supabase-server'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { data, error } = await supabase
+    const { client, user, error: authError } = await requireSupabaseUser(req)
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: authError },
+        { status: 401 }
+      )
+    }
+
+    const { data, error } = await client
       .from('incomes')
       .select('*')
+      .eq('user_id', user.id)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -33,6 +43,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const { client, user, error: authError } = await requireSupabaseUser(req)
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: authError },
+        { status: 401 }
+      )
+    }
+
     const body = await req.json()
     const amount = Number(body.amount)
 
@@ -51,17 +70,16 @@ export async function POST(req: Request) {
     }
 
     const insertPayload = {
-  title: body.title || body.client || 'Einnahme',
-  client: body.client || '',
-  amount,
-  date: body.date || new Date().toISOString().slice(0, 10),
-  note: body.note || '',
-  user_id: body.user_id || null,
-created_at: new Date().toISOString(),
- 
-}
+      title: body.title || body.client || 'Einnahme',
+      client: body.client || '',
+      amount,
+      date: body.date || new Date().toISOString().slice(0, 10),
+      note: body.note || '',
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+    }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('incomes')
       .insert([insertPayload])
       .select()
@@ -86,6 +104,15 @@ created_at: new Date().toISOString(),
 
 export async function DELETE(req: Request) {
   try {
+    const { client, user, error: authError } = await requireSupabaseUser(req)
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: authError },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
@@ -96,7 +123,11 @@ export async function DELETE(req: Request) {
       )
     }
 
-    const { error } = await supabase.from('incomes').delete().eq('id', id)
+    const { error } = await client
+      .from('incomes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('Supabase Incomes DELETE Error:', error)
