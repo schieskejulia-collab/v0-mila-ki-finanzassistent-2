@@ -314,7 +314,7 @@ function getTodayTask(input: any) {
     return {
       title: 'Offenen Zahlungseingang prüfen',
       message: `Du wartest noch auf ${formatEuro(totalOpenAmount)}. Prüfe heute einen Eingang.`,
-      href: '/finanzen',
+      href: '/buchungen',
       tone: 'info' as const,
     }
   }
@@ -325,7 +325,7 @@ function getTodayTask(input: any) {
   message: `Lege heute ${formatEuro(
     taxReserve
   )} für deine Steuer zurück.`,
-  href: '/finanzen',
+  href: '/buchungen',
   tone: 'good' as const,
 }
   }
