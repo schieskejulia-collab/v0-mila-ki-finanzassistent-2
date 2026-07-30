@@ -727,7 +727,7 @@ export default function FahrtenbuchPage() {
                         onClick={() => void openReceiptPhoto(entry.receipt_photo_path as string)}
                         className="mt-2 text-[11px] font-black text-violet-700 underline"
                       >
-                        Belegfoto Ã¶ffnen
+                        Belegfoto &ouml;ffnen
                       </button>
                     )}
                   </div>
