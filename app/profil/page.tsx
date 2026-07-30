@@ -142,9 +142,12 @@ export default function ProfilPage() {
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
   const [assemblyWork, setAssemblyWork] = useState('nein')
-const [vatStatus, setVatStatus] = useState('kleinunternehmer')
+  const [vatStatus, setVatStatus] = useState('kleinunternehmer')
+  const [subscriptionStatus, setSubscriptionStatus] = useState('loading')
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null)
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false)
   const missing: string[] = []
-if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
+  if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
   if (!userName) missing.push('Name')
   if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
   if (!federalState) missing.push('Bundesland')
@@ -162,7 +165,7 @@ setUserName(profile.userName || '')
     setUserStatus(profile.userStatus || 'freelancer')
     setIndustry(profile.industry || 'webdesign')
     setAnnualGross(profile.annualGross || '')
-setAnnualProfit(profile.annualProfit || '')
+    setAnnualProfit(profile.annualProfit || '')
     setVatStatus(profile.vatStatus || 'kleinunternehmer')
     setFederalState(profile.federalState || 'Sachsen-Anhalt')
     setChurchTax(profile.churchTax || 'nein')
@@ -171,6 +174,46 @@ setAnnualProfit(profile.annualProfit || '')
     setAssemblyWork(profile.assemblyWork || 'nein')
   } catch (error) {
     console.error('Fehler beim Laden des Profils', error)
+  }
+}, [])
+
+useEffect(() => {
+  let cancelled = false
+
+  async function loadSubscription() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      if (!cancelled) setSubscriptionStatus('inactive')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end, cancel_at_period_end')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (cancelled) return
+
+    if (error) {
+      console.error('Premium-Status konnte nicht geladen werden', error)
+      setSubscriptionStatus('inactive')
+      return
+    }
+
+    setSubscriptionStatus(data?.status || 'inactive')
+    setSubscriptionEnd(data?.current_period_end || null)
+    setCancelAtPeriodEnd(data?.cancel_at_period_end === true)
+  }
+
+  void loadSubscription()
+
+  return () => {
+    cancelled = true
   }
 }, [])
 
@@ -204,6 +247,13 @@ useEffect(() => {
   children,
   assemblyWork,
 ])
+
+  const premiumActive =
+    subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
+
+  const premiumEndText = subscriptionEnd
+    ? new Date(subscriptionEnd).toLocaleDateString('de-DE')
+    : ''
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -441,22 +491,44 @@ useEffect(() => {
           Mila Premium
         </p>
 
-        <h2 className="mt-3 text-xl font-black tracking-tight">
-          Premium aktivieren
-        </h2>
+        {subscriptionStatus === 'loading' ? (
+          <p className="mt-3 text-sm font-semibold text-slate-500">
+            Premium-Status wird geprüft …
+          </p>
+        ) : premiumActive ? (
+          <div className="mt-3 rounded-2xl bg-emerald-50 p-4 text-emerald-700">
+            <p className="font-black">✅ Mila Premium ist aktiv</p>
+            <p className="mt-1 text-sm font-semibold">
+              {cancelAtPeriodEnd
+                ? premiumEndText
+                  ? `Dein Zugang läuft bis zum ${premiumEndText}.`
+                  : 'Dein Zugang läuft zum Ende des aktuellen Zeitraums aus.'
+                : premiumEndText
+                  ? `Nächste Verlängerung: ${premiumEndText}.`
+                  : 'Dein Premium-Zugang ist freigeschaltet.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <h2 className="mt-3 text-xl font-black tracking-tight">
+              Premium aktivieren
+            </h2>
 
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Starte Mila Premium für Berichte, Auswertungen und kommende
-          Komfortfunktionen.
-        </p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+              {subscriptionStatus === 'past_due'
+                ? 'Die letzte Zahlung konnte nicht verarbeitet werden. Bitte öffne den Checkout erneut.'
+                : 'Starte Mila Premium für Berichte, Auswertungen und kommende Komfortfunktionen.'}
+            </p>
 
-        <button
-          type="button"
-          onClick={handleStartCheckout}
-          className="mt-4 w-full rounded-2xl bg-violet-600 py-4 text-sm font-black text-white shadow-sm"
-        >
-          Mila Premium für 2,99 € / Monat aktivieren
-        </button>
+            <button
+              type="button"
+              onClick={handleStartCheckout}
+              className="mt-4 w-full rounded-2xl bg-violet-600 py-4 text-sm font-black text-white shadow-sm"
+            >
+              Mila Premium für 2,99 € / Monat aktivieren
+            </button>
+          </>
+        )}
       </section>
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">
