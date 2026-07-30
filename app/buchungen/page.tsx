@@ -15,7 +15,7 @@ function formatEuro(value: number) {
 }
 
 function formatDate(dateString: string) {
-  if (!dateString) return 'Kein Datum'
+  if (!dateString) return ''
   const d = new Date(dateString)
   if (isNaN(d.getTime())) return dateString
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -28,9 +28,7 @@ export default function BuchungenPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<'alle' | 'einnahme' | 'ausgabe'>('alle')
   const [statusFilter, setStatusFilter] = useState<'alle' | 'offen' | 'bezahlt' | 'ueberfaellig'>('alle')
-  
-  // FIX: Standardmäßig auf 'alle' gesetzt, damit nichts fälschlicherweise weggefiltert wird!
-  const [selectedYear, setSelectedYear] = useState<string>('alle')
+  const [selectedYear, setSelectedYear] = useState<string>('2026') // Standardmäßig auf 2026 laut Bild
   const [selectedMonth, setSelectedMonth] = useState<string>('alle')
   const [reportPeriod, setReportPeriod] = useState<ReportPeriod>('month')
 
@@ -40,37 +38,37 @@ export default function BuchungenPage() {
 
   // 1. Daten matchen & vereinheitlichen
   const alleTransaktionen = useMemo(() => {
-    const exps = (expenses || []).map((e, index) => ({
-      id: `exp-${e.id || e.created_at || index}-${e.title}-${e.amount}`,
-      rawId: e.id || {
-        title: e.title,
-        amount: e.amount,
-        date: e.date,
-        created_at: e.created_at,
-      },
-      title: e.title || 'Ausgabe ohne Titel',
+    const exps = (expenses || []).map((e) => ({
+      id: `exp-${e.title}-${e.amount}-${e.date}`,
+rawId: {
+  title: e.title,
+  amount: e.amount,
+  date: e.date,
+created_at: e.created_at,
+},
+      title: e.title || '',
       party: e.vendor || '',
       amount: Number(e.amount || 0),
-      date: e.date || e.created_at || new Date().toISOString(),
+      date: e.date,
       category: e.category || 'Ausgabe',
-      note: e.note || '',
-      typ: 'ausgabe' as const,
-      status: e.status || 'bezahlt',
+note: e.note || '',
+typ: 'ausgabe' as const,
+status: e.status || 'bezahlt',
     }))
 
-    const incs = (incomes || []).map((i, index) => {
+    const incs = (incomes || []).map((i) => {
       const currentStatus = (i.status || 'Offen').toLowerCase()
       let mappedStatus = 'offen'
       if (currentStatus === 'bezahlt') mappedStatus = 'bezahlt'
       if (currentStatus === 'überfällig' || currentStatus === 'ueberfaellig') mappedStatus = 'ueberfaellig'
 
       return {
-        id: `inc-${i.id || index}`,
+        id: `inc-${i.id}`,
         rawId: i.id,
-        title: i.title || 'Einnahme ohne Titel',
+        title: i.title || '',
         party: i.client || '',
         amount: Number(i.amount || 0),
-        date: i.date || i.created_at || new Date().toISOString(),
+        date: i.date,
         category: 'Einnahme',
         note: i.note || '',
         typ: 'einnahme' as const,
@@ -95,10 +93,8 @@ export default function BuchungenPage() {
 
       if (t.date) {
         const d = new Date(t.date)
-        if (!isNaN(d.getTime())) {
-          if (selectedYear !== 'alle' && d.getFullYear().toString() !== selectedYear) return false
-          if (selectedMonth !== 'alle' && d.getMonth().toString() !== selectedMonth) return false
-        }
+        if (selectedYear !== 'alle' && d.getFullYear().toString() !== selectedYear) return false
+        if (selectedMonth !== 'alle' && d.getMonth().toString() !== selectedMonth) return false
       }
       return true
     })
@@ -108,11 +104,9 @@ export default function BuchungenPage() {
   const gruppierteTransaktionen = useMemo(() => {
     const groups: Record<string, typeof gefilterteTransaktionen> = {}
     gefilterteTransaktionen.forEach((t) => {
-      const d = t.date ? new Date(t.date) : new Date()
-      const monatsName = !isNaN(d.getTime()) 
-        ? d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-        : 'Ohne Datum'
-        
+      if (!t.date) return
+      const d = new Date(t.date)
+      const monatsName = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
       if (!groups[monatsName]) groups[monatsName] = []
       groups[monatsName].push(t)
     })
@@ -141,7 +135,7 @@ export default function BuchungenPage() {
       const date = new Date(item.date)
 
       if (Number.isNaN(date.getTime())) return false
-      if (selectedYear !== 'alle' && date.getFullYear() !== year) return false
+      if (date.getFullYear() !== year) return false
 
       if (reportPeriod === 'year') return true
 
@@ -151,7 +145,7 @@ export default function BuchungenPage() {
         return month >= quarterStart && month <= quarterEnd
       }
 
-      return selectedMonth === 'alle' ? true : month === selectedMonthNumber
+      return month === selectedMonthNumber
     })
 
     const monthName = new Date(year, selectedMonthNumber, 1).toLocaleDateString(
@@ -179,28 +173,34 @@ export default function BuchungenPage() {
   }, [alleTransaktionen, reportPeriod, selectedMonth, selectedYear])
 
   // --- ACTIONS ---
+  const handleMarkAsPaid = async (id: string) => {
+    if (updateIncomeStatus) {
+      await updateIncomeStatus(id, 'bezahlt')
+    }
+  }
+
   const handleWhatsAppReminder = (t: any) => {
     const text = `Hallo ${t.party}, ich wollte kurz an die offene Rechnung für "${t.title}" über ${formatEuro(t.amount)} erinnern. Viele Grüße!`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
-  const handleDelete = async (t: any) => {
-    if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) return
+const handleDelete = async (t: any) => {
+  if (!confirm(`Möchtest du "${t.title}" wirklich löschen?`)) return
 
-    if (t.typ === 'ausgabe') {
-      await deleteExpense(t.rawId)
-    } else {
-      await deleteIncome(t.rawId)
-    }
+  if (t.typ === 'ausgabe') {
+    await deleteExpense(t.rawId)
+  } else {
+    await deleteIncome(t.rawId)
   }
+}
 
   return (
     <div className="min-h-screen bg-[#F8F9FC] pb-24 font-sans antialiased text-slate-900">
       
-      {/* Header Controls */}
+      {/* Header Controls (Angelehnt an Bild 10) */}
       <div className="p-4 space-y-4 max-w-md mx-auto">
         
-        {/* Datums-Dropdowns */}
+        {/* Datums-Dropdowns ganz oben */}
         <div className="grid grid-cols-2 gap-3">
           <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-white border border-slate-100 shadow-sm p-3 rounded-2xl font-bold text-xs text-slate-800 focus:outline-none appearance-none">
             <option value="alle">Alle Jahre</option>
@@ -236,7 +236,7 @@ export default function BuchungenPage() {
           />
         </div>
 
-        {/* Filter Pill Box */}
+        {/* Filter Pill Box mit Zeilenumbruch */}
         <div className="flex flex-wrap gap-2 text-xs">
           <button onClick={() => { setTypeFilter('alle'); setStatusFilter('alle'); }} className={`px-4 py-2 rounded-full font-bold shadow-sm border transition ${typeFilter === 'alle' && statusFilter === 'alle' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-100 text-purple-600'}`}>
             Alle
@@ -262,35 +262,63 @@ export default function BuchungenPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 pt-2">
           Gefundene Buchungen ({gefilterteTransaktionen.length})
         </p>
+<div className="grid grid-cols-2 gap-3">
+  <Link
+    href="/buchungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">📒</p>
+    <p className="mt-2 font-black text-slate-900">Buchungen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Einnahmen und Ausgaben
+    </p>
+  </Link>
 
-        {/* Quick Navigation Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/buchungen" className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100">
-            <p className="text-2xl">📒</p>
-            <p className="mt-2 font-black text-slate-900">Buchungen</p>
-            <p className="mt-1 text-xs text-slate-500">Einnahmen und Ausgaben</p>
-          </Link>
+  <Link
+    href="/rechnungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">📄</p>
+    <p className="mt-2 font-black text-slate-900">Rechnungen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Offen, bezahlt und überfällig
+    </p>
+  </Link>
 
-          <Link href="/rechnungen" className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100">
-            <p className="text-2xl">📄</p>
-            <p className="mt-2 font-black text-slate-900">Rechnungen</p>
-            <p className="mt-1 text-xs text-slate-500">Offen, bezahlt & überfällig</p>
-          </Link>
+  <Link
+    href="/verpflichtungen"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">🧾</p>
+    <p className="mt-2 font-black text-slate-900">Fristen</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Rechnungen, Raten und Termine
+    </p>
+  </Link>
 
-          <Link href="/verpflichtungen" className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100">
-            <p className="text-2xl">🧾</p>
-            <p className="mt-2 font-black text-slate-900">Fristen</p>
-            <p className="mt-1 text-xs text-slate-500">Rechnungen & Termine</p>
-          </Link>
+  <Link
+    href="/dokumente"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">📂</p>
+    <p className="mt-2 font-black text-slate-900">Dokumente</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Belege, Rechnungen und Nachweise
+    </p>
+  </Link>
 
-          <Link href="/dokumente" className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100">
-            <p className="text-2xl">📂</p>
-            <p className="mt-2 font-black text-slate-900">Dokumente</p>
-            <p className="mt-1 text-xs text-slate-500">Belege & Nachweise</p>
-          </Link>
-        </div>
+  <Link
+    href="/fahrtenbuch"
+    className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
+  >
+    <p className="text-2xl">🚗</p>
+    <p className="mt-2 font-black text-slate-900">Fahrtenbuch</p>
+    <p className="mt-1 text-xs text-slate-500">
+      Fahrten und Kilometer dokumentieren
+    </p>
+  </Link>
+</div>
 
-        {/* Export-Sektion */}
         <section className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.15em] text-violet-500">
             Berichte exportieren
@@ -346,139 +374,167 @@ export default function BuchungenPage() {
 
         {/* --- BUCHUNGSLISTE --- */}
         <div className="space-y-6">
-          {Object.keys(gruppierteTransaktionen).length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-8 text-center border border-slate-100 shadow-sm">
-              <p className="text-3xl">📭</p>
-              <p className="mt-2 font-black text-slate-800">Keine Buchungen gefunden</p>
-              <p className="mt-1 text-xs text-slate-400">
-                Prüfe deine Filterkriterien oder erstelle eine neue Einnahme bzw. Ausgabe.
-              </p>
-            </div>
-          ) : (
-            Object.entries(gruppierteTransaktionen).map(([monat, liste]) => {
-              const isCollapsed = collapsedGroups[monat] || false
+          {Object.entries(gruppierteTransaktionen).map(([monat, liste]) => {
+            const isCollapsed = collapsedGroups[monat] || false
 
-              return (
-                <div key={monat} className="space-y-3">
-                  {/* Monatsgruppe Header */}
-                  <div className="flex items-center justify-between px-1">
-                    <div>
-                      <h2 className="text-xl font-black text-slate-950">{monat}</h2>
-                      <p className="text-[11px] font-bold text-slate-400 mt-0.5">{liste.length} Buchungen</p>
-                    </div>
-                    <button
-                      onClick={() => setCollapsedGroups(p => ({ ...p, [monat]: !isCollapsed }))}
-                      className="text-purple-600 text-xs font-black flex items-center gap-1"
-                    >
-                      {isCollapsed ? '🔼 AUFKLAPPEN' : '🔽 ZUKLAPPEN'}
-                    </button>
+            return (
+              <div key={monat} className="space-y-3">
+                {/* Monatsgruppe (Bild 10 Layout) */}
+                <div className="flex items-center justify-between px-1">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-950">{monat}</h2>
+                    <p className="text-[11px] font-bold text-slate-400 mt-0.5">{liste.length} Buchungen</p>
                   </div>
+                  <button
+                    onClick={() => setCollapsedGroups(p => ({ ...p, [monat]: !isCollapsed }))}
+                    className="text-purple-600 text-xs font-black flex items-center gap-1"
+                  >
+                    {isCollapsed ? '🔼 AUFKLAPPEN' : '🔽 ZUKLAPPEN'}
+                  </button>
+                </div>
 
-                  {/* Buchungskarten */}
-                  {!isCollapsed && (
-                    <div className="space-y-3">
-                      {liste.map((t) => {
-                        const isExpanded = expandedCards[t.id] || false
+                {/* Buchungskarten */}
+                {!isCollapsed && (
+                  <div className="space-y-3">
+                    {liste.map((t) => {
+                      const isExpanded = expandedCards[t.id] || false
 
-                        return (
-                          <div key={t.id} className="bg-white rounded-[2rem] p-5 border border-slate-50 shadow-sm space-y-4">
-                            {/* Klickbarer Header-Bereich */}
-                            <div onClick={() => setExpandedCards(p => ({ ...p, [t.id]: !isExpanded }))} className="flex items-start justify-between gap-2 cursor-pointer select-none">
-                              <div className="space-y-2">
-                                <h3 className="font-black text-sm text-slate-950 flex items-center gap-1.5">
-                                  {t.typ === 'ausgabe' ? '💸' : '💰'} {t.title}
-                                </h3>
-                                <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                                  t.status === 'bezahlt' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                                  t.status === 'ueberfaellig' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                                  'bg-amber-50 text-amber-600 border border-amber-100'
-                                }`}>
-                                  {t.status === 'bezahlt' ? '🟢 Bezahlt' : t.status === 'ueberfaellig' ? '🔴 Überfällig' : '🟡 Offen'}
-                                </span>
-                                
-                                {!isExpanded && (
-                                  <p className="text-[11px] text-slate-400 font-medium">
-                                    {t.party ? `${t.party} · ` : ''}{formatDate(t.date)}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="text-right shrink-0">
-                                <p className={`text-base font-black ${t.typ === 'ausgabe' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                  {t.typ === 'ausgabe' ? '-' : '+'}{formatEuro(t.amount)}
+                      return (
+                        <div key={t.id} className="bg-white rounded-[2rem] p-5 border border-slate-50 shadow-sm space-y-4">
+                          {/* Klickbarer Header-Bereich */}
+                          <div onClick={() => setExpandedCards(p => ({ ...p, [t.id]: !isExpanded }))} className="flex items-start justify-between gap-2 cursor-pointer select-none">
+                            <div className="space-y-2">
+                              <h3 className="font-black text-sm text-slate-950 flex items-center gap-1.5">
+                                💰 {t.title}
+                              </h3>
+                              <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                                t.status === 'bezahlt' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                t.status === 'ueberfaellig' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                                'bg-amber-50 text-amber-600 border border-amber-100'
+                              }`}>
+                                {t.status === 'bezahlt' ? '🟢 Bezahlt' : t.status === 'ueberfaellig' ? '🔴 Überfällig' : '🟡 Offen'}
+                              </span>
+                              
+                              {/* Kompakte Sub-Infos im geschlossenen Zustand */}
+                              {!isExpanded && (
+                                <p className="text-[11px] text-slate-400 font-medium">
+                                  {t.party} · {formatDate(t.date)}
                                 </p>
-                                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{formatDate(t.date)}</p>
-                              </div>
+                              )}
                             </div>
 
-                            {/* Aufgeklappte Details */}
-                            {isExpanded && (
-                              <div className="pt-2 border-t border-slate-100 space-y-4 text-xs animate-fadeIn">
-                                <div className="space-y-2 text-slate-600 font-medium">
-                                  <p><strong className="text-slate-800 font-bold">Partner/Kunde:</strong> {t.party || 'Keine Angabe'}</p>
-                                  <p><strong className="text-slate-800 font-bold">Kategorie:</strong> {t.category}</p>
-                                  <p><strong className="text-slate-800 font-bold">Buchungsdatum:</strong> {formatDate(t.date)}</p>
-                                  {t.note && <p><strong className="text-slate-800 font-bold">Notiz:</strong> <span className="italic">{t.note}</span></p>}
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-col gap-2 pt-1">
-                                  {t.typ === 'einnahme' && (
-                                    <div className="grid grid-cols-3 gap-2">
-                                      <button
-                                        onClick={() => updateIncomeStatus(t.rawId, 'bezahlt')}
-                                        className="rounded-xl bg-emerald-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
-                                      >
-                                        ✅ Bezahlt
-                                      </button>
-
-                                      <button
-                                        onClick={() => updateIncomeStatus(t.rawId, 'offen')}
-                                        className="rounded-xl bg-amber-400 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
-                                      >
-                                        🟡 Offen
-                                      </button>
-
-                                      <button
-                                        onClick={() => updateIncomeStatus(t.rawId, 'ueberfaellig')}
-                                        className="rounded-xl bg-rose-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
-                                      >
-                                        🚨 Überfällig
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  <div className="grid grid-cols-2 gap-2">
-                                    {t.typ === 'einnahme' && t.status !== 'bezahlt' ? (
-                                      <button
-                                        onClick={() => handleWhatsAppReminder(t)}
-                                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
-                                      >
-                                        🔔 Erinnern
-                                      </button>
-                                    ) : (
-                                      <div />
-                                    )}
-
-                                    <button
-                                      onClick={() => handleDelete(t)}
-                                      className="bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98] ml-auto w-full"
-                                    >
-                                      Löschen
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            <div className="text-right shrink-0">
+                              <p className={`text-base font-black ${t.typ === 'ausgabe' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {t.typ === 'ausgabe' ? '-' : '+'}{formatEuro(t.amount)}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{formatDate(t.date)}</p>
+                            </div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
+
+                          {/* Aufgeklappte Details (Exakt wie Bild 10) */}
+                          {isExpanded && (
+                            <div className="pt-2 border-t border-slate-100 space-y-4 text-xs animate-fadeIn">
+                              <div className="space-y-2 text-slate-600 font-medium">
+                                <p><strong className="text-slate-800 font-bold">Kunde:</strong> {t.party || 'Keine Angabe'}</p>
+                                <p><strong className="text-slate-800 font-bold">Buchungsdatum:</strong> {formatDate(t.date)}</p>
+                                {t.note && <p><strong className="text-slate-800 font-bold">Notiz:</strong> <span className="italic">{t.note}</span></p>}
+                              </div>
+
+                              {/* Action Buttons */}
+
+<div className="flex flex-col gap-2 pt-1">
+
+  {t.typ === 'einnahme' && (
+
+    <div className="grid grid-cols-3 gap-2">
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'bezahlt')}
+
+        className="rounded-xl bg-emerald-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        ✅ Bezahlt
+
+      </button>
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'offen')}
+
+        className="rounded-xl bg-amber-400 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        🟡 Offen
+
+      </button>
+
+      <button
+
+        onClick={() => updateIncomeStatus(t.rawId, 'ueberfaellig')}
+
+        className="rounded-xl bg-rose-500 py-3 text-[11px] font-bold text-white transition active:scale-[0.98]"
+
+      >
+
+        🚨 Überfällig
+
+      </button>
+
+    </div>
+
+  )}
+
+  <div className="grid grid-cols-2 gap-2">
+
+    {t.typ === 'einnahme' && t.status !== 'bezahlt' ? (
+
+      <button
+
+        onClick={() => handleWhatsAppReminder(t)}
+
+        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+
+      >
+
+        🔔 Erinnern
+
+      </button>
+
+    ) : (
+
+      <div />
+
+    )}
+
+    <button
+
+      onClick={() => handleDelete(t)}
+
+      className="bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold py-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-[0.98] ml-auto w-full"
+
+    >
+
+      Löschen
+
+    </button>
+
+  </div>
+
+</div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
