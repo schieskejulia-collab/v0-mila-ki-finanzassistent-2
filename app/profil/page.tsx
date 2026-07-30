@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { clearMilaLocalData } from '@/lib/privacy'
-
 const USER_TYPES = [
   {
     key: 'angestellt',
@@ -105,6 +104,36 @@ export default function ProfilPage() {
     router.replace('/login')
   }
 
+  const handleStartCheckout = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      alert('Bitte melde dich erneut an, bevor du Mila Premium aktivierst.')
+      return
+    }
+
+    const response = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    const result = await response.json().catch(() => null)
+
+    if (!response.ok || !result?.url) {
+      alert(
+        result?.error ||
+          'Stripe Checkout konnte gerade nicht geöffnet werden.'
+      )
+      return
+    }
+
+    window.location.href = result.url
+  }
+
   const [taxClass, setTaxClass] = useState('1')
   const [federalState, setFederalState] = useState('')
   const [churchTax, setChurchTax] = useState('nein')
@@ -113,10 +142,9 @@ export default function ProfilPage() {
   const [annualGross, setAnnualGross] = useState('')
   const [annualProfit, setAnnualProfit] = useState('')
   const [assemblyWork, setAssemblyWork] = useState('nein')
-  const [vatStatus, setVatStatus] = useState('kleinunternehmer')
-
+const [vatStatus, setVatStatus] = useState('kleinunternehmer')
   const missing: string[] = []
-  if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
+if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
   if (!userName) missing.push('Name')
   if (userStatus === 'angestellt' && !taxClass) missing.push('Steuerklasse')
   if (!federalState) missing.push('Bundesland')
@@ -124,60 +152,58 @@ export default function ProfilPage() {
   if (!annualProfit && userStatus !== 'angestellt') missing.push('Jahresgewinn')
 
   const completeness = Math.max(20, 100 - missing.length * 15)
+useEffect(() => {
+  const saved = localStorage.getItem('mila_profile')
+  if (!saved) return
 
-  useEffect(() => {
-    const saved = localStorage.getItem('mila_profile')
-    if (!saved) return
+  try {
+    const profile = JSON.parse(saved)
+setUserName(profile.userName || '')
+    setUserStatus(profile.userStatus || 'freelancer')
+    setIndustry(profile.industry || 'webdesign')
+    setAnnualGross(profile.annualGross || '')
+setAnnualProfit(profile.annualProfit || '')
+    setVatStatus(profile.vatStatus || 'kleinunternehmer')
+    setFederalState(profile.federalState || 'Sachsen-Anhalt')
+    setChurchTax(profile.churchTax || 'nein')
+    setMarried(profile.married || 'nein')
+    setChildren(profile.children || '')
+    setAssemblyWork(profile.assemblyWork || 'nein')
+  } catch (error) {
+    console.error('Fehler beim Laden des Profils', error)
+  }
+}, [])
 
-    try {
-      const profile = JSON.parse(saved)
-      setUserName(profile.userName || '')
-      setUserStatus(profile.userStatus || 'freelancer')
-      setIndustry(profile.industry || 'webdesign')
-      setAnnualGross(profile.annualGross || '')
-      setAnnualProfit(profile.annualProfit || '')
-      setVatStatus(profile.vatStatus || 'kleinunternehmer')
-      setFederalState(profile.federalState || 'Sachsen-Anhalt')
-      setChurchTax(profile.churchTax || 'nein')
-      setMarried(profile.married || 'nein')
-      setChildren(profile.children || '')
-      setAssemblyWork(profile.assemblyWork || 'nein')
-    } catch (error) {
-      console.error('Fehler beim Laden des Profils', error)
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem(
-      'mila_profile',
-      JSON.stringify({
-        userName,
-        userStatus,
-        industry,
-        annualGross,
-        annualProfit,
-        vatStatus,
-        federalState,
-        churchTax,
-        married,
-        children,
-        assemblyWork,
-      })
-    )
-  }, [
-    userName,
-    userStatus,
-    industry,
-    annualGross,
-    annualProfit,
-    vatStatus,
-    federalState,
-    churchTax,
-    married,
-    children,
-    assemblyWork,
-  ])
-
+useEffect(() => {
+  localStorage.setItem(
+    'mila_profile',
+    JSON.stringify({
+      userName,
+      userStatus,
+      industry,
+      annualGross,
+      annualProfit,
+      vatStatus,
+      federalState,
+      churchTax,
+      married,
+      children,
+      assemblyWork,
+    })
+  )
+}, [
+  userName,
+  userStatus,
+  industry,
+  annualGross,
+  annualProfit,
+  vatStatus,
+  federalState,
+  churchTax,
+  married,
+  children,
+  assemblyWork,
+])
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -329,18 +355,17 @@ export default function ProfilPage() {
               className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
             />
           )}
-
-          {userStatus !== 'angestellt' && (
-            <select
-              value={vatStatus}
-              onChange={(e) => setVatStatus(e.target.value)}
-              className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
-            >
-              <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
-              <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
-              <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
-            </select>
-          )}
+{userStatus !== 'angestellt' && (
+  <select
+    value={vatStatus}
+    onChange={(e) => setVatStatus(e.target.value)}
+    className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-bold outline-none"
+  >
+    <option value="kleinunternehmer">Kleinunternehmer (§19 UStG)</option>
+    <option value="regelbesteuerung_19">Regelbesteuerung 19%</option>
+    <option value="ermaessigt_7">Ermäßigter Satz 7%</option>
+  </select>
+)}
 
           <input
             value={federalState}
@@ -390,29 +415,49 @@ export default function ProfilPage() {
           Steuerberatung und werden aktuell nur für Orientierung genutzt.
         </p>
       </section>
+<button
+  onClick={() => {
+    localStorage.setItem(
+      'mila-profile-saved',
+      new Date().toISOString()
+    )
 
-      <button
-        onClick={() => {
-          localStorage.setItem(
-            'mila-profile-saved',
-            new Date().toISOString()
-          )
+    alert('✅ Dein Mila-Profil wurde gespeichert')
+  }}
+  className="
+    w-full rounded-[2rem]
+    bg-gradient-to-r from-purple-600 to-violet-500
+    p-5
+    text-xl
+    font-black
+    text-white
+    shadow-lg
+  "
+>
+  💾 Profil speichern
+</button>
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
+          Mila Premium
+        </p>
 
-          alert('✅ Dein Mila-Profil wurde gespeichert')
-        }}
-        className="
-          w-full rounded-[2rem]
-          bg-gradient-to-r from-purple-600 to-violet-500
-          p-5
-          text-xl
-          font-black
-          text-white
-          shadow-lg
-        "
-      >
-        💾 Profil speichern
-      </button>
+        <h2 className="mt-3 text-xl font-black tracking-tight">
+          Premium aktivieren
+        </h2>
 
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Starte Mila Premium für Berichte, Auswertungen und kommende
+          Komfortfunktionen.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleStartCheckout}
+          className="mt-4 w-full rounded-2xl bg-violet-600 py-4 text-sm font-black text-white shadow-sm"
+        >
+          Mila Premium für 2,99 € / Monat aktivieren
+        </button>
+      </section>
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">
           Datenschutz
@@ -461,22 +506,22 @@ export default function ProfilPage() {
       </section>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <button
-          type="button"
-          onClick={async () => {
-            if (
-              confirm(
-                'Möchtest du dich wirklich abmelden?'
-              )
-            ) {
-              await handleLogout()
-            }
-          }}
-          className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
-        >
-          Abmelden
-        </button>
-      </section>
+  <button
+    type="button"
+    onClick={async () => {
+      if (
+        confirm(
+          'Möchtest du dich wirklich abmelden?'
+        )
+      ) {
+        await handleLogout()
+      }
+    }}
+    className="w-full rounded-2xl bg-rose-50 py-4 text-sm font-black text-rose-600"
+  >
+    Abmelden
+  </button>
+</section>
     </main>
   )
 }
