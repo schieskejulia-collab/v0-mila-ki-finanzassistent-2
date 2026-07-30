@@ -88,7 +88,14 @@ function formatKm(value: number) {
 }
 
 function parseKmInput(value: string) {
-  return Number(String(value).replace(',', '.'))
+  const raw = String(value).trim().replace(/\s/g, '')
+  if (!raw) return Number.NaN
+
+  const normalized = raw.includes(',')
+    ? raw.replace(/\./g, '').replace(',', '.')
+    : raw
+
+  return Number(normalized)
 }
 
 function tripTypeLabel(type: TripType) {
@@ -119,6 +126,7 @@ export default function FahrtenbuchPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [form, setForm] = useState<FormState>(emptyForm)
+  const [receiptPhoto, setReceiptPhoto] = useState<File | null>(null)
 
   async function loadEntries(uid: string) {
     setErrorMessage('')
@@ -249,7 +257,22 @@ export default function FahrtenbuchPage() {
     setSuccessMessage('')
 
     const now = new Date().toISOString()
+    const entryId = createFahrtenbuchId()
+    let receiptPhotoPath: string | null = null
+
+    if (receiptPhoto && !userId) {
+      setErrorMessage('Belegfotos kÃ¶nnen nur mit einem eingeloggten Konto gespeichert werden.')
+      setIsSaving(false)
+      return
+    }
+
+    if (receiptPhoto) {
+      const extension = receiptPhoto.name.split('.').pop()?.toLowerCase() || 'jpg'
+      receiptPhotoPath = `${userId}/${entryId}.${extension}`
+    }
+
     const payload = {
+      id: entryId,
       trip_date: form.tripDate,
       start_location: form.startLocation.trim(),
       destination: form.destination.trim(),
@@ -265,9 +288,21 @@ export default function FahrtenbuchPage() {
       return_trip: form.returnTrip,
       route: form.route.trim(),
       notes: form.notes.trim(),
+      receipt_photo_path: receiptPhotoPath,
     }
 
     try {
+      if (receiptPhoto && receiptPhotoPath) {
+        const { error: uploadError } = await supabase.storage
+          .from('fahrtenbuch-belege')
+          .upload(receiptPhotoPath, receiptPhoto, {
+            contentType: receiptPhoto.type,
+            upsert: false,
+          })
+
+        if (uploadError) throw uploadError
+      }
+
       let savedEntry: FahrtenbuchEntry
 
       if (userId) {
@@ -296,10 +331,14 @@ export default function FahrtenbuchPage() {
         tripType: previous.tripType,
         vehicle: previous.vehicle,
       }))
+      setReceiptPhoto(null)
       setShowDetails(false)
       setSuccessMessage('Fahrt wurde gespeichert')
     } catch (error: any) {
       console.error('Fahrt speichern fehlgeschlagen:', error)
+      if (receiptPhotoPath) {
+        await supabase.storage.from('fahrtenbuch-belege').remove([receiptPhotoPath])
+      }
       setErrorMessage(
         error?.message ||
           'Die Fahrt konnte nicht gespeichert werden. Bitte pr\u00fcfe zuerst die SQL-Tabelle.'
@@ -318,6 +357,14 @@ export default function FahrtenbuchPage() {
 
     try {
       if (userId) {
+        if (entry.receipt_photo_path) {
+          const { error: photoError } = await supabase.storage
+            .from('fahrtenbuch-belege')
+            .remove([entry.receipt_photo_path])
+
+          if (photoError) throw photoError
+        }
+
         const { error } = await supabase
           .from('fahrtenbuch')
           .delete()
@@ -337,6 +384,19 @@ export default function FahrtenbuchPage() {
       console.error('Fahrt loeschen fehlgeschlagen:', error)
       setErrorMessage(error?.message || 'Die Fahrt konnte nicht gel\u00f6scht werden.')
     }
+  }
+
+  async function openReceiptPhoto(path: string) {
+    const { data, error } = await supabase.storage
+      .from('fahrtenbuch-belege')
+      .createSignedUrl(path, 300)
+
+    if (error || !data?.signedUrl) {
+      setErrorMessage('Das Belegfoto konnte nicht geÃ¶ffnet werden.')
+      return
+    }
+
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -484,6 +544,30 @@ export default function FahrtenbuchPage() {
             />
           </label>
 
+          <label className="block text-xs font-black text-slate-500">
+            Belegfoto / Tacho-Foto (optional)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              capture="environment"
+              onChange={(event) => {
+                const file = event.target.files?.[0] || null
+                if (file && file.size > 5 * 1024 * 1024) {
+                  setReceiptPhoto(null)
+                  setErrorMessage('Das Belegfoto darf hÃ¶chstens 5 MB groÃ sein.')
+                  event.currentTarget.value = ''
+                  return
+                }
+                setErrorMessage('')
+                setReceiptPhoto(file)
+              }}
+              className="mt-1 block w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-violet-100 file:px-3 file:py-2 file:text-xs file:font-black file:text-violet-700"
+            />
+            <span className="mt-1 block text-[11px] font-semibold text-slate-400">
+              Optional: Foto vom Kilometerstand oder Beleg. Maximal 5 MB.
+            </span>
+          </label>
+
           <button
             type="button"
             onClick={() => setShowDetails((previous) => !previous)}
@@ -603,7 +687,7 @@ export default function FahrtenbuchPage() {
             <h2 className="mt-1 text-xl font-black">Deine Fahrten</h2>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">
-            {entries.length} Eintr&#228;ge
+            {entries.length}{' '}Eintr&#228;ge
           </span>
         </div>
 
@@ -636,6 +720,15 @@ export default function FahrtenbuchPage() {
                       <p className="mt-1 text-[11px] font-semibold text-slate-400">
                         Tacho {formatKm(entry.odometer_start_km)} -&gt; {formatKm(entry.odometer_end_km)}
                       </p>
+                    )}
+                    {entry.receipt_photo_path && (
+                      <button
+                        type="button"
+                        onClick={() => void openReceiptPhoto(entry.receipt_photo_path as string)}
+                        className="mt-2 text-[11px] font-black text-violet-700 underline"
+                      >
+                        Belegfoto Ã¶ffnen
+                      </button>
                     )}
                   </div>
                   <p className="shrink-0 text-sm font-black text-violet-700">
