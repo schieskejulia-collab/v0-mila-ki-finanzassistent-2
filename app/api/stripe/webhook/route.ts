@@ -8,7 +8,7 @@ import {
 } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_KEY?.trim()
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 const stripePriceId = process.env.STRIPE_PRICE_ID?.trim()
