@@ -127,12 +127,30 @@ export default function FahrtenbuchPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [form, setForm] = useState<FormState>(emptyForm)
   const [receiptPhoto, setReceiptPhoto] = useState<File | null>(null)
+  const [premiumStatus, setPremiumStatus] = useState<'loading' | 'active' | 'inactive'>('loading')
 
-  async function loadEntries(uid: string) {
+  async function hasPremiumAccess(uid: string) {
+    if (!uid) return false
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', uid)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Premium-Status konnte nicht geladen werden:', error)
+      return false
+    }
+
+    return data?.status === 'active' || data?.status === 'trialing'
+  }
+
+  async function loadEntries(uid: string, premiumActive: boolean) {
     setErrorMessage('')
 
-    if (!uid) {
-      setEntries(sortEntries(readLocalEntries()))
+    if (!uid || !premiumActive) {
+      setEntries([])
       setIsLoading(false)
       return
     }
@@ -169,7 +187,10 @@ export default function FahrtenbuchPage() {
 
       const uid = session?.user?.id || ''
       setUserId(uid)
-      await loadEntries(uid)
+      const premiumActive = await hasPremiumAccess(uid)
+      if (!mounted) return
+      setPremiumStatus(premiumActive ? 'active' : 'inactive')
+      await loadEntries(uid, premiumActive)
     }
 
     void loadSession()
@@ -179,9 +200,16 @@ export default function FahrtenbuchPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const uid = session?.user?.id || ''
       setUserId(uid)
+      setPremiumStatus('loading')
       setIsLoading(true)
       window.setTimeout(() => {
-        if (mounted) void loadEntries(uid)
+        if (!mounted) return
+        void (async () => {
+          const premiumActive = await hasPremiumAccess(uid)
+          if (!mounted) return
+          setPremiumStatus(premiumActive ? 'active' : 'inactive')
+          await loadEntries(uid, premiumActive)
+        })()
       }, 0)
     })
 
@@ -228,6 +256,11 @@ export default function FahrtenbuchPage() {
   async function saveEntry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isSaving) return
+
+    if (premiumStatus !== 'active') {
+      setErrorMessage('Das Fahrtenbuch ist nur mit Mila Premium verfÃ¼gbar.')
+      return
+    }
 
     const odometerStart = parseKmInput(form.odometerStartKm)
     const odometerEnd = parseKmInput(form.odometerEndKm)
@@ -397,6 +430,46 @@ export default function FahrtenbuchPage() {
     }
 
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  if (premiumStatus === 'loading') {
+    return (
+      <main className="mx-auto min-h-screen max-w-md p-4 text-slate-950">
+        <section className="rounded-[2rem] bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-bold text-slate-500">Premium-Zugang wird geprÃ¼ft ...</p>
+        </section>
+      </main>
+    )
+  }
+
+  if (premiumStatus !== 'active') {
+    return (
+      <main className="mx-auto min-h-screen max-w-md space-y-4 p-4 text-slate-950">
+        <header className="rounded-[2rem] bg-white p-5 shadow-sm">
+          <Link
+            href="/buchungen"
+            className="text-xs font-black uppercase tracking-[0.16em] text-violet-600"
+          >
+            &larr; Finanzen
+          </Link>
+          <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-violet-500">Mila Modul</p>
+          <h1 className="mt-2 text-3xl font-black">Fahrtenbuch</h1>
+        </header>
+        <section className="rounded-[2rem] border border-violet-100 bg-white p-6 text-center shadow-sm">
+          <p className="text-4xl">&#x1F512;</p>
+          <h2 className="mt-3 text-xl font-black">Premium-Modul</h2>
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+            Das Fahrtenbuch ist in Mila Premium enthalten. Aktiviere Premium, um Fahrten und Belegfotos sicher zu speichern.
+          </p>
+          <Link
+            href="/profil"
+            className="mt-5 block rounded-2xl bg-violet-600 py-4 text-base font-black text-white"
+          >
+            Premium ansehen
+          </Link>
+        </section>
+      </main>
+    )
   }
 
   return (
