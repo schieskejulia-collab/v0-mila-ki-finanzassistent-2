@@ -16,7 +16,8 @@ type FormState = {
   startLocation: string
   destination: string
   purpose: string
-  distanceKm: string
+  odometerStartKm: string
+  odometerEndKm: string
   tripType: TripType
   businessPartner: string
   vehicle: string
@@ -33,7 +34,8 @@ function emptyForm(): FormState {
     startLocation: '',
     destination: '',
     purpose: '',
-    distanceKm: '',
+    odometerStartKm: '',
+    odometerEndKm: '',
     tripType: 'betrieblich',
     businessPartner: '',
     vehicle: '',
@@ -83,6 +85,10 @@ function formatKm(value: number) {
   return `${Number(value || 0).toLocaleString('de-DE', {
     maximumFractionDigits: 2,
   })} km`
+}
+
+function parseKmInput(value: string) {
+  return Number(String(value).replace(',', '.'))
 }
 
 function tripTypeLabel(type: TripType) {
@@ -196,6 +202,17 @@ export default function FahrtenbuchPage() {
     }
   }, [entries])
 
+  const calculatedDistance = useMemo(() => {
+    const start = parseKmInput(form.odometerStartKm)
+    const end = parseKmInput(form.odometerEndKm)
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+      return null
+    }
+
+    return end - start
+  }, [form.odometerEndKm, form.odometerStartKm])
+
   function setField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((previous) => ({ ...previous, [field]: value }))
   }
@@ -204,18 +221,25 @@ export default function FahrtenbuchPage() {
     event.preventDefault()
     if (isSaving) return
 
-    const distance = Number(String(form.distanceKm).replace(',', '.'))
+    const odometerStart = parseKmInput(form.odometerStartKm)
+    const odometerEnd = parseKmInput(form.odometerEndKm)
+    const distance = odometerEnd - odometerStart
 
     if (
       !form.tripDate ||
       !form.startLocation.trim() ||
       !form.destination.trim() ||
       !form.purpose.trim() ||
+      !Number.isFinite(odometerStart) ||
+      !Number.isFinite(odometerEnd) ||
+      odometerStart < 0 ||
+      odometerEnd < 0 ||
+      odometerEnd < odometerStart ||
       !Number.isFinite(distance) ||
       distance <= 0
     ) {
       setErrorMessage(
-        'Bitte Datum, Start, Ziel, Zweck und eine Kilometerzahl eintragen.'
+        'Bitte Datum, Start, Ziel, Zweck sowie Anfangs- und Endkilometerstand korrekt eintragen.'
       )
       return
     }
@@ -231,6 +255,8 @@ export default function FahrtenbuchPage() {
       destination: form.destination.trim(),
       purpose: form.purpose.trim(),
       distance_km: distance,
+      odometer_start_km: odometerStart,
+      odometer_end_km: odometerEnd,
       trip_type: form.tripType,
       business_partner: form.businessPartner.trim(),
       vehicle: form.vehicle.trim(),
@@ -402,18 +428,38 @@ export default function FahrtenbuchPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-black text-slate-500">
-              Kilometer
+              Kilometerstand Start
               <input
-                type="number"
-                min="0.1"
-                step="0.1"
+                type="text"
                 inputMode="decimal"
-                value={form.distanceKm}
-                onChange={(event) => setField('distanceKm', event.target.value)}
-                placeholder="z. B. 24,5"
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
+                value={form.odometerStartKm}
+                onChange={(event) => setField('odometerStartKm', event.target.value)}
+                placeholder="z. B. 12.345,6"
+                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
               />
             </label>
+            <label className="block text-xs font-black text-slate-500">
+              Kilometerstand Ende
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.odometerEndKm}
+                onChange={(event) => setField('odometerEndKm', event.target.value)}
+                placeholder="z. B. 12.369,1"
+                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-violet-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet-500">
+                Automatische Strecke
+              </p>
+              <p className="mt-1 text-lg font-black text-violet-800">
+                {calculatedDistance === null ? 'Wird berechnet' : formatKm(calculatedDistance)}
+              </p>
+            </div>
             <label className="block text-xs font-black text-slate-500">
               Fahrtart
               <select
@@ -586,6 +632,11 @@ export default function FahrtenbuchPage() {
                     <p className="mt-1 text-xs font-semibold text-slate-500">
                       {formatDate(entry.trip_date)} &middot; {entry.purpose}
                     </p>
+                    {entry.odometer_start_km != null && entry.odometer_end_km != null && (
+                      <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                        Tacho {formatKm(entry.odometer_start_km)} -&gt; {formatKm(entry.odometer_end_km)}
+                      </p>
+                    )}
                   </div>
                   <p className="shrink-0 text-sm font-black text-violet-700">
                     {formatKm(entry.distance_km)}
