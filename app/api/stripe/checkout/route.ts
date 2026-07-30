@@ -1,123 +1,86 @@
-import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-export const runtime = "nodejs"
+import { NextResponse } from 'next/server'
+import { requireSupabaseUser } from '@/lib/supabase-server'
 
-export async function POST(request: NextRequest) {
-  const secretKey = process.env.SECRET_KEY
-  const priceId = process.env.PRICE_ID
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim()
+const stripePriceId = process.env.STRIPE_PRICE_ID?.trim()
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+function getBaseUrl(req: Request) {
+  const origin = req.headers.get('origin')
 
-  if (!secretKey || !priceId) {
+  if (origin) return origin
+
+  const host = req.headers.get('host')
+
+  if (host) {
+    return `${host.includes('localhost') ? 'http' : 'https'}://${host}`
+  }
+
+  return 'https://v0-mila-ki-finanzassistent-2.vercel.app'
+}
+
+export async function POST(req: Request) {
+  const { user, error: authError } = await requireSupabaseUser(req)
+
+  if (authError || !user) {
     return NextResponse.json(
-      { error: "Stripe-Konfiguration fehlt." },
-      { status: 500 },
+      { success: false, error: authError },
+      { status: 401 }
     )
   }
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!stripeSecretKey || !stripePriceId) {
     return NextResponse.json(
-      { error: "Supabase-Konfiguration fehlt." },
-      { status: 500 },
+      {
+        success: false,
+        error:
+          'Stripe ist serverseitig noch nicht vollständig konfiguriert.',
+      },
+      { status: 501 }
     )
   }
 
-  const authHeader = request.headers.get("authorization")
-  const accessToken = authHeader?.replace("Bearer ", "")
-
-  if (!accessToken) {
-    return NextResponse.json(
-      { error: "Bitte melde dich zuerst an." },
-      { status: 401 },
-    )
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  })
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser(accessToken)
-
-  if (userError || !user) {
-    return NextResponse.json(
-      { error: "Deine Anmeldung konnte nicht geprüft werden." },
-      { status: 401 },
-    )
-  }
-
-  const origin = request.nextUrl.origin
+  const baseUrl = getBaseUrl(req)
   const body = new URLSearchParams()
 
-  body.set("mode", "subscription")
-  body.set("line_items[0][price]", priceId)
-  body.set("line_items[0][quantity]", "1")
+  body.set('mode', 'subscription')
+  body.set('line_items[0][price]', stripePriceId)
+  body.set('line_items[0][quantity]', '1')
+  body.set('success_url', `${baseUrl}/profil?checkout=success`)
+  body.set('cancel_url', `${baseUrl}/profil?checkout=cancelled`)
+  body.set('client_reference_id', user.id)
+  body.set('customer_email', user.email || '')
+  body.set('metadata[user_id]', user.id)
+  body.set('subscription_data[metadata][user_id]', user.id)
+  body.set('allow_promotion_codes', 'true')
 
-  body.set("client_reference_id", user.id)
-  body.set("metadata[user_id]", user.id)
-  body.set("subscription_data[metadata][user_id]", user.id)
+  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${stripeSecretKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
 
-  if (user.email) {
-    body.set("customer_email", user.email)
-  }
+  const data = await response.json()
 
-  body.set(
-    "success_url",
-    `${origin}/profil?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-  )
-
-  body.set(
-    "cancel_url",
-    `${origin}/premium?checkout=cancelled`,
-  )
-
-  body.set("allow_promotion_codes", "true")
-
-  try {
-    const stripeResponse = await fetch(
-      "https://api.stripe.com/v1/checkout/sessions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: body.toString(),
-        cache: "no-store",
-      },
-    )
-
-    const stripeData = await stripeResponse.json()
-
-    if (!stripeResponse.ok || !stripeData.url) {
-      console.error("Stripe checkout error:", stripeData)
-
-      return NextResponse.json(
-        {
-          error:
-            stripeData?.error?.message ??
-            "Stripe Checkout konnte nicht gestartet werden.",
-        },
-        { status: stripeResponse.status || 500 },
-      )
-    }
-
-    return NextResponse.json({
-      url: stripeData.url,
-    })
-  } catch (error) {
-    console.error("Stripe checkout request failed:", error)
-
+  if (!response.ok) {
     return NextResponse.json(
-      { error: "Stripe ist momentan nicht erreichbar." },
-      { status: 500 },
+      {
+        success: false,
+        error:
+          data?.error?.message ||
+          'Stripe Checkout konnte nicht erstellt werden.',
+      },
+      { status: 500 }
     )
   }
+
+  return NextResponse.json({
+    success: true,
+    url: data.url,
+  })
 }
