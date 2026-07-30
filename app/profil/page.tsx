@@ -612,9 +612,10 @@ useEffect(() => {
         </button>
 
         <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-400">
-          Für vollständige Cloud-Löschung braucht Mila serverseitig den
-          Supabase-Admin-Key in Vercel. Dieser Key darf niemals im Browser oder
-          als NEXT_PUBLIC-Variable landen.
+          Für die dauerhafte Löschung deines Kontos und deiner Cloud-Daten
+          verwendet Mila einen geschützten serverseitigen Schlüssel. Dieser
+          bleibt ausschließlich auf dem Server und wird niemals im Browser
+          angezeigt.
         </p>
 
         <button
