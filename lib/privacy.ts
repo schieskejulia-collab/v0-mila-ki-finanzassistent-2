@@ -10,6 +10,7 @@ const MILA_LOCAL_STORAGE_PREFIXES = [
   'mila-incomes-',
   'mila-obligations-',
   'mila-documents-',
+  'mila-fahrtenbuch-',
   'mila-merchant-memory',
 ]
 
