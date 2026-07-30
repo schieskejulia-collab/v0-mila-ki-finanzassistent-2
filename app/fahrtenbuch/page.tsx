@@ -271,12 +271,12 @@ export default function FahrtenbuchPage() {
         vehicle: previous.vehicle,
       }))
       setShowDetails(false)
-      setSuccessMessage('Fahrt wurde gespeichert â')
+      setSuccessMessage('Fahrt wurde gespeichert')
     } catch (error: any) {
       console.error('Fahrt speichern fehlgeschlagen:', error)
       setErrorMessage(
         error?.message ||
-          'Die Fahrt konnte nicht gespeichert werden. Bitte prÃ¼fe zuerst die SQL-Tabelle.'
+          'Die Fahrt konnte nicht gespeichert werden. Bitte pr\u00fcfe zuerst die SQL-Tabelle.'
       )
     } finally {
       setIsSaving(false)
@@ -284,7 +284,7 @@ export default function FahrtenbuchPage() {
   }
 
   async function deleteEntry(entry: FahrtenbuchEntry) {
-    if (!window.confirm(`MÃ¶chtest du die Fahrt nach â${entry.destination}â lÃ¶schen?`)) {
+    if (!window.confirm(`M\u00f6chtest du die Fahrt nach "${entry.destination}" l\u00f6schen?`)) {
       return
     }
 
@@ -308,8 +308,8 @@ export default function FahrtenbuchPage() {
         previous.filter((item) => item.id !== entry.id)
       )
     } catch (error: any) {
-      console.error('Fahrt lÃ¶schen fehlgeschlagen:', error)
-      setErrorMessage(error?.message || 'Die Fahrt konnte nicht gelÃ¶scht werden.')
+      console.error('Fahrt loeschen fehlgeschlagen:', error)
+      setErrorMessage(error?.message || 'Die Fahrt konnte nicht gel\u00f6scht werden.')
     }
   }
 
@@ -320,7 +320,7 @@ export default function FahrtenbuchPage() {
           href="/buchungen"
           className="text-xs font-black uppercase tracking-[0.16em] text-violet-600"
         >
-          â Finanzen
+          &larr; Finanzen
         </Link>
         <div className="mt-4 flex items-start justify-between gap-3">
           <div>
@@ -329,11 +329,11 @@ export default function FahrtenbuchPage() {
             </p>
             <h1 className="mt-2 text-3xl font-black">Fahrtenbuch</h1>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-              GeschÃ¤ftliche Fahrten, Arbeitswege und private Strecken sauber an einem Ort dokumentieren.
+              Gesch&#228;ftliche Fahrten, Arbeitswege und private Strecken sauber an einem Ort dokumentieren.
             </p>
           </div>
           <span className="text-4xl" aria-hidden="true">
-            ð
+            &#x1F697;
           </span>
         </div>
       </header>
@@ -361,10 +361,10 @@ export default function FahrtenbuchPage() {
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-violet-500">
               Neue Fahrt
             </p>
-            <h2 className="mt-1 text-xl font-black">Eintrag hinzufÃ¼gen</h2>
+            <h2 className="mt-1 text-xl font-black">Eintrag hinzuf&#252;gen</h2>
           </div>
           <span className="rounded-full bg-emerald-50 px-3 py-2 text-[10px] font-black text-emerald-700">
-            {userId ? 'Cloud gespeichert' : 'GerÃ¤t gespeichert'}
+            {userId ? 'Cloud gespeichert' : 'Ger\u00e4t gespeichert'}
           </span>
         </div>
 
@@ -470,7 +470,7 @@ export default function FahrtenbuchPage() {
               </div>
 
               <label className="block text-xs font-black text-slate-500">
-                GeschÃ¤ftspartner / Kunde
+                Gesch&#228;ftspartner / Kunde
                 <input
                   value={form.businessPartner}
                   onChange={(event) => setField('businessPartner', event.target.value)}
@@ -496,7 +496,7 @@ export default function FahrtenbuchPage() {
                   onChange={(event) => setField('returnTrip', event.target.checked)}
                   className="h-5 w-5 accent-violet-600"
                 />
-                RÃ¼ckfahrt enthalten
+                R&#252;ckfahrt enthalten
               </label>
 
               <label className="block text-xs font-black text-slate-500">
@@ -539,12 +539,12 @@ export default function FahrtenbuchPage() {
             disabled={isSaving}
             className="w-full rounded-2xl bg-violet-600 py-4 text-base font-black text-white shadow-sm transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
           >
-            {isSaving ? 'Wird gespeichert â¦' : 'Fahrt speichern ð'}
+            {isSaving ? 'Wird gespeichert ...' : 'Fahrt speichern'}
           </button>
         </form>
 
         <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-400">
-          Mila unterstÃ¼tzt dich bei der Dokumentation. Ob ein Fahrtenbuch steuerlich anerkannt wird, hÃ¤ngt von VollstÃ¤ndigkeit und den Anforderungen des Finanzamts ab.
+          Mila unterst&#252;tzt dich bei der Dokumentation. Ob ein Fahrtenbuch steuerlich anerkannt wird, h&#228;ngt von Vollst&#228;ndigkeit und den Anforderungen des Finanzamts ab.
         </p>
       </section>
 
@@ -557,15 +557,15 @@ export default function FahrtenbuchPage() {
             <h2 className="mt-1 text-xl font-black">Deine Fahrten</h2>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">
-            {entries.length} EintrÃ¤ge
+            {entries.length} Eintr&#228;ge
           </span>
         </div>
 
         {isLoading ? (
-          <p className="mt-5 text-sm font-semibold text-slate-500">Fahrtenbuch wird geladen â¦</p>
+          <p className="mt-5 text-sm font-semibold text-slate-500">Fahrtenbuch wird geladen ...</p>
         ) : entries.length === 0 ? (
           <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-center">
-            <p className="text-3xl">ð£ï¸</p>
+            <p className="text-3xl">&#x1F6E3;&#xFE0F;</p>
             <p className="mt-2 text-sm font-black text-slate-700">Noch keine Fahrten</p>
             <p className="mt-1 text-xs font-semibold text-slate-400">
               Deine gespeicherten Fahrten erscheinen hier chronologisch.
@@ -581,10 +581,10 @@ export default function FahrtenbuchPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-slate-900">
-                      {entry.start_location} â {entry.destination}
+                      {entry.start_location} &rarr; {entry.destination}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {formatDate(entry.trip_date)} Â· {entry.purpose}
+                      {formatDate(entry.trip_date)} &middot; {entry.purpose}
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-black text-violet-700">
@@ -600,7 +600,7 @@ export default function FahrtenbuchPage() {
                     onClick={() => void deleteEntry(entry)}
                     className="text-[11px] font-black text-rose-600"
                   >
-                    LÃ¶schen
+                    L&#246;schen
                   </button>
                 </div>
               </article>
