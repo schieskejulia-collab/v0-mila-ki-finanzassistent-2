@@ -146,6 +146,7 @@ export default function ProfilPage() {
   const [subscriptionStatus, setSubscriptionStatus] = useState('loading')
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null)
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
   const missing: string[] = []
   if (userStatus !== 'angestellt' && !vatStatus) missing.push('Umsatzsteuerstatus')
   if (!userName) missing.push('Name')
@@ -254,6 +255,43 @@ useEffect(() => {
   const premiumEndText = subscriptionEnd
     ? new Date(subscriptionEnd).toLocaleDateString('de-DE')
     : ''
+
+  const handleOpenBillingPortal = async () => {
+    setPortalLoading(true)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        alert('Bitte melde dich erneut an, bevor du dein Abo verwaltest.')
+        return
+      }
+
+      const response = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok || !result?.url) {
+        alert(
+          result?.error ||
+            'Das Stripe-Kundenportal konnte gerade nicht geöffnet werden.'
+        )
+        return
+      }
+
+      window.location.href = result.url
+    } finally {
+      setPortalLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen space-y-5 bg-[#fbf9ff] p-4 pb-40 text-slate-950">
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
@@ -507,6 +545,17 @@ useEffect(() => {
                   ? `Nächste Verlängerung: ${premiumEndText}.`
                   : 'Dein Premium-Zugang ist freigeschaltet.'}
             </p>
+
+            <button
+              type="button"
+              onClick={handleOpenBillingPortal}
+              disabled={portalLoading}
+              className="mt-4 w-full rounded-2xl border-2 border-emerald-600 bg-white py-4 text-sm font-black text-emerald-700 disabled:opacity-60"
+            >
+              {portalLoading
+                ? 'Stripe-Kundenportal wird geöffnet …'
+                : 'Abo verwalten & kündigen'}
+            </button>
           </div>
         ) : (
           <>
