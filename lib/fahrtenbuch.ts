@@ -10,6 +10,7 @@ export interface FahrtenbuchEntry {
   distance_km: number
   odometer_start_km?: number | null
   odometer_end_km?: number | null
+  receipt_photo_path?: string | null
   trip_type: TripType
   business_partner: string
   vehicle: string
