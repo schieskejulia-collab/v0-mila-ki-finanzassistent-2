@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { supabase } from '@/lib/supabase'
+import { createDocument } from '@/lib/mila-documents'
 import { ReceiptUpload } from '@/components/ui/receipt-upload'
 import {
   CATEGORY_LIST,
@@ -99,6 +101,8 @@ export default function NeueBuchungPage() {
     incomes,
     expenses,
     obligations,
+    addDocument,
+    userId,
   } = useFinance()
 
   const [type, setType] =
@@ -112,6 +116,7 @@ export default function NeueBuchungPage() {
   const [status, setStatus] = useState('offen')
   const [dueDate, setDueDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [scannedFile, setScannedFile] = useState<File | null>(null)
 
   const [scanSuggestion, setScanSuggestion] =
     useState('')
@@ -181,7 +186,8 @@ export default function NeueBuchungPage() {
     )
   }
 
-  const handleScanSuccess = (rawData: any) => {
+  const handleScanSuccess = (rawData: any, file: File) => {
+    setScannedFile(file)
     const scannedData =
       rawData?.data?.data ||
       rawData?.data ||
@@ -588,6 +594,47 @@ const rememberedCategory =
         await addIncome(payload)
       }
 
+      if (scannedFile && userId) {
+        if (scannedFile.size > 10 * 1024 * 1024) {
+          throw new Error('Die Datei ist größer als 10 MB.')
+        }
+
+        const documentId = crypto.randomUUID()
+        const extension =
+          scannedFile.name.split('.').pop()?.toLowerCase() ||
+          (scannedFile.type === 'application/pdf' ? 'pdf' : 'jpg')
+        const filePath = `${userId}/${documentId}.${extension}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('mila-dokumente')
+          .upload(filePath, scannedFile, {
+            contentType: scannedFile.type || 'application/octet-stream',
+            upsert: false,
+          })
+
+        if (uploadError) throw uploadError
+
+        try {
+          await addDocument(
+            createDocument({
+              id: documentId,
+              title: payload.title,
+              partner: partner || '',
+              amount: numericAmount,
+              type: type === 'income' ? 'rechnung' : 'beleg',
+              status: 'neu',
+              dueDate: dueDate || undefined,
+              fileName: scannedFile.name,
+              fileUrl: filePath,
+              note: note || '',
+            })
+          )
+        } catch (documentError) {
+          await supabase.storage.from('mila-dokumente').remove([filePath])
+          throw documentError
+        }
+      }
+
       setTitle('')
       setAmount('')
       setPartner('')
@@ -595,6 +642,7 @@ const rememberedCategory =
       setStatus('offen')
       setDueDate('')
       setCategory('Sonstiges')
+      setScannedFile(null)
       resetScanReview()
     } catch (error: any) {
       alert(
