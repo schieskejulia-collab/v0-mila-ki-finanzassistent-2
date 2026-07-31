@@ -102,7 +102,7 @@ export default function NeueBuchungPage() {
     expenses,
     obligations,
     addDocument,
-    userId,
+    
   } = useFinance()
 
   const [type, setType] =
