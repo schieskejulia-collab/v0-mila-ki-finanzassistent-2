@@ -5,7 +5,7 @@ import { useRef, useState } from 'react'
 export function ReceiptUpload({
   onScanSuccess,
 }: {
-  onScanSuccess?: (data: any) => void
+  onScanSuccess?: (data: any, file: File) => void
 }) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -49,7 +49,7 @@ export function ReceiptUpload({
 
     if (!contentType.includes('application/json')) {
       throw new Error(
-        'Der Scanner hat keine gültige Antwort erhalten. Bitte nochmal versuchen.'
+        'Der Scanner hat keine gÃ¼ltige Antwort erhalten. Bitte nochmal versuchen.'
       )
     }
 
@@ -65,7 +65,7 @@ export function ReceiptUpload({
 const scanPayload = json.data?.data || json.data
 
 if (scanPayload && onScanSuccess) {
-  onScanSuccess(scanPayload)
+  onScanSuccess(scanPayload, file)
 }
   } catch (err: any) {
     console.error('Scanner Error:', err)
@@ -88,7 +88,7 @@ if (scanPayload && onScanSuccess) {
   return (
     <div className="w-full">
       <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-violet-200 bg-violet-50/70 p-5 text-center transition-all active:scale-[0.99]">
-        <span className="text-3xl">{isScanning ? '⏳' : '📸'}</span>
+        <span className="text-3xl">{isScanning ? 'â³' : 'ð¸'}</span>
 
         <p className="mt-2 text-sm font-black text-slate-800">
           {isScanning ? statusText : 'Beleg fotografieren oder hochladen'}
