@@ -259,12 +259,12 @@ const handleDelete = async (t: any) => {
         </div>
 
         {/* Sektions-Titel */}
-        <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 pt-2">
+        <p id="buchungen-liste" className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 pt-2 scroll-mt-24">
           Gefundene Buchungen ({gefilterteTransaktionen.length})
         </p>
 <div className="grid grid-cols-2 gap-3">
   <Link
-    href="/buchungen"
+    href="#buchungen-liste"
     className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
   >
     <p className="text-2xl">📒</p>
@@ -311,7 +311,7 @@ const handleDelete = async (t: any) => {
     href="/fahrtenbuch"
     className="rounded-3xl bg-white p-4 shadow-sm border border-slate-100"
   >
-    <p className="text-2xl">🚗</p>
+    <p className="text-2xl">&#x1F697;</p>
     <p className="mt-2 font-black text-slate-900">Fahrtenbuch</p>
     <p className="mt-1 text-xs text-slate-500">
       Fahrten und Kilometer dokumentieren
