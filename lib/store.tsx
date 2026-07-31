@@ -14,7 +14,11 @@ import { supabase } from '@/lib/supabase'
 import { calculateSummary } from '@/lib/calculations'
 import type { MilaGoal } from '@/lib/mila-goals'
 import type { Obligation } from './mila-obligations'
-import type { MilaDocument } from './mila-documents'
+import {
+  createDocument,
+  documentFromRow,
+  type MilaDocument,
+} from './mila-documents'
 
 export type { Expense, Income } from './types'
 
@@ -64,7 +68,8 @@ interface FinanceContextValue {
 
   documents: MilaDocument[]
   setDocuments: (items: MilaDocument[]) => void
-  deleteDocument: (id: string) => void
+  addDocument: (item: MilaDocument) => Promise<void>
+  deleteDocument: (id: string) => Promise<void>
 
 userName: string
   setUserName: (value: string) => void
@@ -464,35 +469,33 @@ if (!uid) {
         )
       : []
   )
+  setDocuments(
+    Array.isArray(savedDocuments)
+      ? savedDocuments
+      : []
+  )
+} else {
+  // Angemeldete Dokumente kommen ausschlieÃlich aus Supabase.
+  // So bleiben sie nicht zusÃ¤tzlich im Browser-LocalStorage liegen.
+  setDocuments([])
 }
-
-setDocuments(
-  Array.isArray(savedDocuments)
-    ? savedDocuments
-    : []
-)
 
 }, [])
 
 const fetchFinanceData =
   useCallback(
       async (uid?: string) => {
-        // Gastmodus nutzt ausschließlich
+        // Gastmodus nutzt ausschlieÃlich
         // die bereits geladenen lokalen Daten.
         if (!uid) return
 
-     const [
-  profileResult,
+       const [
   expensesResult,
   incomesResult,
   obligationsResult,
   goalsResult,
+  documentsResult,
 ] = await Promise.all([
-supabase
-  .from('profiles')
-  .select('*')
-  .eq('id', uid)
-  .maybeSingle(),
           supabase
             .from('expenses')
             .select('*')
@@ -520,29 +523,16 @@ supabase
   .from('goals')
   .select('*')
   .eq('user_id', uid),
+
+          supabase
+            .from('documents')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', {
+              ascending: false,
+            }),
         ])
 
-if (profileResult.error) {
-  console.error(
-    'Profil laden fehlgeschlagen:',
-    profileResult.error
-  )
-} else {
-  const profile = profileResult.data
-
-  setUserName(profile?.display_name || '')
-  setUserStatus(profile?.user_status || '')
-  setIndustry(profile?.industry || 'sonstiges')
-  setTaxClass(profile?.tax_class || '1')
-  setAnnualGross(Number(profile?.annual_gross || 0))
-  setAnnualProfit(Number(profile?.annual_profit || 0))
-  setVatStatus(profile?.vat_status || '')
-  setFederalState(profile?.federal_state || '')
-  setChurchTax(Boolean(profile?.church_tax))
-  setMarried(Boolean(profile?.married))
-  setChildren(Number(profile?.children || 0))
-  setAssemblyWork(Boolean(profile?.assembly_work))
-}
         if (expensesResult.error) {
           console.error(
             'Ausgaben laden fehlgeschlagen:',
@@ -597,6 +587,17 @@ if (!goalsResult) {
     }))
   )
 }
+
+if (documentsResult.error) {
+  console.error(
+    'Dokumente laden fehlgeschlagen:',
+    documentsResult.error
+  )
+} else {
+  setDocuments(
+    (documentsResult.data || []).map(documentFromRow)
+  )
+}
   },
   []
 )
@@ -630,6 +631,8 @@ useEffect(() => {
       return
     }
 
+    // PersÃ¶nliche Profildaten lokal laden.
+    loadLocalProfile(uid)
 
     // Finanzdaten danach verbindlich aus Supabase holen.
     await fetchFinanceData(uid)
@@ -661,6 +664,7 @@ useEffect(() => {
           return
         }
 
+        loadLocalProfile(uid)
         await fetchFinanceData(uid)
 
         if (mounted) {
@@ -676,7 +680,7 @@ useEffect(() => {
   }
 }, [fetchFinanceData, loadLocalProfile])
   useEffect(() => {
-    if (!profileLoaded) return
+    if (!profileLoaded || userId) return
 
     localStorage.setItem(
       profileKey(userId || undefined),
@@ -754,7 +758,7 @@ useEffect(() => {
   ])
 
   useEffect(() => {
-    if (!profileLoaded) return
+    if (!profileLoaded || userId) return
 
     localStorage.setItem(
       documentsKey(
@@ -932,10 +936,11 @@ useEffect(() => {
             .from('expenses')
             .delete()
             .eq('id', id)
+            .eq('user_id', userId)
 
         if (error) {
           console.error(
-            'Ausgabe löschen fehlgeschlagen:',
+            'Ausgabe lÃ¶schen fehlgeschlagen:',
             error
           )
 
@@ -971,10 +976,11 @@ useEffect(() => {
             .from('incomes')
             .delete()
             .eq('id', id)
+            .eq('user_id', userId)
 
         if (error) {
           console.error(
-            'Einnahme löschen fehlgeschlagen:',
+            'Einnahme lÃ¶schen fehlgeschlagen:',
             error
           )
 
@@ -1024,12 +1030,13 @@ useEffect(() => {
                 normalizedStatus,
             })
             .eq('id', id)
+            .eq('user_id', userId)
             .select()
             .single()
 
         if (error) {
           console.error(
-            'Status ändern fehlgeschlagen:',
+            'Status Ã¤ndern fehlgeschlagen:',
             error
           )
 
@@ -1072,7 +1079,7 @@ useEffect(() => {
     )
 
     if (alreadyExists) {
-      alert('Diese Verpflichtung ist bereits vorhanden. ⚠️')
+      alert('Diese Verpflichtung ist bereits vorhanden. â ï¸')
       return previous
     }
 
@@ -1226,6 +1233,7 @@ useEffect(() => {
       .from('obligations')
       .update(payload)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -1254,7 +1262,7 @@ const deleteObligation = useCallback(
   async (id: string) => {
     if (!id) {
       console.warn(
-        'Verpflichtung konnte nicht gelöscht werden: ID fehlt.'
+        'Verpflichtung konnte nicht gelÃ¶scht werden: ID fehlt.'
       )
       return
     }
@@ -1270,10 +1278,11 @@ const deleteObligation = useCallback(
       .from('obligations')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) {
       console.error(
-        'Verpflichtung löschen fehlgeschlagen:',
+        'Verpflichtung lÃ¶schen fehlgeschlagen:',
         error
       )
       throw error
@@ -1301,47 +1310,28 @@ const addGoal = useCallback(
     }
 
     if (normalizedGoal.target <= 0) {
-      throw new Error(
-        'Der Zielbetrag muss größer als 0 sein.'
-      )
+      throw new Error('Der Zielbetrag muss grÃ¶Ãer als 0 sein.')
     }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    if (userId) {
+      const { error } = await supabase
+        .from('goals')
+        .insert({
+          id: normalizedGoal.id,
+          user_id: userId,
+          title: normalizedGoal.title,
+          target: normalizedGoal.target,
+          saved: normalizedGoal.saved,
+          due_date: normalizedGoal.dueDate || null,
+        })
 
-    if (authError) {
-      console.error(
-        'Benutzer konnte nicht geladen werden:',
-        authError
-      )
-      throw authError
-    }
-
-    if (!user) {
-      throw new Error(
-        'Du bist nicht angemeldet. Bitte melde dich erneut an.'
-      )
-    }
-
-    const { error } = await supabase
-      .from('goals')
-      .insert({
-        id: normalizedGoal.id,
-        user_id: user.id,
-        title: normalizedGoal.title,
-        target: normalizedGoal.target,
-        saved: normalizedGoal.saved,
-        due_date: normalizedGoal.dueDate || null,
-      })
-
-    if (error) {
-      console.error(
-        'Ziel speichern fehlgeschlagen:',
-        error
-      )
-      throw error
+      if (error) {
+        console.error(
+          'Ziel speichern fehlgeschlagen:',
+          error
+        )
+        throw error
+      }
     }
 
     setGoals((previous) => [
@@ -1349,7 +1339,7 @@ const addGoal = useCallback(
       normalizedGoal,
     ])
   },
-  []
+  [userId]
 )
 
 const updateGoal = useCallback(
@@ -1402,7 +1392,7 @@ const deleteGoal = useCallback(
 
       if (error) {
         console.error(
-          'Ziel löschen fehlgeschlagen:',
+          'Ziel lÃ¶schen fehlgeschlagen:',
           error
         )
         throw error
@@ -1418,15 +1408,62 @@ const deleteGoal = useCallback(
   [userId]
 )
 
+const addDocument = useCallback(
+  async (item: MilaDocument) => {
+    const normalized = createDocument(item)
+
+    if (!userId) {
+      setDocuments((previous) => [normalized, ...previous])
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
+        id: normalized.id,
+        user_id: userId,
+        title: normalized.title,
+        partner: normalized.partner || '',
+        amount: normalized.amount ?? null,
+        type: normalized.type,
+        status: normalized.status,
+        document_date: normalized.documentDate || null,
+        due_date: normalized.dueDate || null,
+        related_obligation_id: normalized.relatedObligationId || null,
+        related_booking_id: normalized.relatedBookingId || null,
+        file_name: normalized.fileName || null,
+        file_url: normalized.fileUrl || null,
+        keep_until: normalized.keepUntil || null,
+        note: normalized.note || '',
+        created_at: normalized.createdAt,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    setDocuments((previous) => [documentFromRow(data), ...previous])
+  },
+  [userId]
+)
+
 const deleteDocument = useCallback(
-  (id: string) => {
+  async (id: string) => {
+    if (userId) {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+    }
+
     setDocuments((previous) =>
-      previous.filter(
-        (item: any) => item.id !== id
-      )
+      previous.filter((item) => item.id !== id)
     )
   },
-  []
+  [userId]
 )
 
 const summary = useMemo(
@@ -1471,6 +1508,7 @@ const budgetStatus = useMemo(
 
       documents,
       setDocuments,
+      addDocument,
       deleteDocument,
 
       userName,
@@ -1541,6 +1579,7 @@ const budgetStatus = useMemo(
       deleteGoal,
 
       documents,
+      addDocument,
       deleteDocument,
 
       userName,
