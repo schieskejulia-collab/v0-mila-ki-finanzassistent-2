@@ -69,6 +69,26 @@ export function createDocument(data: Partial<MilaDocument>): MilaDocument {
   }
 }
 
+export function documentFromRow(row: any): MilaDocument {
+  return createDocument({
+    id: row.id,
+    title: row.title,
+    partner: row.partner,
+    amount: row.amount == null ? undefined : Number(row.amount),
+    type: row.type,
+    status: row.status,
+    documentDate: row.document_date || undefined,
+    dueDate: row.due_date || undefined,
+    relatedObligationId: row.related_obligation_id || undefined,
+    relatedBookingId: row.related_booking_id || undefined,
+    fileName: row.file_name || undefined,
+    fileUrl: row.file_url || undefined,
+    keepUntil: row.keep_until || undefined,
+    note: row.note || '',
+    createdAt: row.created_at,
+  })
+}
+
 export function isDeadlineDocument(document: MilaDocument) {
   return Boolean(document.dueDate)
 }
