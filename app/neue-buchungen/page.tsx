@@ -593,8 +593,10 @@ const rememberedCategory =
       } else {
         await addIncome(payload)
       }
-
-      if (scannedFile && userId) {
+const {
+      data: { user },
+    } = await supabase.auth.getUser()
+       if (scannedFile && user?.id) {
         if (scannedFile.size > 10 * 1024 * 1024) {
           throw new Error('Die Datei ist größer als 10 MB.')
         }
@@ -603,7 +605,7 @@ const rememberedCategory =
         const extension =
           scannedFile.name.split('.').pop()?.toLowerCase() ||
           (scannedFile.type === 'application/pdf' ? 'pdf' : 'jpg')
-        const filePath = `${userId}/${documentId}.${extension}`
+        const filePath = `${user.id}/${documentId}.${extension}`
 
         const { error: uploadError } = await supabase.storage
           .from('mila-dokumente')
