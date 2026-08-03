@@ -1,8 +1,21 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { calculateAtlasEmployeeCost } from '@/lib/business/atlas-costs'
 import { supabase } from '@/lib/supabase'
+
+type AtlasEmployee = {
+  id: string
+  name: string
+  role: string | null
+  monthly_gross: number
+  employer_cost_percent: number
+  annual_vacation_days: number
+  annual_sick_days: number
+  annual_bad_weather_days: number
+  annual_productive_hours: number
+  created_at: string
+}
 
 const euro = new Intl.NumberFormat('de-DE', {
   style: 'currency',
@@ -21,8 +34,44 @@ export default function HandwerkAtlasPage() {
   const [sickDays, setSickDays] = useState('')
   const [badWeatherDays, setBadWeatherDays] = useState('0')
   const [productiveHours, setProductiveHours] = useState('')
+  const [employees, setEmployees] = useState<AtlasEmployee[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+
+  const loadEmployees = useCallback(async () => {
+    setLoadingEmployees(true)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setEmployees([])
+      setLoadingEmployees(false)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('atlas_employees')
+      .select(
+        'id, name, role, monthly_gross, employer_cost_percent, annual_vacation_days, annual_sick_days, annual_bad_weather_days, annual_productive_hours, created_at'
+      )
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Atlas-Mitarbeiter konnten nicht geladen werden', error)
+      setEmployees([])
+    } else {
+      setEmployees((data || []) as AtlasEmployee[])
+    }
+
+    setLoadingEmployees(false)
+  }, [])
+
+  useEffect(() => {
+    void loadEmployees()
+  }, [loadEmployees])
 
   const result = useMemo(
     () =>
@@ -98,9 +147,34 @@ export default function HandwerkAtlasPage() {
       setMessage('Speichern war nicht moeglich. Bitte spaeter erneut versuchen.')
     } else {
       setMessage(`${name.trim()} wurde gespeichert.`)
+      await loadEmployees()
     }
 
     setSaving(false)
+  }
+
+  async function handleDelete(id: string, employeeName: string) {
+    const confirmed = window.confirm(
+      `${employeeName} wirklich aus Atlas loeschen?`
+    )
+
+    if (!confirmed) return
+
+    setMessage('')
+
+    const { error } = await supabase
+      .from('atlas_employees')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Atlas-Mitarbeiter konnte nicht geloescht werden', error)
+      setMessage('Loeschen war nicht moeglich. Bitte spaeter erneut versuchen.')
+      return
+    }
+
+    setMessage(`${employeeName} wurde geloescht.`)
+    await loadEmployees()
   }
 
   return (
@@ -115,6 +189,7 @@ export default function HandwerkAtlasPage() {
               Mitarbeiterkosten
             </h1>
           </div>
+
           <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-700">
             Kostencheck
           </span>
@@ -132,6 +207,7 @@ export default function HandwerkAtlasPage() {
                 Werte eingeben und anschliessend speichern.
               </p>
             </div>
+
             <span className="rounded-lg bg-violet-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-violet-700">
               Atlas
             </span>
@@ -265,10 +341,9 @@ export default function HandwerkAtlasPage() {
               <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-600">
                 Ergebnis
               </p>
-              <h2 className="mt-1 text-lg font-black">
-                Kostenuebersicht
-              </h2>
+              <h2 className="mt-1 text-lg font-black">Kostenuebersicht</h2>
             </div>
+
             <span className="text-xs font-bold text-slate-500">
               {name || 'Noch kein Mitarbeiter'}
             </span>
@@ -295,23 +370,97 @@ export default function HandwerkAtlasPage() {
           <div className="mt-4 divide-y divide-slate-100 border-t border-slate-100 text-sm">
             <div className="flex justify-between gap-4 py-3">
               <span>Bruttogehalt</span>
-              <strong>{hasCalculation ? euro.format(result.monthlyGross) : '-'}</strong>
+              <strong>
+                {hasCalculation ? euro.format(result.monthlyGross) : '-'}
+              </strong>
             </div>
 
             <div className="flex justify-between gap-4 py-3">
               <span>Arbeitgeberkosten</span>
               <strong>
-                {hasCalculation ? euro.format(result.monthlyEmployerCosts) : '-'}
+                {hasCalculation
+                  ? euro.format(result.monthlyEmployerCosts)
+                  : '-'}
               </strong>
             </div>
 
             <div className="flex justify-between gap-4 py-3">
               <span>Ausfallreserve</span>
               <strong>
-                {hasCalculation ? euro.format(result.monthlyAbsenceReserve) : '-'}
+                {hasCalculation
+                  ? euro.format(result.monthlyAbsenceReserve)
+                  : '-'}
               </strong>
             </div>
           </div>
+        </section>
+
+        <section className="mt-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-600">
+                Atlas-Daten
+              </p>
+              <h2 className="mt-1 text-lg font-black">
+                Gespeicherte Mitarbeiter
+              </h2>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+              {employees.length}
+            </span>
+          </div>
+
+          {loadingEmployees ? (
+            <p className="mt-4 text-sm text-slate-500">Lade Mitarbeiter...</p>
+          ) : employees.length === 0 ? (
+            <p className="mt-4 text-sm leading-6 text-slate-500">
+              Noch keine Mitarbeiter gespeichert.
+            </p>
+          ) : (
+            <div className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
+              {employees.map((employee) => {
+                const employeeResult = calculateAtlasEmployeeCost({
+                  monthlyGross: employee.monthly_gross,
+                  employerCostPercent: employee.employer_cost_percent,
+                  annualVacationDays: employee.annual_vacation_days,
+                  annualSickDays: employee.annual_sick_days,
+                  annualBadWeatherDays: employee.annual_bad_weather_days,
+                  annualProductiveHours: employee.annual_productive_hours,
+                })
+
+                return (
+                  <div
+                    key={employee.id}
+                    className="flex items-center justify-between gap-4 py-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-black">{employee.name}</p>
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        {employee.role || 'Keine Rolle hinterlegt'}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-black text-slate-950">
+                        {euro.format(employeeResult.monthlyTotalCost)} / Monat
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {euro.format(employeeResult.productiveHourlyCost)} / Stunde
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(employee.id, employee.name)}
+                        className="mt-2 text-xs font-black text-rose-600"
+                      >
+                        Loeschen
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         <p className="mt-4 text-xs leading-5 text-slate-500">
