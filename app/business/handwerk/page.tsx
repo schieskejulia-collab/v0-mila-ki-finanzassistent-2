@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { calculateAtlasEmployeeCost } from '@/lib/business/atlas-costs'
 import { supabase } from '@/lib/supabase'
@@ -198,6 +199,15 @@ export default function HandwerkAtlasPage() {
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Ermittele die echten Kosten pro Monat und pro produktiver Stunde.
         </p>
+
+        <div className="mt-4">
+          <Link
+            href="/business/handwerk/auftraege"
+            className="flex w-full items-center justify-center rounded-lg bg-violet-100 px-4 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-200"
+          >
+            AuftrÃ¤ge &amp; Angebote
+          </Link>
+        </div>
 
         <section className="mt-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
