@@ -24,27 +24,28 @@ const navItems = [
     label: 'Pflichten',
     icon: '🧾',
   },
-{
-  href: '/crm',
-  label: 'CRM',
-  icon: '👥',
-},
-{
-  href: '/business/handwerk',
-  label: 'Atlas',
-  icon: '🧰',
-},
+  {
+    href: '/crm',
+    label: 'CRM',
+    icon: '👥',
+  },
+  {
+    href: '/business/handwerk',
+    label: 'Handwerk',
+    icon: '🧰',
+  },
   {
     href: '/profil',
     label: 'Profil',
     icon: '👤',
   },
-{
-  href: '/ziele',
-  label: 'Ziele',
-  icon: '🎯',
-},
+  {
+    href: '/ziele',
+    label: 'Ziele',
+    icon: '🎯',
+  },
 ]
+
 export function BottomNav() {
   const pathname = usePathname()
 
