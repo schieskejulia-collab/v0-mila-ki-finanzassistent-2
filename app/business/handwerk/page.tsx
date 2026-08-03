@@ -104,7 +104,7 @@ export default function HandwerkAtlasPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-36 pt-6 text-slate-950">
+    <main className="min-h-screen bg-slate-50 px-4 pb-52 pt-6 text-slate-950">
       <div className="mx-auto max-w-xl">
         <header className="flex items-end justify-between gap-4">
           <div>
@@ -132,7 +132,9 @@ export default function HandwerkAtlasPage() {
                 Werte eingeben und anschliessend speichern.
               </p>
             </div>
-            <span className="text-xl">ð§°</span>
+            <span className="rounded-lg bg-violet-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-violet-700">
+              Atlas
+            </span>
           </div>
 
           <div className="mt-4 space-y-3">
