@@ -61,7 +61,7 @@ export default function HandwerkAtlasPage() {
         'Atlas-Mitarbeiter konnte nicht gespeichert werden',
         error
       )
-      setMessage('Speichern war nicht mÃ¶glich. Bitte spÃ¤ter erneut versuchen.')
+      setMessage('Speichern war nicht moeglich. Bitte spaeter erneut versuchen.')
     } else {
       setMessage(`${name.trim()} wurde erfolgreich gespeichert.`)
     }
@@ -246,7 +246,7 @@ export default function HandwerkAtlasPage() {
         </section>
 
         <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-black">AufschlÃ¼sselung</h2>
+          <h2 className="text-lg font-black">Aufschluesselung</h2>
 
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
