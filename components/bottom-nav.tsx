@@ -29,6 +29,11 @@ const navItems = [
   label: 'CRM',
   icon: '👥',
 },
+{
+  href: '/business/handwerk',
+  label: 'Atlas',
+  icon: '🧰',
+},
   {
     href: '/profil',
     label: 'Profil',
