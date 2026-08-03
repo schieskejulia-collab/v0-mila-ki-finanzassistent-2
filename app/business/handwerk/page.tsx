@@ -200,12 +200,18 @@ export default function HandwerkAtlasPage() {
           Ermittele die echten Kosten pro Monat und pro produktiver Stunde.
         </p>
 
-        <div className="mt-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Link
             href="/business/handwerk/auftraege"
             className="flex w-full items-center justify-center rounded-lg bg-violet-100 px-4 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-200"
           >
-            AuftrÃ¤ge &amp; Angebote
+            Auftr&auml;ge &amp; Angebote
+          </Link>
+          <Link
+            href="/business/handwerk/inventar"
+            className="flex w-full items-center justify-center rounded-lg bg-violet-100 px-4 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-200"
+          >
+            Inventar &amp; Betriebsmittel
           </Link>
         </div>
 
