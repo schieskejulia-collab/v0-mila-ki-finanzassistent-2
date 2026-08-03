@@ -9,7 +9,8 @@ type Contact = { id: string; first_name: string; last_name: string; company: str
 type Project = { id: string; title: string; description: string; status: string }
 type Note = { id: string; body: string; note_type: string; created_at: string }
 type Event = { id: string; title: string; starts_at: string; notes: string }
-type Tab = 'projects' | 'activity' | 'calendar'
+type Task = { id: string; title: string; description: string; status: string; priority: string; due_at: string | null }
+type Tab = 'projects' | 'activity' | 'calendar' | 'tasks'
 
 const projectLabels: Record<string, string> = { planung: 'Planung', aktiv: 'Aktiv', wartet: 'Wartet', abgeschlossen: 'Abgeschlossen' }
 const noteLabels: Record<string, string> = { notiz: 'Notiz', telefonat: 'Telefonat', email: 'E-Mail', whatsapp: 'WhatsApp', meeting: 'Meeting' }
@@ -20,26 +21,30 @@ export default function ContactDetailPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [tab, setTab] = useState<Tab>('projects')
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
   const [project, setProject] = useState({ title: '', description: '', status: 'planung' })
   const [note, setNote] = useState({ body: '', type: 'notiz' })
   const [event, setEvent] = useState({ title: '', starts_at: '', notes: '' })
+  const [task, setTask] = useState({ title: '', description: '', status: 'offen', priority: 'normal', due_at: '' })
   const [editing, setEditing] = useState<{ table: string; id: string } | null>(null)
 
   async function load() {
-    const [c, p, n, e] = await Promise.all([
+    const [c, p, n, e, t] = await Promise.all([
       supabase.from('crm_contacts').select('*').eq('id', id).single(),
       supabase.from('crm_projects').select('*').eq('contact_id', id).order('created_at', { ascending: false }),
       supabase.from('crm_notes').select('*').eq('contact_id', id).order('created_at', { ascending: false }),
       supabase.from('crm_calendar_events').select('*').eq('contact_id', id).order('starts_at', { ascending: true }),
+      supabase.from('crm_tasks').select('*').eq('contact_id', id).order('due_at', { ascending: true, nullsFirst: false }),
     ])
     if (c.error) { setError('Kontakt konnte nicht geladen werden.'); return }
     setContact(c.data as Contact)
     setProjects((p.data || []) as Project[])
     setNotes((n.data || []) as Note[])
     setEvents((e.data || []) as Event[])
+    setTasks((t.data || []) as Task[])
   }
 
   useEffect(() => { if (id) void load() }, [id])
@@ -65,6 +70,7 @@ export default function ContactDetailPage() {
   function editProject(item: Project) { setTab('projects'); setEditing({ table: 'crm_projects', id: item.id }); setProject({ title: item.title, description: item.description || '', status: item.status }); setShowForm(true) }
   function editNote(item: Note) { setTab('activity'); setEditing({ table: 'crm_notes', id: item.id }); setNote({ body: item.body, type: item.note_type }); setShowForm(true) }
   function editEvent(item: Event) { setTab('calendar'); setEditing({ table: 'crm_calendar_events', id: item.id }); setEvent({ title: item.title, starts_at: item.starts_at.slice(0, 16), notes: item.notes || '' }); setShowForm(true) }
+  function editTask(item: Task) { setTab('tasks'); setEditing({ table: 'crm_tasks', id: item.id }); setTask({ title: item.title, description: item.description || '', status: item.status, priority: item.priority, due_at: item.due_at ? item.due_at.slice(0, 16) : '' }); setShowForm(true) }
 
   if (!contact) return <main className="min-h-screen bg-[#fbf9ff] p-6 font-bold">{error || 'Kontakt wird geladen...'}</main>
 
@@ -73,6 +79,7 @@ export default function ContactDetailPage() {
     projects: { label: 'Projekte', count: projects.length, action: '+ Projekt anlegen' },
     activity: { label: 'Aktivitaeten', count: notes.length, action: '+ Aktivitaet anlegen' },
     calendar: { label: 'Termine', count: events.length, action: '+ Termin anlegen' },
+    tasks: { label: 'Aufgaben', count: tasks.length, action: '+ Aufgabe anlegen' },
   }
   const active = tabData[tab]
 
@@ -90,7 +97,7 @@ export default function ContactDetailPage() {
     </section>
 
     <section className="mt-5 rounded-3xl bg-white p-3 shadow-sm">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {(Object.keys(tabData) as Tab[]).map((key) => <button key={key} type="button" onClick={() => { setTab(key); setShowForm(false) }} className={`rounded-2xl px-2 py-3 text-xs font-black ${tab === key ? 'bg-violet-600 text-white' : 'bg-violet-50 text-violet-700'}`}><span className="block text-lg">{tabData[key].count}</span>{tabData[key].label}</button>)}
       </div>
     </section>
@@ -103,10 +110,12 @@ export default function ContactDetailPage() {
       {showForm && tab === 'activity' && <div className="mt-5 space-y-3 rounded-2xl bg-slate-50 p-4"><select className="w-full rounded-xl border-0 p-3 text-sm" value={note.type} onChange={(e) => setNote({ ...note, type: e.target.value })}>{Object.entries(noteLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><textarea className="min-h-28 w-full rounded-xl border-0 p-3 text-sm" placeholder="Was wurde besprochen?" value={note.body} onChange={(e) => setNote({ ...note, body: e.target.value })} /><button type="button" onClick={() => save('crm_notes', { body: note.body.trim(), note_type: note.type }, () => setNote({ body: '', type: 'notiz' }))} className="w-full rounded-xl bg-slate-900 py-3 font-black text-white">Aktivitaet speichern</button></div>}
 
       {showForm && tab === 'calendar' && <div className="mt-5 space-y-3 rounded-2xl bg-amber-50 p-4"><input className="w-full rounded-xl border-0 p-3 text-sm" placeholder="Terminname" value={event.title} onChange={(e) => setEvent({ ...event, title: e.target.value })} /><input className="w-full rounded-xl border-0 p-3 text-sm" type="datetime-local" value={event.starts_at} onChange={(e) => setEvent({ ...event, starts_at: e.target.value })} /><textarea className="min-h-20 w-full rounded-xl border-0 p-3 text-sm" placeholder="Terminnotiz oder Videolink" value={event.notes} onChange={(e) => setEvent({ ...event, notes: e.target.value })} /><button type="button" onClick={() => save('crm_calendar_events', { title: event.title.trim(), starts_at: new Date(event.starts_at).toISOString(), notes: event.notes.trim() }, () => setEvent({ title: '', starts_at: '', notes: '' }))} className="w-full rounded-xl bg-amber-500 py-3 font-black text-white">Termin speichern</button></div>}
+      {showForm && tab === 'tasks' && <div className="mt-5 space-y-3 rounded-2xl bg-emerald-50 p-4"><input className="w-full rounded-xl border-0 p-3 text-sm" placeholder="Aufgabe" value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} /><textarea className="min-h-20 w-full rounded-xl border-0 p-3 text-sm" placeholder="Was muss erledigt werden?" value={task.description} onChange={(e) => setTask({ ...task, description: e.target.value })} /><div className="grid grid-cols-2 gap-3"><select className="rounded-xl border-0 p-3 text-sm" value={task.status} onChange={(e) => setTask({ ...task, status: e.target.value })}><option value="offen">Offen</option><option value="in_bearbeitung">In Bearbeitung</option><option value="erledigt">Erledigt</option></select><select className="rounded-xl border-0 p-3 text-sm" value={task.priority} onChange={(e) => setTask({ ...task, priority: e.target.value })}><option value="niedrig">Niedrig</option><option value="normal">Normal</option><option value="hoch">Hoch</option></select></div><input className="w-full rounded-xl border-0 p-3 text-sm" type="datetime-local" value={task.due_at} onChange={(e) => setTask({ ...task, due_at: e.target.value })} /><button type="button" onClick={() => save('crm_tasks', { title: task.title.trim(), description: task.description.trim(), status: task.status, priority: task.priority, due_at: task.due_at ? new Date(task.due_at).toISOString() : null }, () => setTask({ title: '', description: '', status: 'offen', priority: 'normal', due_at: '' }))} className="w-full rounded-xl bg-emerald-600 py-3 font-black text-white">Aufgabe speichern</button></div>}
 
       {!showForm && tab === 'projects' && <div className="mt-5 space-y-3">{projects.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Projekte vorhanden.</p>}{projects.map((item) => <article key={item.id} className="rounded-2xl bg-violet-50 p-4"><div className="flex justify-between gap-3"><p className="font-black">{item.title}</p><span className="text-xs font-black text-violet-700">{projectLabels[item.status] || item.status}</span></div>{item.description && <p className="mt-2 text-sm text-slate-600">{item.description}</p>}<div className="mt-4 flex gap-2"><button type="button" onClick={() => editProject(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-violet-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_projects', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
       {!showForm && tab === 'activity' && <div className="mt-5 space-y-3">{notes.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine AktivitÃ¤ten vorhanden.</p>}{notes.map((item) => <article key={item.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{noteLabels[item.note_type] || item.note_type} Â· {new Date(item.created_at).toLocaleDateString('de-DE')}</p><p className="mt-2 font-semibold text-slate-700">{item.body}</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => editNote(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_notes', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
       {!showForm && tab === 'calendar' && <div className="mt-5 space-y-3">{events.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Termine vorhanden.</p>}{events.map((item) => <article key={item.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-black">{item.title}</p><p className="mt-1 font-bold text-amber-700">{new Date(item.starts_at).toLocaleString('de-DE')}</p>{item.notes && <p className="mt-2 text-sm text-slate-600">{item.notes}</p>}<div className="mt-4 flex gap-2"><button type="button" onClick={() => editEvent(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-amber-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_calendar_events', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
+      {!showForm && tab === 'tasks' && <div className="mt-5 space-y-3">{tasks.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Aufgaben vorhanden.</p>}{tasks.map((item) => <article key={item.id} className="rounded-2xl bg-emerald-50 p-4"><div className="flex justify-between gap-3"><p className="font-black">{item.title}</p><span className={`text-xs font-black ${item.priority === 'hoch' ? 'text-rose-700' : 'text-emerald-700'}`}>{item.priority}</span></div>{item.description && <p className="mt-2 text-sm text-slate-600">{item.description}</p>}<p className="mt-2 text-xs font-bold text-slate-500">{item.status.replace('_', ' ')}{item.due_at ? ` Â· faellig ${new Date(item.due_at).toLocaleString('de-DE')}` : ''}</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => editTask(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-emerald-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_tasks', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
     </section>
     {error && <p className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</p>}
   </main>
