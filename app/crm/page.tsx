@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -197,7 +198,12 @@ export default function CRMPage() {
               {contact.phone && <p className="mt-1 text-sm font-semibold text-slate-600">📞 {contact.phone}</p>}
               {contact.next_contact_at && <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700">📅 Wiedervorlage: {new Date(contact.next_contact_at).toLocaleDateString('de-DE')}</p>}
               {contact.note && <p className="mt-3 whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">{contact.note}</p>}
-              <button type="button" onClick={() => deleteContact(contact.id)} className="mt-4 font-black text-rose-500">Löschen</button>
+              <div className="mt-4 flex flex-wrap gap-5">
+                <Link href={`/crm/kontakt/${contact.id}`} className="font-black text-violet-600">
+                  Kontakt öffnen →
+                </Link>
+                <button type="button" onClick={() => deleteContact(contact.id)} className="font-black text-rose-500">Löschen</button>
+              </div>
             </article>
           ))
         )}
