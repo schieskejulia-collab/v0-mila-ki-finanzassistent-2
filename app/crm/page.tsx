@@ -59,6 +59,13 @@ export default function CRMPage() {
     setSaving(false)
   }
 
+  async function deleteContact(contactId: string) {
+    if (!window.confirm('Diesen Kontakt wirklich loeschen? Projekte, Notizen und Termine bleiben bestehen.')) return
+    const { error: deleteError } = await supabase.from('crm_contacts').delete().eq('id', contactId)
+    if (deleteError) { setError('Kontakt konnte nicht geloescht werden.'); return }
+    await load()
+  }
+
   const filtered = useMemo(() => contacts.filter((contact) => {
     const text = [contact.first_name, contact.last_name, contact.company, contact.email].join(' ').toLowerCase()
     return (filter === 'alle' || contact.status === filter) && text.includes(query.toLowerCase().trim())
@@ -99,7 +106,7 @@ export default function CRMPage() {
         <input className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm" placeholder="Suchen..." value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{(['alle', 'lead', 'gespraech', 'angebot', 'kunde'] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-full px-3 py-2 text-xs font-black ${filter === value ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 shadow-sm'}`}>{value === 'alle' ? 'Alle' : labels[value]}</button>)}</div>
         <div className="mt-3 space-y-3">
-          {loading ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">CRM wird geladen...</div> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Keine Kontakte gefunden.</div> : filtered.map((contact) => <article key={contact.id} className="border-b border-slate-200 py-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 font-black text-violet-700">{initials(contact)}</div><div className="min-w-0 flex-1"><p className="truncate font-black">{[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company}</p><p className="truncate text-sm font-semibold text-slate-500">{contact.company || contact.email || 'Kein Unternehmen'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badge[contact.status]}`}>{labels[contact.status]}</span></div><div className="mt-3 flex items-center justify-between"><p className="text-xs font-semibold text-slate-500">{contact.next_contact_at ? `Wiedervorlage ${dateDE(contact.next_contact_at)}` : 'Keine Wiedervorlage'}</p><Link href={`/crm/kontakte/${contact.id}`} className="text-sm font-black text-violet-600">Öffnen →</Link></div></article>)}
+          {loading ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">CRM wird geladen...</div> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Keine Kontakte gefunden.</div> : filtered.map((contact) => <article key={contact.id} className="border-b border-slate-200 py-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 font-black text-violet-700">{initials(contact)}</div><div className="min-w-0 flex-1"><p className="truncate font-black">{[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company}</p><p className="truncate text-sm font-semibold text-slate-500">{contact.company || contact.email || 'Kein Unternehmen'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badge[contact.status]}`}>{labels[contact.status]}</span></div><div className="mt-3 flex items-center justify-between"><p className="text-xs font-semibold text-slate-500">{contact.next_contact_at ? `Wiedervorlage ${dateDE(contact.next_contact_at)}` : 'Keine Wiedervorlage'}</p><div className="flex items-center gap-3"><Link href={`/crm/kontakte/${contact.id}`} className="text-sm font-black text-violet-600">Öffnen →</Link><button type="button" onClick={() => deleteContact(contact.id)} className="text-sm font-black text-rose-600">Löschen</button></div></div></article>)}
         </div>
       </section>
       {error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}
