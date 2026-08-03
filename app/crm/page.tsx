@@ -199,7 +199,7 @@ export default function CRMPage() {
               {contact.next_contact_at && <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700">📅 Wiedervorlage: {new Date(contact.next_contact_at).toLocaleDateString('de-DE')}</p>}
               {contact.note && <p className="mt-3 whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">{contact.note}</p>}
               <div className="mt-4 flex flex-wrap gap-5">
-                <Link href={`/crm/kontakt/${contact.id}`} className="font-black text-violet-600">
+                <Link href={`/crm/kontakte/${contact.id}`} className="font-black text-violet-600">
                   Kontakt öffnen →
                 </Link>
                 <button type="button" onClick={() => deleteContact(contact.id)} className="font-black text-rose-500">Löschen</button>
