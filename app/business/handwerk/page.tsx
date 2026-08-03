@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { calculateAtlasEmployeeCost } from '@/lib/business/atlas-costs'
+import { supabase } from '@/lib/supabase'
 
 const euro = new Intl.NumberFormat('de-DE', {
   style: 'currency',
@@ -17,6 +18,56 @@ export default function HandwerkAtlasPage() {
   const [sickDays, setSickDays] = useState('8')
   const [badWeatherDays, setBadWeatherDays] = useState('0')
   const [productiveHours, setProductiveHours] = useState('1450')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function handleSave() {
+    setMessage('')
+
+    if (!name.trim()) {
+      setMessage('Bitte zuerst einen Namen eingeben.')
+      return
+    }
+
+    setSaving(true)
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage('Bitte zuerst bei Mila anmelden.')
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase
+      .from('atlas_employees')
+      .insert({
+        user_id: user.id,
+        name: name.trim(),
+        role: role.trim() || null,
+        monthly_gross: Number(monthlyGross) || 0,
+        employer_cost_percent: Number(employerCostPercent) || 0,
+        annual_vacation_days: Number(vacationDays) || 0,
+        annual_sick_days: Number(sickDays) || 0,
+        annual_bad_weather_days: Number(badWeatherDays) || 0,
+        annual_productive_hours: Number(productiveHours) || 1,
+      })
+
+    if (error) {
+      console.error(
+        'Atlas-Mitarbeiter konnte nicht gespeichert werden',
+        error
+      )
+      setMessage('Speichern war nicht mÃ¶glich. Bitte spÃ¤ter erneut versuchen.')
+    } else {
+      setMessage(`${name.trim()} wurde erfolgreich gespeichert.`)
+    }
+
+    setSaving(false)
+  }
 
   const result = useMemo(
     () =>
@@ -59,9 +110,7 @@ export default function HandwerkAtlasPage() {
         </p>
 
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-black">
-            Mitarbeiter anlegen
-          </h2>
+          <h2 className="text-lg font-black">Mitarbeiter anlegen</h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-bold">
@@ -91,9 +140,7 @@ export default function HandwerkAtlasPage() {
                 inputMode="decimal"
                 type="number"
                 value={monthlyGross}
-                onChange={(event) =>
-                  setMonthlyGross(event.target.value)
-                }
+                onChange={(event) => setMonthlyGross(event.target.value)}
               />
             </label>
 
@@ -117,9 +164,7 @@ export default function HandwerkAtlasPage() {
                 inputMode="numeric"
                 type="number"
                 value={vacationDays}
-                onChange={(event) =>
-                  setVacationDays(event.target.value)
-                }
+                onChange={(event) => setVacationDays(event.target.value)}
               />
             </label>
 
@@ -130,9 +175,7 @@ export default function HandwerkAtlasPage() {
                 inputMode="numeric"
                 type="number"
                 value={sickDays}
-                onChange={(event) =>
-                  setSickDays(event.target.value)
-                }
+                onChange={(event) => setSickDays(event.target.value)}
               />
             </label>
 
@@ -143,9 +186,7 @@ export default function HandwerkAtlasPage() {
                 inputMode="numeric"
                 type="number"
                 value={badWeatherDays}
-                onChange={(event) =>
-                  setBadWeatherDays(event.target.value)
-                }
+                onChange={(event) => setBadWeatherDays(event.target.value)}
               />
             </label>
 
@@ -156,11 +197,24 @@ export default function HandwerkAtlasPage() {
                 inputMode="numeric"
                 type="number"
                 value={productiveHours}
-                onChange={(event) =>
-                  setProductiveHours(event.target.value)
-                }
+                onChange={(event) => setProductiveHours(event.target.value)}
               />
             </label>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-2xl bg-violet-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? 'Speichert...' : 'Mitarbeiter speichern'}
+            </button>
+
+            {message ? (
+              <p className="text-sm font-bold text-slate-600">{message}</p>
+            ) : null}
           </div>
         </section>
 
@@ -192,9 +246,7 @@ export default function HandwerkAtlasPage() {
         </section>
 
         <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5">
-          <h2 className="text-lg font-black">
-            Aufschlüsselung
-          </h2>
+          <h2 className="text-lg font-black">AufschlÃ¼sselung</h2>
 
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -204,30 +256,24 @@ export default function HandwerkAtlasPage() {
 
             <div className="flex justify-between gap-4">
               <span>Arbeitgeberkosten</span>
-              <strong>
-                {euro.format(result.monthlyEmployerCosts)}
-              </strong>
+              <strong>{euro.format(result.monthlyEmployerCosts)}</strong>
             </div>
 
             <div className="flex justify-between gap-4">
               <span>Urlaub, Krankheit, Wetter</span>
-              <strong>
-                {euro.format(result.monthlyAbsenceReserve)}
-              </strong>
+              <strong>{euro.format(result.monthlyAbsenceReserve)}</strong>
             </div>
 
             <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 font-black">
               <span>Atlas-Gesamtkosten</span>
-              <strong>
-                {euro.format(result.monthlyTotalCost)}
-              </strong>
+              <strong>{euro.format(result.monthlyTotalCost)}</strong>
             </div>
           </div>
         </section>
 
         <p className="mt-5 text-xs leading-5 text-slate-500">
-          Hinweis: Die Werte sind eine betriebliche Planungshilfe und
-          ersetzen keine Lohnabrechnung oder steuerliche Beratung.
+          Hinweis: Die Werte sind eine betriebliche Planungshilfe und ersetzen
+          keine Lohnabrechnung oder steuerliche Beratung.
         </p>
       </div>
     </main>
