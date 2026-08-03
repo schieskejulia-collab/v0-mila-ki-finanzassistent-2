@@ -31,6 +31,7 @@ export default function CRMPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [editingContactId, setEditingContactId] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -53,10 +54,25 @@ export default function CRMPage() {
     const { data: userData } = await supabase.auth.getUser()
     if (!userData.user) return
     setSaving(true); setError('')
-    const { error: saveError } = await supabase.from('crm_contacts').insert({ user_id: userData.user.id, ...form, first_name: form.first_name.trim(), last_name: form.last_name.trim(), company: form.company.trim(), email: form.email.trim(), phone: form.phone.trim(), next_contact_at: form.next_contact_at || null })
+    const payload = { first_name: form.first_name.trim(), last_name: form.last_name.trim(), company: form.company.trim(), email: form.email.trim(), phone: form.phone.trim(), status: form.status, next_contact_at: form.next_contact_at || null }
+    const result = editingContactId
+      ? await supabase.from('crm_contacts').update(payload).eq('id', editingContactId)
+      : await supabase.from('crm_contacts').insert({ user_id: userData.user.id, ...payload })
+    const saveError = result.error
     if (saveError) setError('Kontakt konnte nicht gespeichert werden.')
-    else { setForm(emptyForm); await load() }
+    else { setForm(emptyForm); setEditingContactId(null); await load() }
     setSaving(false)
+  }
+
+  function editContact(contact: Contact) {
+    setEditingContactId(contact.id)
+    setForm({ first_name: contact.first_name || '', last_name: contact.last_name || '', company: contact.company || '', email: contact.email || '', phone: contact.phone || '', status: contact.status, next_contact_at: contact.next_contact_at ? contact.next_contact_at.slice(0, 10) : '' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingContactId(null)
+    setForm(emptyForm)
   }
 
   async function deleteContact(contactId: string) {
@@ -91,13 +107,14 @@ export default function CRMPage() {
       {events.length > 0 && <section className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Als Nächstes</p><p className="mt-2 font-black text-slate-900">{events[0].title}</p><p className="mt-1 text-sm font-semibold text-amber-800">{new Date(events[0].starts_at).toLocaleString('de-DE')}</p></section>}
 
       <details open className="mt-5 rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <summary className="cursor-pointer list-none p-4 font-black text-slate-900">+ Kontakt anlegen</summary>
+        <summary className="cursor-pointer list-none p-4 font-black text-slate-900">{editingContactId ? 'Kontakt bearbeiten' : '+ Kontakt anlegen'}</summary>
         <div className="space-y-3 border-t border-slate-100 p-4">
           <div className="grid grid-cols-2 gap-3"><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Vorname" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Nachname" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
           <input className="w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Unternehmen" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
           <div className="grid grid-cols-2 gap-3"><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="E-Mail" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Telefon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3"><select className="rounded-xl border border-slate-200 p-3 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Status })}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input className="rounded-xl border border-slate-200 p-3 text-sm" type="date" value={form.next_contact_at} onChange={(e) => setForm({ ...form, next_contact_at: e.target.value })} /></div>
-          <button type="button" onClick={saveContact} disabled={saving} className="w-full rounded-xl bg-violet-600 py-3 font-black text-white disabled:opacity-50">{saving ? 'Wird gespeichert...' : 'Kontakt speichern'}</button>
+          <button type="button" onClick={saveContact} disabled={saving} className="w-full rounded-xl bg-violet-600 py-3 font-black text-white disabled:opacity-50">{saving ? 'Wird gespeichert...' : editingContactId ? 'Änderungen speichern' : 'Kontakt speichern'}</button>
+          {editingContactId && <button type="button" onClick={cancelEdit} className="w-full rounded-xl bg-slate-100 py-3 font-black text-slate-600">Bearbeiten abbrechen</button>}
         </div>
       </details>
 
@@ -106,7 +123,7 @@ export default function CRMPage() {
         <input className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm" placeholder="Suchen..." value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{(['alle', 'lead', 'gespraech', 'angebot', 'kunde'] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-full px-3 py-2 text-xs font-black ${filter === value ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 shadow-sm'}`}>{value === 'alle' ? 'Alle' : labels[value]}</button>)}</div>
         <div className="mt-3 space-y-3">
-          {loading ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">CRM wird geladen...</div> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Keine Kontakte gefunden.</div> : filtered.map((contact) => <article key={contact.id} className="border-b border-slate-200 py-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 font-black text-violet-700">{initials(contact)}</div><div className="min-w-0 flex-1"><p className="truncate font-black">{[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company}</p><p className="truncate text-sm font-semibold text-slate-500">{contact.company || contact.email || 'Kein Unternehmen'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badge[contact.status]}`}>{labels[contact.status]}</span></div><div className="mt-3 flex items-center justify-between"><p className="text-xs font-semibold text-slate-500">{contact.next_contact_at ? `Wiedervorlage ${dateDE(contact.next_contact_at)}` : 'Keine Wiedervorlage'}</p><div className="flex items-center gap-3"><Link href={`/crm/kontakte/${contact.id}`} className="text-sm font-black text-violet-600">Öffnen →</Link><button type="button" onClick={() => deleteContact(contact.id)} className="text-sm font-black text-rose-600">Löschen</button></div></div></article>)}
+          {loading ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">CRM wird geladen...</div> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Keine Kontakte gefunden.</div> : filtered.map((contact) => <article key={contact.id} className="border-b border-slate-200 py-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 font-black text-violet-700">{initials(contact)}</div><div className="min-w-0 flex-1"><p className="truncate font-black">{[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company}</p><p className="truncate text-sm font-semibold text-slate-500">{contact.company || contact.email || 'Kein Unternehmen'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badge[contact.status]}`}>{labels[contact.status]}</span></div><div className="mt-3 flex items-center justify-between"><p className="text-xs font-semibold text-slate-500">{contact.next_contact_at ? `Wiedervorlage ${dateDE(contact.next_contact_at)}` : 'Keine Wiedervorlage'}</p><div className="flex items-center gap-3"><button type="button" onClick={() => editContact(contact)} className="text-sm font-black text-slate-600">Bearbeiten</button><Link href={`/crm/kontakte/${contact.id}`} className="text-sm font-black text-violet-600">Öffnen →</Link><button type="button" onClick={() => deleteContact(contact.id)} className="text-sm font-black text-rose-600">Löschen</button></div></div></article>)}
         </div>
       </section>
       {error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}
