@@ -205,7 +205,7 @@ export default function HandwerkAtlasPage() {
             href="/business/handwerk/auftraege"
             className="flex w-full items-center justify-center rounded-lg bg-violet-100 px-4 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-200"
           >
-            AuftrÃ¤ge &amp; Angebote
+            Aufträge &amp; Angebote
           </Link>
         </div>
 
