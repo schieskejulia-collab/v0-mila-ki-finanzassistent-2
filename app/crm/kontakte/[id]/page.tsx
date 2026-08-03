@@ -26,6 +26,7 @@ export default function ContactDetailPage() {
   const [project, setProject] = useState({ title: '', description: '', status: 'planung' })
   const [note, setNote] = useState({ body: '', type: 'notiz' })
   const [event, setEvent] = useState({ title: '', starts_at: '', notes: '' })
+  const [editing, setEditing] = useState<{ table: string; id: string } | null>(null)
 
   async function load() {
     const [c, p, n, e] = await Promise.all([
@@ -46,10 +47,24 @@ export default function ContactDetailPage() {
   async function save(table: string, payload: Record<string, unknown>, reset: () => void) {
     const { data } = await supabase.auth.getUser()
     if (!data.user) { setError('Bitte zuerst anmelden.'); return }
-    const { error: saveError } = await supabase.from(table).insert({ ...payload, user_id: data.user.id, contact_id: id })
+    const query = editing?.table === table
+      ? supabase.from(table).update(payload).eq('id', editing.id)
+      : supabase.from(table).insert({ ...payload, user_id: data.user.id, contact_id: id })
+    const { error: saveError } = await query
     if (saveError) { setError('Speichern war nicht erfolgreich.'); return }
-    setError(''); reset(); setShowForm(false); await load()
+    setError(''); setEditing(null); reset(); setShowForm(false); await load()
   }
+
+  async function remove(table: string, itemId: string) {
+    if (!window.confirm('Diesen Eintrag wirklich loeschen?')) return
+    const { error: deleteError } = await supabase.from(table).delete().eq('id', itemId)
+    if (deleteError) { setError('Loeschen war nicht erfolgreich.'); return }
+    await load()
+  }
+
+  function editProject(item: Project) { setTab('projects'); setEditing({ table: 'crm_projects', id: item.id }); setProject({ title: item.title, description: item.description || '', status: item.status }); setShowForm(true) }
+  function editNote(item: Note) { setTab('activity'); setEditing({ table: 'crm_notes', id: item.id }); setNote({ body: item.body, type: item.note_type }); setShowForm(true) }
+  function editEvent(item: Event) { setTab('calendar'); setEditing({ table: 'crm_calendar_events', id: item.id }); setEvent({ title: item.title, starts_at: item.starts_at.slice(0, 16), notes: item.notes || '' }); setShowForm(true) }
 
   if (!contact) return <main className="min-h-screen bg-[#fbf9ff] p-6 font-bold">{error || 'Kontakt wird geladen...'}</main>
 
@@ -89,9 +104,9 @@ export default function ContactDetailPage() {
 
       {showForm && tab === 'calendar' && <div className="mt-5 space-y-3 rounded-2xl bg-amber-50 p-4"><input className="w-full rounded-xl border-0 p-3 text-sm" placeholder="Terminname" value={event.title} onChange={(e) => setEvent({ ...event, title: e.target.value })} /><input className="w-full rounded-xl border-0 p-3 text-sm" type="datetime-local" value={event.starts_at} onChange={(e) => setEvent({ ...event, starts_at: e.target.value })} /><textarea className="min-h-20 w-full rounded-xl border-0 p-3 text-sm" placeholder="Terminnotiz oder Videolink" value={event.notes} onChange={(e) => setEvent({ ...event, notes: e.target.value })} /><button type="button" onClick={() => save('crm_calendar_events', { title: event.title.trim(), starts_at: new Date(event.starts_at).toISOString(), notes: event.notes.trim() }, () => setEvent({ title: '', starts_at: '', notes: '' }))} className="w-full rounded-xl bg-amber-500 py-3 font-black text-white">Termin speichern</button></div>}
 
-      {!showForm && tab === 'projects' && <div className="mt-5 space-y-3">{projects.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Projekte vorhanden.</p>}{projects.map((item) => <article key={item.id} className="rounded-2xl bg-violet-50 p-4"><div className="flex justify-between gap-3"><p className="font-black">{item.title}</p><span className="text-xs font-black text-violet-700">{projectLabels[item.status] || item.status}</span></div>{item.description && <p className="mt-2 text-sm text-slate-600">{item.description}</p>}</article>)}</div>}
-      {!showForm && tab === 'activity' && <div className="mt-5 space-y-3">{notes.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine AktivitÃ¤ten vorhanden.</p>}{notes.map((item) => <article key={item.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{noteLabels[item.note_type] || item.note_type} Â· {new Date(item.created_at).toLocaleDateString('de-DE')}</p><p className="mt-2 font-semibold text-slate-700">{item.body}</p></article>)}</div>}
-      {!showForm && tab === 'calendar' && <div className="mt-5 space-y-3">{events.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Termine vorhanden.</p>}{events.map((item) => <article key={item.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-black">{item.title}</p><p className="mt-1 font-bold text-amber-700">{new Date(item.starts_at).toLocaleString('de-DE')}</p>{item.notes && <p className="mt-2 text-sm text-slate-600">{item.notes}</p>}</article>)}</div>}
+      {!showForm && tab === 'projects' && <div className="mt-5 space-y-3">{projects.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Projekte vorhanden.</p>}{projects.map((item) => <article key={item.id} className="rounded-2xl bg-violet-50 p-4"><div className="flex justify-between gap-3"><p className="font-black">{item.title}</p><span className="text-xs font-black text-violet-700">{projectLabels[item.status] || item.status}</span></div>{item.description && <p className="mt-2 text-sm text-slate-600">{item.description}</p>}<div className="mt-4 flex gap-2"><button type="button" onClick={() => editProject(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-violet-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_projects', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
+      {!showForm && tab === 'activity' && <div className="mt-5 space-y-3">{notes.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine AktivitÃ¤ten vorhanden.</p>}{notes.map((item) => <article key={item.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{noteLabels[item.note_type] || item.note_type} Â· {new Date(item.created_at).toLocaleDateString('de-DE')}</p><p className="mt-2 font-semibold text-slate-700">{item.body}</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => editNote(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_notes', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
+      {!showForm && tab === 'calendar' && <div className="mt-5 space-y-3">{events.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Termine vorhanden.</p>}{events.map((item) => <article key={item.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-black">{item.title}</p><p className="mt-1 font-bold text-amber-700">{new Date(item.starts_at).toLocaleString('de-DE')}</p>{item.notes && <p className="mt-2 text-sm text-slate-600">{item.notes}</p>}<div className="mt-4 flex gap-2"><button type="button" onClick={() => editEvent(item)} className="rounded-full bg-white px-3 py-2 text-xs font-black text-amber-700">Bearbeiten</button><button type="button" onClick={() => remove('crm_calendar_events', item.id)} className="rounded-full bg-rose-100 px-3 py-2 text-xs font-black text-rose-700">Loeschen</button></div></article>)}</div>}
     </section>
     {error && <p className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</p>}
   </main>
