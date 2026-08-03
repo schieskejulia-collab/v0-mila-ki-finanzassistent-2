@@ -24,6 +24,11 @@ const navItems = [
     label: 'Pflichten',
     icon: '🧾',
   },
+{
+  href: '/crm',
+  label: 'CRM',
+  icon: '👥',
+},
   {
     href: '/profil',
     label: 'Profil',
