@@ -201,24 +201,6 @@ function buildSuggestions(params: {
 }
 
 async function loadMilaData() {
-  /*
-    Hier werden im nächsten Schritt die echten bestehenden Mila-Module angeschlossen.
-
-    Wichtig:
-    Keine zweite Datenstruktur bauen.
-    Diese Stelle ist nur der Sammelpunkt.
-
-    Später hier einsetzen:
-    - Ausgaben laden
-    - Einnahmen laden
-    - Kategorien aus lib/categories.ts nutzen
-    - Belege laden
-    - Projekte laden
-    - Ziele laden
-    - Verpflichtungen laden
-    - Steuerlogik anbinden
-  */
-
   return {
     expenses: [] as MilaExpense[],
     income: [] as MilaIncome[],
