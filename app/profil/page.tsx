@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
+import { MilaContextPanel } from '@/components/mila-context-panel'
 import { clearMilaLocalData } from '@/lib/privacy'
 const USER_TYPES = [
   {
@@ -308,7 +309,11 @@ useEffect(() => {
           Hinweise und Erinnerungen einschätzen.
         </p>
       </section>
+      </section>
 
+      <MilaContextPanel />
+
+      <section className="rounded-[2rem] ..."
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
           Datenqualität
