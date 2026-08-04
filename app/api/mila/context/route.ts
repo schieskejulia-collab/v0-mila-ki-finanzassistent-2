@@ -1,4 +1,4 @@
-/server"
+import { NextResponse } from "next/server"
 import { buildMilaContext } from "@/lib/mila-context"
 
 export const runtime = "nodejs"
