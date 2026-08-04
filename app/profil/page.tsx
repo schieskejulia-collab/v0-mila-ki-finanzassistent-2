@@ -309,10 +309,7 @@ useEffect(() => {
           Hinweise und Erinnerungen einschätzen.
         </p>
       </section>
-      </section>
-
-      <MilaContextPanel />
-
+     
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
           Datenqualität
@@ -582,6 +579,11 @@ useEffect(() => {
             </button>
           </>
         )}
+      </section>
+
+      <MilaContextPanel />
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
       </section>
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-500">
