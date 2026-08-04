@@ -313,7 +313,6 @@ useEffect(() => {
 
       <MilaContextPanel />
 
-      <section className="rounded-[2rem] ..."
       <section className="rounded-[2rem] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
           Datenqualität
