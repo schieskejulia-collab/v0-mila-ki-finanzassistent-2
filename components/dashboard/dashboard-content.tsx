@@ -4,6 +4,7 @@ import { DailySummaryCard } from './daily-summary-card'
 import { OverviewSection } from './overview-section'
 import { TasksSection } from './tasks-section'
 import { InsightsSection } from './insights-section'
+import { KanzleiHandoffSection } from './kanzlei-handoff-section'
 
 export function DashboardContent({ model }: { model: any }) {
   return (
@@ -11,6 +12,8 @@ export function DashboardContent({ model }: { model: any }) {
       <DailySummaryCard model={model} />
 
       <OverviewSection model={model} />
+
+      <KanzleiHandoffSection model={model} />
 
       <TasksSection model={model} />
 

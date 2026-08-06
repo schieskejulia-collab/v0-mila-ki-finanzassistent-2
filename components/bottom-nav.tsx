@@ -20,9 +20,14 @@ const navItems = [
     icon: '➕',
   },
   {
+    href: '/dokumente',
+    label: 'Mappe',
+    icon: '🧾',
+  },
+  {
     href: '/verpflichtungen',
     label: 'Pflichten',
-    icon: '🧾',
+    icon: '⏰',
   },
   {
     href: '/crm',
@@ -31,7 +36,7 @@ const navItems = [
   },
   {
     href: '/business/handwerk',
-    label: 'Handwerk',
+    label: 'Betrieb',
     icon: '🧰',
   },
   {

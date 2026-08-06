@@ -179,6 +179,12 @@ export function buildDashboardModel(data: any) {
     documents,
     obligations: openObligations,
   })
+  const kanzleiHandoff = getKanzleiHandoff({
+    expenses,
+    documents,
+    openObligations,
+    assistantFindings,
+  })
 
   return {
     greeting: getGreeting(),
@@ -206,6 +212,107 @@ export function buildDashboardModel(data: any) {
     financeAnalysis,
     dailyInsight,
     forecast,
+    kanzleiHandoff,
+  }
+}
+
+function getKanzleiHandoff(input: any) {
+  const {
+    expenses = [],
+    documents = [],
+    openObligations = [],
+    assistantFindings = [],
+  } = input
+
+  const missingReceiptCount = expenses.filter((expense: any) => {
+    return expense?.hasReceipt === false || expense?.has_receipt === false
+  }).length
+
+  const openQuestionCount = documents.filter((document: any) => {
+    const status = String(document?.status || '').toLowerCase()
+    const note = String(document?.note || '').toLowerCase()
+
+    return (
+      status === 'neu' ||
+      note.includes('unklar') ||
+      note.includes('rückfrage') ||
+      note.includes('rueckfrage') ||
+      note.includes('prüfen') ||
+      note.includes('pruefen')
+    )
+  }).length
+
+  const highFindingCount = assistantFindings.filter((finding: any) => {
+    return finding?.priority === 'high'
+  }).length
+
+  const issueCount =
+    missingReceiptCount +
+    openQuestionCount +
+    openObligations.length +
+    highFindingCount
+
+  const completion = Math.max(15, Math.min(100, 100 - issueCount * 12))
+  const nextAction = getKanzleiNextAction({
+    missingReceiptCount,
+    openQuestionCount,
+    openObligationCount: openObligations.length,
+  })
+
+  return {
+    documentCount: documents.length,
+    missingReceiptCount,
+    openQuestionCount,
+    openObligationCount: openObligations.length,
+    highFindingCount,
+    completion,
+    nextAction,
+  }
+}
+
+function getKanzleiNextAction(input: any) {
+  const {
+    missingReceiptCount,
+    openQuestionCount,
+    openObligationCount,
+  } = input
+
+  if (missingReceiptCount > 0) {
+    return {
+      title: 'Belege nachfordern',
+      message:
+        'Es gibt Buchungen ohne Beleg. Sammle zuerst die fehlenden Nachweise, bevor die Monatsmappe rausgeht.',
+      href: '/buchungen',
+      cta: 'Fehlende Belege prüfen',
+    }
+  }
+
+  if (openQuestionCount > 0) {
+    return {
+      title: 'Rückfragen klären',
+      message:
+        'Einige Dokumente brauchen noch Kontext. Mila hält sie sichtbar, damit die Kanzlei später weniger nachfragen muss.',
+      href: '/dokumente',
+      cta: 'Dokumente öffnen',
+    }
+  }
+
+  if (openObligationCount > 0) {
+    return {
+      title: 'Offene Pflichten prüfen',
+      message:
+        'Vor der Übergabe sollten offene Zahlungen, Fristen oder Bescheide einmal angeschaut werden.',
+      href: '/verpflichtungen',
+      cta: 'Pflichten prüfen',
+    }
+  }
+
+  return {
+    title: 'Übergabe wirkt vorbereitet',
+    message:
+      'Die Monatsmappe sieht organisatorisch ordentlich aus. Export oder Kanzlei-Weitergabe kann der nächste Schritt sein.',
+    href: '/dokumente',
+    cta: 'Monatsmappe ansehen',
   }
 }
 
