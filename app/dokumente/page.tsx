@@ -1,8 +1,15 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { describeHandoffSummary } from '@/components/dashboard/kanzlei-handoff-section'
+import {
+  demoPilotBusiness,
+  demoPilotDocuments,
+  demoPilotExpenses,
+  demoPilotObligations,
+} from '@/lib/demo-pilot-data'
 
 function formatEuro(value?: number) {
   if (!value) return ''
@@ -20,12 +27,35 @@ export default function DokumentePage() {
     obligations,
     deleteDocument,
   } = useFinance()
+  const [demoMode, setDemoMode] = useState(false)
 
-  const missingReceipts = expenses.filter((expense: any) => {
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search)
+    const requestedDemo = search.get('demo') === '1'
+    const savedMode = window.localStorage.getItem('mila-pilot-mode')
+    const nextDemoMode = requestedDemo || savedMode === 'demo'
+
+    setDemoMode(nextDemoMode)
+
+    if (requestedDemo) {
+      window.localStorage.setItem('mila-pilot-mode', 'demo')
+    }
+  }, [])
+
+  function startOwnMappe() {
+    window.localStorage.setItem('mila-pilot-mode', 'own')
+    setDemoMode(false)
+  }
+
+  const activeDocuments = demoMode ? demoPilotDocuments : documents
+  const activeExpenses = demoMode ? demoPilotExpenses : expenses
+  const activeObligations = demoMode ? demoPilotObligations : obligations
+
+  const missingReceipts = activeExpenses.filter((expense: any) => {
     return expense?.hasReceipt === false || expense?.has_receipt === false
   })
 
-  const openQuestions = documents.filter((doc) => {
+  const openQuestions = activeDocuments.filter((doc) => {
     const status = String(doc.status || '').toLowerCase()
     const note = String(doc.note || '').toLowerCase()
 
@@ -39,7 +69,7 @@ export default function DokumentePage() {
     )
   })
 
-  const openObligations = obligations.filter((item: any) => {
+  const openObligations = activeObligations.filter((item: any) => {
     const status = String(item.status || '').toLowerCase()
     return !['erledigt', 'bezahlt', 'archiviert'].includes(status)
   })
@@ -50,11 +80,13 @@ export default function DokumentePage() {
     openObligations.length
 
   const handoff = {
-    documentCount: documents.length,
+    documentCount: activeDocuments.length,
     missingReceiptCount: missingReceipts.length,
     openQuestionCount: openQuestions.length,
     openObligationCount: openObligations.length,
-    completion: Math.max(15, Math.min(100, 100 - issueCount * 12)),
+    completion: demoMode
+      ? demoPilotBusiness.handoffCompletion
+      : Math.max(15, Math.min(100, 100 - issueCount * 12)),
   }
 
   return (
@@ -66,13 +98,49 @@ export default function DokumentePage() {
         </Link>
 
         <h1 className="mt-4 text-3xl font-black text-slate-950">
-          📂 Kanzlei-Mappe
+          📂 {demoMode ? 'Demo-Mappe' : 'Kanzlei-Mappe'}
         </h1>
 
         <p className="text-sm text-slate-500">
-          Belege, Rückfragen und Unterlagen für die nächste Übergabe.
+          {demoMode
+            ? `${demoPilotBusiness.name}: vorbereitete Beispielunterlagen für den Termin.`
+            : 'Belege, Rückfragen und Unterlagen für die nächste Übergabe.'}
         </p>
       </div>
+
+      {demoMode && (
+        <section className="rounded-3xl border border-violet-100 bg-violet-50 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
+                Demo-Zustand
+              </p>
+
+              <h2 className="mt-2 text-xl font-black text-slate-950">
+                {demoPilotBusiness.name}
+              </h2>
+            </div>
+
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-violet-700 shadow-sm">
+              Keine echten Daten
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
+            Diese Mappe zeigt, wie Mila im Termin wirkt: Belege sind
+            vorsortiert, zwei Rückfragen bleiben sichtbar und offene Pflichten
+            sind für die Kanzlei vorbereitet.
+          </p>
+
+          <button
+            type="button"
+            onClick={startOwnMappe}
+            className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-black text-violet-700 shadow-sm"
+          >
+            Zu meinem echten Betrieb wechseln
+          </button>
+        </section>
+      )}
 
       <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
@@ -98,7 +166,7 @@ export default function DokumentePage() {
         <div className="mt-4 grid grid-cols-3 gap-2">
           <MappeMetric
             label="Dokumente"
-            value={documents.length}
+            value={activeDocuments.length}
           />
           <MappeMetric
             label="Fehlende Belege"
@@ -128,7 +196,7 @@ export default function DokumentePage() {
         </p>
       </section>
 
-      {documents.length === 0 && (
+      {activeDocuments.length === 0 && (
         <section className="rounded-3xl bg-violet-50 p-5">
           <p className="font-black text-violet-700">
             Noch keine Dokumente
@@ -149,7 +217,7 @@ export default function DokumentePage() {
       )}
 
       <div className="space-y-3">
-        {documents.map((doc) => (
+        {activeDocuments.map((doc) => (
           <section
             key={doc.id}
             className="rounded-3xl bg-white p-5 shadow-sm border"
@@ -183,12 +251,18 @@ export default function DokumentePage() {
                 ⏰ Fällig: {doc.dueDate}
               </p>
             )}
-<button
-  onClick={() => deleteDocument(doc.id)}
-  className="text-red-500 font-bold"
->
-  Löschen
-</button>
+            {demoMode ? (
+              <p className="mt-4 rounded-2xl bg-violet-50 p-3 text-xs font-black uppercase tracking-wider text-violet-700">
+                Demo-Unterlage
+              </p>
+            ) : (
+              <button
+                onClick={() => deleteDocument(doc.id)}
+                className="mt-4 text-red-500 font-bold"
+              >
+                Löschen
+              </button>
+            )}
 
             <p className="mt-3 text-xs text-slate-400">
               gespeichert bis {doc.keepUntil}

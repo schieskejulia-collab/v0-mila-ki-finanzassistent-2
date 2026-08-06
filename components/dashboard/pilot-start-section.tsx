@@ -217,7 +217,7 @@ function DemoMode({ onStartOwn }: { onStartOwn: () => void }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
-          href="/dokumente"
+          href="/dokumente?demo=1"
           className="rounded-2xl bg-violet-600 px-4 py-4 text-center text-sm font-black text-white shadow-lg shadow-violet-100"
         >
           Demo-Mappe ansehen
