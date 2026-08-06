@@ -47,6 +47,11 @@ export default function DokumentePage() {
     setDemoMode(false)
   }
 
+  function startDemoMappe() {
+    window.localStorage.setItem('mila-pilot-mode', 'demo')
+    setDemoMode(true)
+  }
+
   const activeDocuments = demoMode ? demoPilotDocuments : documents
   const activeExpenses = demoMode ? demoPilotExpenses : expenses
   const activeObligations = demoMode ? demoPilotObligations : obligations
@@ -106,6 +111,32 @@ export default function DokumentePage() {
             ? `${demoPilotBusiness.name}: vorbereitete Beispielunterlagen für den Termin.`
             : 'Belege, Rückfragen und Unterlagen für die nächste Übergabe.'}
         </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-violet-50 p-2">
+          <button
+            type="button"
+            onClick={startDemoMappe}
+            className={
+              demoMode
+                ? 'rounded-xl bg-white px-3 py-3 text-sm font-black text-violet-700 shadow-sm'
+                : 'rounded-xl px-3 py-3 text-sm font-black text-slate-500'
+            }
+          >
+            Demo-Mappe
+          </button>
+
+          <button
+            type="button"
+            onClick={startOwnMappe}
+            className={
+              demoMode
+                ? 'rounded-xl px-3 py-3 text-sm font-black text-slate-500'
+                : 'rounded-xl bg-white px-3 py-3 text-sm font-black text-violet-700 shadow-sm'
+            }
+          >
+            Echte Mappe
+          </button>
+        </div>
       </div>
 
       {demoMode && (
@@ -213,6 +244,14 @@ export default function DokumentePage() {
           >
             Beleg scannen oder hochladen
           </Link>
+
+          <button
+            type="button"
+            onClick={startDemoMappe}
+            className="mt-3 w-full rounded-2xl bg-white px-4 py-3 text-sm font-black text-violet-700 shadow-sm"
+          >
+            Erst Demo-Mappe ansehen
+          </button>
         </section>
       )}
 
