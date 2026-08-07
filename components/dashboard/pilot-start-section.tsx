@@ -377,6 +377,29 @@ function DemoMode({
         </div>
       </section>
 
+      <section className="rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-600">
+          Interner Arbeitsbereich
+        </p>
+
+        <h2 className="mt-2 text-xl font-black text-slate-950">
+          Akquise-Vorlagen öffnen
+        </h2>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+          Kopierfertige Nachrichten für Kanzleien, kleine Betriebe,
+          Gruppenposts und Follow-ups, damit du nach der Demo direkt ins
+          Gespräch kommst.
+        </p>
+
+        <Link
+          href="/akquise"
+          className="mt-4 inline-flex w-full justify-center rounded-2xl bg-fuchsia-600 px-4 py-4 text-sm font-black text-white shadow-lg shadow-fuchsia-100"
+        >
+          Akquise-Arbeitsbereich öffnen
+        </Link>
+      </section>
+
       <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
           Wenn Rückfragen kommen
@@ -396,32 +419,6 @@ function DemoMode({
           ))}
         </div>
       </section>
-
-      <Link
-        href="/akquise"
-        className="block rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition active:scale-[0.98]"
-      >
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-          Internes Akquise-Kit
-        </p>
-
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <div>
-            <p className="font-black text-slate-950">
-              Vorlagen für Kanzlei und Mandanten öffnen
-            </p>
-
-            <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
-              Kopierfertige Nachrichten für LinkedIn, XING, Facebook und
-              Follow-up, ohne das öffentliche Angebot zu vermischen.
-            </p>
-          </div>
-
-          <span className="rounded-full bg-violet-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-violet-700">
-            intern
-          </span>
-        </div>
-      </Link>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
