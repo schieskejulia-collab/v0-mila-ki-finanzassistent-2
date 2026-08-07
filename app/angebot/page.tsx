@@ -54,7 +54,7 @@ export default function AngebotPage() {
             </Link>
 
             <Link
-              href="/login"
+              href="/kontakt"
               className="rounded-2xl border border-white/25 px-4 py-4 text-center text-sm font-black text-white"
             >
               Pilot anfragen
@@ -148,10 +148,10 @@ export default function AngebotPage() {
           </p>
 
           <Link
-            href="/login"
+            href="/kontakt"
             className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white"
           >
-            Zur Demo
+            Pilot anfragen
           </Link>
         </section>
       </section>
