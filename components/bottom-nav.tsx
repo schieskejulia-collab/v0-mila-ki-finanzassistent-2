@@ -37,7 +37,8 @@ export function BottomNav() {
   if (
     pathname === '/login' ||
     pathname === '/angebot' ||
-    pathname === '/kontakt'
+    pathname === '/kontakt' ||
+    pathname === '/akquise'
   ) {
     return null
   }
