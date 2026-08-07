@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -84,7 +85,7 @@ router.replace(profileComplete ? '/' : '/profil')
     <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-4 text-slate-950">
       <section className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
-          Mila Finanz
+          Mila Kanzlei-Vorbereitung
         </p>
 
         <h1 className="mt-3 text-3xl font-black">
@@ -94,8 +95,16 @@ router.replace(profileComplete ? '/' : '/profil')
         </h1>
 
         <p className="mt-2 text-sm text-slate-500">
-          Melde dich an, damit deine Finanzdaten geschützt bleiben.
+          Melde dich an, um Demo, Mandantenmappe und VA-Arbeitsbereich zu
+          öffnen.
         </p>
+
+        <Link
+          href="/angebot"
+          className="mt-4 inline-flex rounded-2xl bg-violet-50 px-4 py-3 text-sm font-black text-violet-700"
+        >
+          Angebot ansehen
+        </Link>
 
         <div className="mt-6 space-y-4">
           <input

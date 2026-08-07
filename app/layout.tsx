@@ -14,9 +14,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Mila – Deine Finanzbegleiterin',
+  title: 'Mila – Kanzlei-Vorbereitung',
   description:
-    'Mila ist die empathische KI-Finanzassistentin für Freelancer und Selbstständige: Buchhaltung, Budgets, Steuern und Coaching in einer App.',
+    'Mila unterstützt kleine Betriebe und Steuerkanzleien dabei, Belege, Rückfragen, Nachweise und Monatsmappen sauber vorzubereiten.',
   generator: 'v0.app',
   manifest: '/manifest.json',
   appleWebApp: {
