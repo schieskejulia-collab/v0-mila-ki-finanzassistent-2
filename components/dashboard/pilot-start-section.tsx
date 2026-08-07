@@ -145,6 +145,40 @@ const demoSteps = [
   },
 ]
 
+const demoTalkTrack = [
+  {
+    title: 'Angebot in einem Satz',
+    text: 'Ich bereite Unterlagen vor, damit Kanzlei und Betrieb weniger Rückfragen und weniger Sucherei haben.',
+  },
+  {
+    title: 'Demo-Mappe öffnen',
+    text: 'Zeige den Beispielbetrieb, die fehlenden Belege, offene Rückfragen und den Übergabe-Stand.',
+  },
+  {
+    title: 'Rolle sauber trennen',
+    text: 'Kanzlei bekommt die Prüfansicht. Betrieb oder Julia arbeiten die Unterlagen im Mandantenbereich vor.',
+  },
+  {
+    title: 'Nächsten Schritt anbieten',
+    text: 'Pilot mit einem echten Mandanten oder einem kleinen Betrieb starten, ohne direkt die ganze Kanzlei umzustellen.',
+  },
+]
+
+const pilotAnswers = [
+  {
+    question: 'Ist Mila eine Software oder dein VA-Service?',
+    answer: 'Beides sauber getrennt: Mila ist mein Arbeitssystem, und daraus kann ein Service oder später ein Mandantenportal werden.',
+  },
+  {
+    question: 'Ersetzt Mila die Kanzlei?',
+    answer: 'Nein. Mila bereitet nur organisatorisch vor. Bewertung und finale Buchung bleiben bei der Kanzlei.',
+  },
+  {
+    question: 'Muss der Mandant direkt selbst damit arbeiten?',
+    answer: 'Nein. Zum Start kann ich die Mappe selbst führen und nur die vorbereitete Übersicht liefern.',
+  },
+]
+
 export function PilotStartSection({ model }: { model: any }) {
   const handoff = model.kanzleiHandoff
   const [mode, setMode] = useState<PilotMode>('demo')
@@ -315,6 +349,53 @@ function DemoMode({
           </div>
         ))}
       </div>
+
+      <section className="rounded-2xl border border-violet-100 bg-white p-4">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
+          Terminleitfaden
+        </p>
+
+        <h2 className="mt-2 text-xl font-black text-slate-950">
+          So führst du Mila vor
+        </h2>
+
+        <div className="mt-4 space-y-3">
+          {demoTalkTrack.map((item, index) => (
+            <div
+              key={item.title}
+              className="rounded-2xl bg-violet-50 p-3"
+            >
+              <p className="text-xs font-black uppercase tracking-wider text-violet-500">
+                {index + 1}. {item.title}
+              </p>
+
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-600">
+                {item.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+          Wenn Rückfragen kommen
+        </p>
+
+        <div className="mt-3 space-y-3">
+          {pilotAnswers.map((item) => (
+            <div key={item.question}>
+              <p className="text-sm font-black text-slate-950">
+                {item.question}
+              </p>
+
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                {item.answer}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
