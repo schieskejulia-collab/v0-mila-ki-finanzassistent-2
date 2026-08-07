@@ -109,7 +109,7 @@ export default function DokumentePage() {
         <p className="text-sm text-slate-500">
           {demoMode
             ? `${demoPilotBusiness.name}: vorbereitete Beispielunterlagen für den Termin.`
-            : 'Belege, Rückfragen, Nachweise und Unterlagen für die nächste Kanzlei-Übergabe.'}
+            : 'Arbeitsmappe für deine VA-Vorbereitung: Belege, Rückfragen, Nachweise und Kanzlei-Übergabe.'}
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-violet-50 p-2">
@@ -160,7 +160,8 @@ export default function DokumentePage() {
           <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
             Diese Mappe zeigt, wie Mila im Termin wirkt: Belege sind
             vorsortiert, zwei Rückfragen bleiben sichtbar und offene Pflichten
-            sind für die Kanzlei vorbereitet.
+            sind für die Kanzlei vorbereitet. Genau so kann Julia die
+            Vorbereitung als Service übernehmen.
           </p>
 
           <button
@@ -223,8 +224,24 @@ export default function DokumentePage() {
         </div>
 
         <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-400">
-          Mila bereitet vor. Steuerliche Bewertung und finale Buchung bleiben
-          bei der Kanzlei.
+          Mila bereitet als internes Arbeitssystem vor. Steuerliche Bewertung
+          und finale Buchung bleiben bei der Kanzlei.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-violet-100 bg-violet-50 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
+          Service-Modell
+        </p>
+
+        <h2 className="mt-2 text-xl font-black text-slate-950">
+          Julia kann die Mappe selbst führen
+        </h2>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+          Der Betrieb muss nicht direkt ein neues System lernen. Für den Start
+          kann Julia die Unterlagen mit Mila vorbereiten und die fertige
+          Übersicht an Mandant oder Kanzlei geben.
         </p>
       </section>
 

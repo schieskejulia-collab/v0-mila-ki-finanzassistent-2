@@ -44,7 +44,7 @@ function DashboardLoading() {
       <div className="space-y-3">
         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
         <p className="text-xs font-medium text-slate-500">
-          Mila lädt deinen Pilot...
+          Mila lädt deine Kanzlei-Vorbereitung...
         </p>
       </div>
     </div>

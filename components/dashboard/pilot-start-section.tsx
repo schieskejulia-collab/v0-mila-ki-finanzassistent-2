@@ -23,6 +23,19 @@ const modeTabs: Array<{
   },
 ]
 
+const offerPaths = [
+  {
+    title: 'Kanzlei-Kooperation',
+    text: 'Für Steuerberater: Mandantenunterlagen kommen vorsortiert, vollständiger und mit klaren Rückfragen an.',
+    label: 'B2B',
+  },
+  {
+    title: 'VA-Service für Betriebe',
+    text: 'Für kleine Betriebe: Julia bereitet Belege, Fahrten, Stunden und Nachweise mit Mila für die Kanzlei vor.',
+    label: 'Service',
+  },
+]
+
 const mandantActions = [
   {
     href: '/neue-buchungen',
@@ -119,12 +132,12 @@ const demoStats = [
 
 const demoSteps = [
   {
-    title: 'Belegchaos wird sichtbar',
-    text: 'Mila erkennt fehlende Zahlungsnachweise und unklare Ausgaben.',
+    title: 'System und Service werden sichtbar',
+    text: 'Die Demo zeigt nicht nur Software, sondern wie die Kanzlei-Vorbereitung praktisch abläuft.',
   },
   {
     title: 'Rückfragen vor der Kanzlei',
-    text: 'Der Betrieb ergänzt Zweck, Projekt oder fehlenden Kontext direkt in Mila.',
+    text: 'Julia oder der Betrieb ergänzt Zweck, Projekt oder fehlenden Kontext, bevor die Kanzlei nachhaken muss.',
   },
   {
     title: 'Monatsmappe entsteht',
@@ -177,8 +190,8 @@ export function PilotStartSection({ model }: { model: any }) {
         </p>
 
         <p className="mt-3 text-xs font-semibold leading-relaxed text-white/65">
-          Mila bereitet Unterlagen organisatorisch vor. Steuerliche Bewertung
-          und finale Buchung bleiben bewusst bei der Kanzlei.
+          Mila ist System und Werkzeug: nach außen Kanzlei-Vorbereitung, innen
+          dein schneller VA-Arbeitsplatz.
         </p>
       </div>
 
@@ -196,6 +209,31 @@ export function PilotStartSection({ model }: { model: any }) {
           >
             {item.label}
           </button>
+        ))}
+      </div>
+
+      <div className="grid gap-2 border-b border-violet-50 bg-white p-4 sm:grid-cols-2">
+        {offerPaths.map((path) => (
+          <div
+            key={path.title}
+            className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-500">
+                  {path.label}
+                </p>
+
+                <p className="mt-2 font-black text-slate-950">
+                  {path.title}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
+              {path.text}
+            </p>
+          </div>
         ))}
       </div>
 
@@ -229,8 +267,8 @@ function DemoMode({
             </h2>
 
             <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-              Eine vorbereitete Monatsmappe, damit du im Termin direkt den
-              Ablauf zeigen kannst.
+              Eine vorbereitete Monatsmappe, damit du im Termin direkt zeigen
+              kannst, was Kanzlei und Betrieb davon haben.
             </p>
           </div>
 
@@ -303,21 +341,22 @@ function KanzleiMode() {
     <div className="space-y-4 p-4">
       <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
-          Kanzlei-Ansicht
+          Kooperation
         </p>
 
         <h2 className="mt-2 text-xl font-black text-slate-950">
-          Weniger Rückfragen, sauberere Übergabe
+          Entlastung für Steuerberater
         </h2>
 
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Mila zeigt nicht „fertig gebucht“, sondern „vorbereitet“: Was liegt
-          vor, was fehlt, und welche Rückfrage muss vor der Buchhaltung raus.
+          Mila ist hier kein Ersatz für die Kanzlei, sondern dein
+          Vorbereitungs-System: Unterlagen sammeln, fehlende Nachweise finden
+          und Rückfragen vor der Buchhaltung klären.
         </p>
 
         <p className="mt-3 rounded-2xl bg-white/70 p-3 text-xs font-black uppercase tracking-wider text-emerald-700">
-          Die Kanzlei sieht die Übergabe. Mandantenmodule wie Fahrtenbuch oder
-          Stunden bleiben Arbeitsbereich des Betriebs.
+          Angebot: Kooperation mit Julia. Die Kanzlei bekommt eine sauberere
+          Übergabe, nicht noch ein neues Chaos-Tool.
         </p>
       </div>
 
@@ -355,17 +394,17 @@ function MandantMode() {
     <div className="space-y-4 p-4">
       <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-          Mandant anlegen
+          VA-Service
         </p>
 
         <h2 className="mt-2 text-xl font-black text-slate-950">
-          Ein Betrieb, klare Kanzlei-Übergabe
+          Betrieb vorbereiten, Mila intern nutzen
         </h2>
 
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Mila wird im Pilot als Mandanten-Arbeitsbereich genutzt. Die Kanzlei
-          bekommt daraus eine ruhige Prüfansicht, nicht das komplette
-          Innenleben.
+          Für Mandanten kann Julia die Unterlagen als VA vorbereiten und Mila
+          als eigenes Arbeitssystem nutzen. Der Betrieb muss nicht sofort eine
+          fertige Software bedienen.
         </p>
       </div>
 
@@ -428,8 +467,8 @@ function MandantMode() {
       </div>
 
       <p className="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
-        Sonderfälle werden in Mila als Hinweis und Nachweisbedarf geführt. Die
-        fachliche Bewertung bleibt bei Kanzlei, Arzt, Behörde oder Versicherung.
+        Der Mandant kann später selbst in Mila arbeiten. Zum Start reicht aber
+        auch: Julia nutzt Mila intern und liefert die vorbereitete Mappe.
       </p>
     </div>
   )
@@ -443,14 +482,14 @@ function getHeadline(mode: PilotMode) {
 
 function getIntro(mode: PilotMode, handoff: any) {
   if (mode === 'kanzlei') {
-    return 'Für die Kanzlei zählt: Vollständigkeit, Kontext und klare Rückfragen, ohne dass Mila steuerlich entscheidet.'
+    return 'Für Steuerberater zählt: weniger Sucherei, weniger Rückfragen und Mandanten, die vorbereiteter liefern.'
   }
 
   if (mode === 'mandant') {
     return getMandantLine(handoff)
   }
 
-  return 'Zeig Mila als fokussiertes Pilot-Produkt: Demo-Mappe öffnen, Rückfragen zeigen, danach echten Mandanten starten.'
+  return 'Zeig Mila als fokussiertes System: erst Demo-Mappe, dann Kanzlei-Kooperation oder VA-Service erklären.'
 }
 
 function getMandantLine(handoff: any) {
