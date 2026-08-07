@@ -1,287 +1,242 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type TemplateType = 'kanzlei' | 'betrieb' | 'gruppe' | 'nachfassen'
-
-const templateTypes: Array<{
-  value: TemplateType
-  label: string
-}> = [
-  {
-    value: 'kanzlei',
-    label: 'Kanzlei',
-  },
-  {
-    value: 'betrieb',
-    label: 'Betrieb',
-  },
-  {
-    value: 'gruppe',
-    label: 'Gruppen',
-  },
-  {
-    value: 'nachfassen',
-    label: 'Follow-up',
-  },
-]
-
-const templates: Record<
-  TemplateType,
-  Array<{
+type TemplateGroup = {
+  title: string
+  intro: string
+  tone: string
+  templates: Array<{
     title: string
     channel: string
     text: string
   }>
-> = {
-  kanzlei: [
-    {
-      title: 'LinkedIn/XING kurz',
-      channel: 'Direktnachricht',
-      text: [
-        'Hallo [Name],',
-        '',
-        'ich teste gerade Mila als Vorbereitungssystem für kleine Betriebe vor der Kanzlei-Übergabe. Ziel ist: weniger Rückfragen, vollständigere Belege und klarere Monatsmappen.',
-        '',
-        'Wäre ein kurzer 15-Minuten-Austausch interessant, um zu prüfen, ob das für Ihre Kanzlei als Pilot hilfreich wäre?',
-      ].join('\n'),
-    },
-    {
-      title: 'Kanzlei-E-Mail',
-      channel: 'E-Mail',
-      text: [
-        'Betreff: Pilot für sauberere Mandantenunterlagen',
-        '',
-        'Hallo [Name],',
-        '',
-        'ich baue mit Mila einen fokussierten Vorbereitungsprozess für kleine Betriebe auf: Belege, fehlende Angaben, Fahrten, Stunden und Sonderfälle werden organisatorisch gesammelt, bevor die Unterlagen in der Kanzlei landen.',
-        '',
-        'Mila ersetzt keine steuerliche Bewertung. Der Nutzen liegt davor: weniger Sucherei, weniger Rückfragen und eine besser vorbereitete Monatsmappe.',
-        '',
-        'Wenn das für Ihre Kanzlei relevant klingt, würde ich gern in 15 Minuten zeigen, wie der Pilot aktuell aussieht.',
-        '',
-        'Viele Grüße',
-        'Julia',
-      ].join('\n'),
-    },
-  ],
-  betrieb: [
-    {
-      title: 'Mandant/Betrieb direkt',
-      channel: 'DM oder WhatsApp',
-      text: [
-        'Hallo [Name],',
-        '',
-        'ich unterstütze kleine Betriebe dabei, Belege, Fahrten, Stunden und Nachweise für die Steuerkanzlei sauber vorzubereiten.',
-        '',
-        'Ich nutze dafür Mila als internes Arbeitssystem, damit fehlende Unterlagen und Rückfragen früher auffallen. Die Kanzlei bleibt für Bewertung und finale Buchung zuständig.',
-        '',
-        'Soll ich dir kurz zeigen, wie so eine vorbereitete Monatsmappe aussehen kann?',
-      ].join('\n'),
-    },
-    {
-      title: 'VA-Angebot klar',
-      channel: 'Angebotsantwort',
-      text: [
-        'Ich kann dich als VA bei der Kanzlei-Vorbereitung unterstützen: Belege sammeln, fehlende Angaben markieren, Fahrten und Stunden bei Bedarf dokumentieren und eine strukturierte Monatsmappe vorbereiten.',
-        '',
-        'Wichtig: Ich mache keine Steuerberatung und treffe keine finale Buchungsentscheidung. Ich sorge dafür, dass die Unterlagen vollständiger und verständlicher bei der Kanzlei ankommen.',
-      ].join('\n'),
-    },
-  ],
-  gruppe: [
-    {
-      title: 'Facebook-Gruppenpost',
-      channel: 'Post',
-      text: [
-        'Viele kleine Betriebe verlieren am Monatsende Zeit, weil Belege, Fahrten, Stunden oder Nachweise nicht vollständig bei der Kanzlei landen.',
-        '',
-        'Ich teste gerade Mila als internes System für genau diese Vorbereitung: Unterlagen sammeln, fehlende Punkte sichtbar machen und eine saubere Monatsmappe vorbereiten.',
-        '',
-        'Es geht nicht um Steuerberatung, sondern um Ordnung vor der Buchhaltung. Wenn jemand das für den eigenen Betrieb testen möchte, schreibt mir gern kurz.',
-      ].join('\n'),
-    },
-    {
-      title: 'LinkedIn-Post',
-      channel: 'Post',
-      text: [
-        'Ich baue Mila gerade bewusst fokussiert auf: als Vorbereitungssystem vor der Kanzlei.',
-        '',
-        'Der praktische Nutzen liegt nicht in mehr Software, sondern in weniger Reibung: Belege vollständiger sammeln, Rückfragen früher klären, Fahrten/Stunden/Sonderfälle als Kontext markieren und die Übergabe sauberer machen.',
-        '',
-        'Für Kanzleien kann daraus ein Pilot zur Mandantenentlastung werden. Für kleine Betriebe ein VA-Service, bei dem ich Mila intern nutze.',
-      ].join('\n'),
-    },
-  ],
-  nachfassen: [
-    {
-      title: 'Sanft nachfassen',
-      channel: 'DM',
-      text: [
-        'Hallo [Name],',
-        '',
-        'ich wollte nur kurz nachfassen, ob der Mila-Pilot zur Kanzlei-Vorbereitung grundsätzlich interessant für Sie ist.',
-        '',
-        'Ich kann entweder die kurze Demo zeigen oder erst einmal erklären, wo genau die Grenze liegt: Mila bereitet organisatorisch vor, die steuerliche Bewertung bleibt bei der Kanzlei.',
-      ].join('\n'),
-    },
-    {
-      title: 'Termin anbieten',
-      channel: 'DM oder E-Mail',
-      text: [
-        'Falls es passt: Ich kann diese Woche zwei kurze Slots für eine 15-Minuten-Demo anbieten.',
-        '',
-        'Ziel wäre nur zu prüfen, ob der Ansatz für Ihre Kanzlei oder einen passenden Mandanten Sinn ergibt. Kein großes Setup, kein Systemwechsel.',
-      ].join('\n'),
-    },
-  ],
 }
 
-const positioning = [
-  'Kanzlei: Pilot zur besseren Mandantenübergabe.',
-  'Betrieb: VA-Service, bei dem Julia Mila intern nutzt.',
-  'Grenze: keine Steuerberatung, keine finale Buchung, keine verbindliche Rechts- oder Fristauskunft.',
+const templateGroups: TemplateGroup[] = [
+  {
+    title: 'Kanzlei anschreiben',
+    intro:
+      'Für Steuerberater und Kanzleiinhaber, bei denen du Mila als Vorbereitung und Entlastung anbietest.',
+    tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+    templates: [
+      {
+        title: 'Erste Nachricht',
+        channel: 'LinkedIn / Mail',
+        text:
+          'Hallo [Name], ich baue mit Mila ein kleines Vorbereitungssystem für Mandantenunterlagen: Belege, fehlende Nachweise und Rückfragen werden vor der Kanzlei sauberer gesammelt. Ich ersetze keine steuerliche Prüfung, sondern bereite die Unterlagen organisatorisch vor. Wäre ein kurzer Austausch interessant, ob so etwas bei Ihren Mandanten Rückfragen reduzieren könnte?',
+      },
+      {
+        title: 'Kooperationsangebot',
+        channel: 'Mail',
+        text:
+          'Hallo [Name], ich würde gern mit 1-2 echten Fällen testen, ob Mila Kanzleien entlasten kann: Ich unterstütze kleine Betriebe als VA bei Belegen, Rückfragen und Monatsmappe, damit Ihre Kanzlei vorbereiteteres Material bekommt. Keine Steuerberatung, keine Buchungsentscheidung, nur Vorarbeit und Struktur. Hätten Sie grundsätzlich Interesse an einem kleinen Pilotlauf?',
+      },
+    ],
+  },
+  {
+    title: 'Betrieb direkt ansprechen',
+    intro:
+      'Für Handwerker, kleine Betriebe und Selbstständige, die ihre Unterlagen nicht sauber sortiert bekommen.',
+    tone: 'border-violet-100 bg-violet-50 text-violet-700',
+    templates: [
+      {
+        title: 'Kurzer Einstieg',
+        channel: 'WhatsApp / DM',
+        text:
+          'Hallo [Name], ich unterstütze kleine Betriebe dabei, Belege, Rechnungen und offene Rückfragen für die Steuerkanzlei besser vorzubereiten. Nicht als Steuerberaterin, sondern als praktische VA-Unterstützung mit meinem Mila-System. Wenn du öfter suchst, nachreichen musst oder Unterlagen liegen bleiben, kann ich dir das einmal kurz zeigen.',
+      },
+      {
+        title: 'Nach Demo anbieten',
+        channel: 'Follow-up',
+        text:
+          'Danke dir fürs Reinschauen. Mein Vorschlag wäre ein kleiner Start: Wir nehmen einen Monat, sammeln Belege und offene Punkte, markieren fehlende Infos und machen daraus eine saubere Übergabe für deine Kanzlei. Danach siehst du sehr klar, ob dir das im Alltag wirklich Arbeit abnimmt.',
+      },
+    ],
+  },
+  {
+    title: 'Gruppenpost',
+    intro:
+      'Für Facebook-, Unternehmer- oder lokale Gruppen, ohne nach kalter Werbung zu klingen.',
+    tone: 'border-fuchsia-100 bg-fuchsia-50 text-fuchsia-700',
+    templates: [
+      {
+        title: 'Problem sichtbar machen',
+        channel: 'Facebook / Gruppe',
+        text:
+          'Viele kleine Betriebe haben nicht das Problem, dass sie keine Buchhaltungssoftware haben. Das Problem ist oft der Monat davor: Belege fehlen, Rückfragen bleiben liegen, der Zweck ist nicht mehr klar und am Ende fragt die Kanzlei alles nochmal ab. Genau dafür baue ich Mila: ein Vorbereitungssystem, mit dem Unterlagen vollständiger und verständlicher an die Kanzlei gehen. Ich suche gerade 1-2 kleine Betriebe oder Kanzleien, die mir ehrliches Feedback geben möchten.',
+      },
+      {
+        title: 'VA-Service posten',
+        channel: 'Facebook / LinkedIn',
+        text:
+          'Ich biete aktuell Unterstützung für kleine Betriebe an, die ihre Belege, Rechnungen, Fahrten oder Nachweise besser für die Kanzlei vorbereiten wollen. Ich nutze dafür mein eigenes Mila-System: keine Steuerberatung, keine Buchungsentscheidung, sondern Struktur, Vollständigkeit und klare Rückfragen. Wer jeden Monat zu spät sortiert oder ständig etwas nachreichen muss, darf mir gern schreiben.',
+      },
+    ],
+  },
+  {
+    title: 'Follow-ups',
+    intro:
+      'Für Kontakte, die schon reagiert haben oder bei denen du freundlich nachfassen möchtest.',
+    tone: 'border-amber-100 bg-amber-50 text-amber-700',
+    templates: [
+      {
+        title: 'Sanft nachfassen',
+        channel: 'DM / Mail',
+        text:
+          'Hallo [Name], ich wollte nur kurz nachfassen, ob mein Mila-Ansatz für Sie grundsätzlich spannend sein könnte. Mir geht es nicht darum, ein fertiges Tool aufzudrängen, sondern herauszufinden, welche Vorarbeit Kanzlei oder Betrieb wirklich entlastet.',
+      },
+      {
+        title: 'Termin sichern',
+        channel: 'DM / Mail',
+        text:
+          'Wenn es passt, würde ich Ihnen Mila gern in 15 Minuten zeigen: einmal Demo-Mappe, einmal Rückfragenlogik, einmal die Grenze zur Kanzlei. Danach können Sie sehr schnell sagen, ob das in der Praxis hilfreich wäre oder was fehlen müsste.',
+      },
+    ],
+  },
 ]
 
 export default function AkquisePage() {
   const router = useRouter()
   const [isReady, setIsReady] = useState(false)
-  const [activeType, setActiveType] = useState<TemplateType>('kanzlei')
-  const [copiedTitle, setCopiedTitle] = useState('')
-
-  const activeTemplates = useMemo(
-    () => templates[activeType],
-    [activeType],
-  )
+  const [copiedKey, setCopiedKey] = useState('')
 
   useEffect(() => {
-    async function checkLogin() {
+    async function checkSession() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
       if (!session) {
-        router.push('/login')
+        router.replace('/login')
         return
       }
 
       setIsReady(true)
     }
 
-    checkLogin()
+    checkSession()
   }, [router])
 
-  async function copyTemplate(title: string, text: string) {
+  async function copyTemplate(key: string, text: string) {
     await navigator.clipboard.writeText(text)
-    setCopiedTitle(title)
+    setCopiedKey(key)
+    window.setTimeout(() => setCopiedKey(''), 1800)
   }
 
   if (!isReady) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-6 text-center text-slate-600">
-        <p className="text-sm font-semibold">
-          Mila bereitet die internen Vorlagen vor...
-        </p>
+      <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-6 text-center text-slate-950">
+        <div>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
+          <p className="mt-4 text-sm font-semibold text-slate-500">
+            Mila öffnet deinen internen Arbeitsbereich...
+          </p>
+        </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#fbf9ff] px-4 py-6 text-slate-950">
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5 pb-10">
-        <div>
-          <Link href="/" className="text-sm font-bold text-slate-500">
+    <main className="min-h-screen bg-[#fbf9ff] p-5 pb-12 text-slate-950">
+      <div className="mx-auto max-w-md space-y-5">
+        <header className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-sm">
+          <Link href="/" className="text-sm font-black text-white/70">
             ← Zurück zum Pilot
           </Link>
 
-          <p className="mt-6 text-xs font-black uppercase tracking-[0.22em] text-violet-600">
-            Internes Akquise-Kit
+          <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-200">
+            Interner Mila-Arbeitsbereich
           </p>
 
-          <h1 className="mt-3 text-4xl font-black tracking-tight">
-            Texte für Kanzlei, Betrieb und Gruppen
+          <h1 className="mt-3 text-3xl font-black tracking-tight">
+            Akquise-Vorlagen
           </h1>
 
-          <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-slate-600">
-            Diese Seite ist dein Arbeitsbereich zum Kopieren. Außen bleibt Mila
-            als klares Angebot sichtbar, innen nutzt du fertige Texte für
-            direkte Ansprache und Follow-up.
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-white/75">
+            Kanzlei, Betrieb, Gruppenpost oder Follow-up: Du kannst jeden Text
+            direkt kopieren, anpassen und verschicken.
           </p>
-        </div>
+        </header>
 
         <section className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-            Positionierung
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-500">
+            Fokus
           </p>
 
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {positioning.map((item) => (
-              <p
-                key={item}
-                className="rounded-2xl bg-violet-50 p-3 text-xs font-bold leading-relaxed text-slate-700"
-              >
-                {item}
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+            Mila bleibt nach außen klar: Vorbereitung, Vollständigkeit,
+            Rückfragen und Übergabe. Keine Steuerberatung und keine finale
+            Buchungsentscheidung.
+          </p>
+        </section>
+
+        {templateGroups.map((group) => (
+          <section
+            key={group.title}
+            className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm"
+          >
+            <div className={`rounded-2xl border p-4 ${group.tone}`}>
+              <p className="text-xs font-black uppercase tracking-[0.18em] opacity-80">
+                Vorlage
               </p>
-            ))}
-          </div>
-        </section>
 
-        <div className="grid grid-cols-2 gap-2 rounded-3xl bg-violet-50 p-2 sm:grid-cols-4">
-          {templateTypes.map((type) => (
-            <button
-              key={type.value}
-              type="button"
-              onClick={() => {
-                setActiveType(type.value)
-                setCopiedTitle('')
-              }}
-              className={
-                activeType === type.value
-                  ? 'rounded-2xl bg-white px-3 py-3 text-sm font-black text-violet-700 shadow-sm'
-                  : 'rounded-2xl px-3 py-3 text-sm font-black text-slate-500'
-              }
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
+              <h2 className="mt-2 text-xl font-black text-slate-950">
+                {group.title}
+              </h2>
 
-        <section className="grid gap-4">
-          {activeTemplates.map((template) => (
-            <article
-              key={template.title}
-              className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-                    {template.channel}
-                  </p>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+                {group.intro}
+              </p>
+            </div>
 
-                  <h2 className="mt-2 text-2xl font-black">
-                    {template.title}
-                  </h2>
-                </div>
+            <div className="mt-3 space-y-3">
+              {group.templates.map((template) => {
+                const key = `${group.title}-${template.title}`
+                const copied = copiedKey === key
 
-                <button
-                  type="button"
-                  onClick={() => copyTemplate(template.title, template.text)}
-                  className="shrink-0 rounded-2xl bg-violet-600 px-4 py-3 text-xs font-black text-white"
-                >
-                  {copiedTitle === template.title ? 'Kopiert' : 'Kopieren'}
-                </button>
-              </div>
+                return (
+                  <article
+                    key={key}
+                    className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-slate-950">
+                          {template.title}
+                        </p>
 
-              <pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-slate-600">
-                {template.text}
-              </pre>
-            </article>
-          ))}
-        </section>
-      </section>
+                        <p className="mt-1 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                          {template.channel}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => copyTemplate(key, template.text)}
+                        className={
+                          copied
+                            ? 'rounded-full bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700'
+                            : 'rounded-full bg-violet-600 px-3 py-2 text-xs font-black text-white'
+                        }
+                      >
+                        {copied ? 'Kopiert' : 'Kopieren'}
+                      </button>
+                    </div>
+
+                    <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-relaxed text-slate-600">
+                      {template.text}
+                    </p>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
     </main>
   )
 }
