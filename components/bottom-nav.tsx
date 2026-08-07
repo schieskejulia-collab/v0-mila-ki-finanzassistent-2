@@ -6,17 +6,12 @@ import { usePathname } from 'next/navigation'
 const navItems = [
   {
     href: '/',
-    label: 'Startseite',
+    label: 'Pilot',
     icon: '🏠',
   },
   {
-    href: '/buchungen',
-    label: 'Finanzen',
-    icon: '💰',
-  },
-  {
     href: '/neue-buchungen',
-    label: 'Neu',
+    label: 'Scan',
     icon: '➕',
   },
   {
@@ -30,24 +25,9 @@ const navItems = [
     icon: '⏰',
   },
   {
-    href: '/crm',
-    label: 'CRM',
-    icon: '👥',
-  },
-  {
-    href: '/business/handwerk',
-    label: 'Betrieb',
-    icon: '🧰',
-  },
-  {
     href: '/profil',
     label: 'Profil',
     icon: '👤',
-  },
-  {
-    href: '/ziele',
-    label: 'Ziele',
-    icon: '🎯',
   },
 ]
 

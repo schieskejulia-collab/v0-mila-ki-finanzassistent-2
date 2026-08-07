@@ -43,7 +43,7 @@ export default function DokumentePage() {
   }, [])
 
   function startOwnMappe() {
-    window.localStorage.setItem('mila-pilot-mode', 'own')
+    window.localStorage.setItem('mila-pilot-mode', 'mandant')
     setDemoMode(false)
   }
 
@@ -103,13 +103,13 @@ export default function DokumentePage() {
         </Link>
 
         <h1 className="mt-4 text-3xl font-black text-slate-950">
-          📂 {demoMode ? 'Demo-Mappe' : 'Kanzlei-Mappe'}
+          📂 {demoMode ? 'Demo-Mappe' : 'Mandantenmappe'}
         </h1>
 
         <p className="text-sm text-slate-500">
           {demoMode
             ? `${demoPilotBusiness.name}: vorbereitete Beispielunterlagen für den Termin.`
-            : 'Belege, Rückfragen und Unterlagen für die nächste Übergabe.'}
+            : 'Belege, Rückfragen, Nachweise und Unterlagen für die nächste Kanzlei-Übergabe.'}
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-violet-50 p-2">
@@ -134,7 +134,7 @@ export default function DokumentePage() {
                 : 'rounded-xl bg-white px-3 py-3 text-sm font-black text-violet-700 shadow-sm'
             }
           >
-            Echte Mappe
+            Mandant
           </button>
         </div>
       </div>
@@ -218,12 +218,30 @@ export default function DokumentePage() {
             <li>✓ Belege gesammelt und sichtbar abgelegt</li>
             <li>✓ Fehlende Angaben vor der Kanzlei-Rückfrage markiert</li>
             <li>✓ Pflichten, Bescheide und Fristen separat im Blick</li>
+            <li>✓ Sonderfälle nur als Kontext und Nachweisbedarf notiert</li>
           </ul>
         </div>
 
         <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-400">
           Mila bereitet vor. Steuerliche Bewertung und finale Buchung bleiben
           bei der Kanzlei.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+          Mandanten-Kontext
+        </p>
+
+        <h2 className="mt-2 text-xl font-black text-slate-950">
+          Sonderfälle nicht entscheiden, sondern sichtbar machen
+        </h2>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+          Krankheit, Pflege, Behinderung, Ausland, Firmenwagen, Reisekosten
+          oder besondere Verträge gehören als Hinweis in die Mappe. Mila fragt
+          nach Zeitraum und Nachweis, die Bewertung bleibt bei der zuständigen
+          Fachstelle.
         </p>
       </section>
 
