@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   createFahrtenbuchId,
-  fahrtenbuchLocalKey,
   todayAsInputValue,
   type FahrtenbuchEntry,
   type TripType,
@@ -21,10 +20,6 @@ type FormState = {
   tripType: TripType
   businessPartner: string
   vehicle: string
-  startTime: string
-  endTime: string
-  returnTrip: boolean
-  route: string
   notes: string
 }
 
@@ -39,46 +34,8 @@ function emptyForm(): FormState {
     tripType: 'betrieblich',
     businessPartner: '',
     vehicle: '',
-    startTime: '',
-    endTime: '',
-    returnTrip: false,
-    route: '',
     notes: '',
   }
-}
-
-function readLocalEntries(userId?: string) {
-  if (typeof window === 'undefined') return []
-
-  try {
-    const stored = window.localStorage.getItem(
-      fahrtenbuchLocalKey(userId)
-    )
-    const parsed = stored ? JSON.parse(stored) : []
-    return Array.isArray(parsed) ? (parsed as FahrtenbuchEntry[]) : []
-  } catch {
-    return []
-  }
-}
-
-function writeLocalEntries(userId: string | undefined, entries: FahrtenbuchEntry[]) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(
-    fahrtenbuchLocalKey(userId),
-    JSON.stringify(entries)
-  )
-}
-
-function formatDate(value: string) {
-  if (!value) return ''
-  const date = new Date(`${value.slice(0, 10)}T12:00:00`)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
 }
 
 function formatKm(value: number) {
@@ -87,12 +44,29 @@ function formatKm(value: number) {
   })} km`
 }
 
+function formatDate(value: string) {
+  if (!value) return ''
+
+  const date = new Date(
+    `${value.slice(0, 10)}T12:00:00`
+  )
+
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString('de-DE')
+}
+
 function parseKmInput(value: string) {
-  const raw = String(value).trim().replace(/\s/g, '')
+  const raw = String(value)
+    .trim()
+    .replace(/\s/g, '')
+
   if (!raw) return Number.NaN
 
   const normalized = raw.includes(',')
-    ? raw.replace(/\./g, '').replace(',', '.')
+    ? raw
+        .replace(/\./g, '')
+        .replace(',', '.')
     : raw
 
   return Number(normalized)
@@ -100,76 +74,69 @@ function parseKmInput(value: string) {
 
 function tripTypeLabel(type: TripType) {
   if (type === 'privat') return 'Privat'
-  if (type === 'arbeitsweg') return 'Arbeitsweg'
+  if (type === 'arbeitsweg') {
+    return 'Arbeitsweg'
+  }
   return 'Betrieblich'
 }
 
-function sortEntries(entries: FahrtenbuchEntry[]) {
-  return [...entries].sort((a, b) => {
-    const dateDifference =
-      new Date(b.trip_date).getTime() - new Date(a.trip_date).getTime()
-
-    if (dateDifference !== 0) return dateDifference
-
-    return (
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-  })
+function sortEntries(
+  entries: FahrtenbuchEntry[]
+) {
+  return [...entries].sort(
+    (a, b) =>
+      new Date(b.trip_date).getTime() -
+      new Date(a.trip_date).getTime()
+  )
 }
 
 export default function FahrtenbuchPage() {
-  const [entries, setEntries] = useState<FahrtenbuchEntry[]>([])
+  const [entries, setEntries] =
+    useState<FahrtenbuchEntry[]>([])
   const [userId, setUserId] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [showDetails, setShowDetails] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [receiptPhoto, setReceiptPhoto] = useState<File | null>(null)
-  const [premiumStatus, setPremiumStatus] = useState<'loading' | 'active' | 'inactive'>('loading')
+  const [isLoading, setIsLoading] =
+    useState(true)
+  const [isSaving, setIsSaving] =
+    useState(false)
+  const [errorMessage, setErrorMessage] =
+    useState('')
+  const [successMessage, setSuccessMessage] =
+    useState('')
+  const [receiptPhoto, setReceiptPhoto] =
+    useState<File | null>(null)
+  const [form, setForm] =
+    useState<FormState>(emptyForm)
 
-  async function hasPremiumAccess(uid: string) {
-    if (!uid) return false
-
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('status')
-      .eq('user_id', uid)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Premium-Status konnte nicht geladen werden:', error)
-      return false
-    }
-
-    return data?.status === 'active' || data?.status === 'trialing'
-  }
-
-  async function loadEntries(uid: string, premiumActive: boolean) {
+  async function loadEntries(uid: string) {
     setErrorMessage('')
 
-    if (!uid || !premiumActive) {
+    if (!uid) {
       setEntries([])
       setIsLoading(false)
       return
     }
 
-    const { data, error } = await supabase
-      .from('fahrtenbuch')
-      .select('*')
-      .eq('user_id', uid)
-      .order('trip_date', { ascending: false })
-      .order('created_at', { ascending: false })
+    const { data, error } =
+      await supabase
+        .from('fahrtenbuch')
+        .select('*')
+        .eq('user_id', uid)
+        .order('trip_date', {
+          ascending: false,
+        })
 
     if (error) {
-      console.error('Fahrtenbuch laden fehlgeschlagen:', error)
       setErrorMessage(
-        'Das Fahrtenbuch ist noch nicht mit der Datenbank verbunden. Die SQL-Tabelle muss zuerst angelegt werden.'
+        error.message ||
+          'Fahrten konnten nicht geladen werden.'
       )
       setEntries([])
     } else {
-      setEntries(sortEntries((data || []) as FahrtenbuchEntry[]))
+      setEntries(
+        sortEntries(
+          (data || []) as FahrtenbuchEntry[]
+        )
+      )
     }
 
     setIsLoading(false)
@@ -181,37 +148,33 @@ export default function FahrtenbuchPage() {
     async function loadSession() {
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } =
+        await supabase.auth.getSession()
 
       if (!mounted) return
 
-      const uid = session?.user?.id || ''
+      const uid =
+        session?.user?.id || ''
+
       setUserId(uid)
-      const premiumActive = await hasPremiumAccess(uid)
-      if (!mounted) return
-      setPremiumStatus(premiumActive ? 'active' : 'inactive')
-      await loadEntries(uid, premiumActive)
+      await loadEntries(uid)
     }
 
     void loadSession()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const uid = session?.user?.id || ''
-      setUserId(uid)
-      setPremiumStatus('loading')
-      setIsLoading(true)
-      window.setTimeout(() => {
-        if (!mounted) return
-        void (async () => {
-          const premiumActive = await hasPremiumAccess(uid)
-          if (!mounted) return
-          setPremiumStatus(premiumActive ? 'active' : 'inactive')
-          await loadEntries(uid, premiumActive)
-        })()
-      }, 0)
-    })
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          const uid =
+            session?.user?.id || ''
+
+          setUserId(uid)
+          setIsLoading(true)
+          void loadEntries(uid)
+        }
+      )
 
     return () => {
       mounted = false
@@ -219,64 +182,89 @@ export default function FahrtenbuchPage() {
     }
   }, [])
 
-  const currentMonthStats = useMemo(() => {
-    const now = new Date()
-    const monthEntries = entries.filter((entry) => {
-      const date = new Date(`${entry.trip_date.slice(0, 10)}T12:00:00`)
-      return (
-        date.getFullYear() === now.getFullYear() &&
-        date.getMonth() === now.getMonth()
-      )
-    })
+  const currentMonthStats =
+    useMemo(() => {
+      const now = new Date()
 
-    return {
-      count: monthEntries.length,
-      km: monthEntries.reduce(
-        (total, entry) => total + Number(entry.distance_km || 0),
-        0
-      ),
-    }
-  }, [entries])
+      const monthEntries =
+        entries.filter((entry) => {
+          const date = new Date(
+            `${entry.trip_date.slice(0, 10)}T12:00:00`
+          )
 
-  const calculatedDistance = useMemo(() => {
-    const start = parseKmInput(form.odometerStartKm)
-    const end = parseKmInput(form.odometerEndKm)
+          return (
+            date.getFullYear() ===
+              now.getFullYear() &&
+            date.getMonth() ===
+              now.getMonth()
+          )
+        })
 
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
-      return null
-    }
+      return {
+        count: monthEntries.length,
+        km: monthEntries.reduce(
+          (total, entry) =>
+            total +
+            Number(
+              entry.distance_km || 0
+            ),
+          0
+        ),
+      }
+    }, [entries])
 
-    return end - start
-  }, [form.odometerEndKm, form.odometerStartKm])
-
-  function setField<K extends keyof FormState>(field: K, value: FormState[K]) {
-    setForm((previous) => ({ ...previous, [field]: value }))
+  function setField<
+    K extends keyof FormState
+  >(
+    field: K,
+    value: FormState[K]
+  ) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }))
   }
 
-  async function saveEntry(event: React.FormEvent<HTMLFormElement>) {
+  async function saveEntry(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault()
+
     if (isSaving) return
 
-    if (premiumStatus !== 'active') {
-      setErrorMessage('Das Fahrtenbuch ist nur mit Mila Premium verfÃ¼gbar.')
+    if (!userId) {
+      setErrorMessage(
+        'Bitte melde dich an, bevor du Fahrten speicherst.'
+      )
       return
     }
 
-    const odometerStart = parseKmInput(form.odometerStartKm)
-    const odometerEnd = parseKmInput(form.odometerEndKm)
-    const distance = odometerEnd - odometerStart
+    const odometerStart =
+      parseKmInput(
+        form.odometerStartKm
+      )
+
+    const odometerEnd =
+      parseKmInput(
+        form.odometerEndKm
+      )
+
+    const distance =
+      odometerEnd - odometerStart
 
     if (
       !form.tripDate ||
       !form.startLocation.trim() ||
       !form.destination.trim() ||
       !form.purpose.trim() ||
-      !Number.isFinite(odometerStart) ||
-      !Number.isFinite(odometerEnd) ||
+      !Number.isFinite(
+        odometerStart
+      ) ||
+      !Number.isFinite(
+        odometerEnd
+      ) ||
       odometerStart < 0 ||
-      odometerEnd < 0 ||
       odometerEnd < odometerStart ||
-      !Number.isFinite(distance) ||
       distance <= 0
     ) {
       setErrorMessage(
@@ -289,540 +277,531 @@ export default function FahrtenbuchPage() {
     setErrorMessage('')
     setSuccessMessage('')
 
-    const now = new Date().toISOString()
-    const entryId = createFahrtenbuchId()
-    let receiptPhotoPath: string | null = null
+    const entryId =
+      createFahrtenbuchId()
 
-    if (receiptPhoto && !userId) {
-      setErrorMessage('Belegfotos kÃ¶nnen nur mit einem eingeloggten Konto gespeichert werden.')
-      setIsSaving(false)
-      return
-    }
-
-    if (receiptPhoto) {
-      const extension = receiptPhoto.name.split('.').pop()?.toLowerCase() || 'jpg'
-      receiptPhotoPath = `${userId}/${entryId}.${extension}`
-    }
-
-    const payload = {
-      id: entryId,
-      trip_date: form.tripDate,
-      start_location: form.startLocation.trim(),
-      destination: form.destination.trim(),
-      purpose: form.purpose.trim(),
-      distance_km: distance,
-      odometer_start_km: odometerStart,
-      odometer_end_km: odometerEnd,
-      trip_type: form.tripType,
-      business_partner: form.businessPartner.trim(),
-      vehicle: form.vehicle.trim(),
-      start_time: form.startTime || null,
-      end_time: form.endTime || null,
-      return_trip: form.returnTrip,
-      route: form.route.trim(),
-      notes: form.notes.trim(),
-      receipt_photo_path: receiptPhotoPath,
-    }
+    let receiptPhotoPath:
+      | string
+      | null = null
 
     try {
-      if (receiptPhoto && receiptPhotoPath) {
-        const { error: uploadError } = await supabase.storage
-          .from('fahrtenbuch-belege')
-          .upload(receiptPhotoPath, receiptPhoto, {
-            contentType: receiptPhoto.type,
-            upsert: false,
-          })
+      if (receiptPhoto) {
+        const extension =
+          receiptPhoto.name
+            .split('.')
+            .pop()
+            ?.toLowerCase() ||
+          'jpg'
 
-        if (uploadError) throw uploadError
+        receiptPhotoPath =
+          `${userId}/${entryId}.${extension}`
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from(
+              'fahrtenbuch-belege'
+            )
+            .upload(
+              receiptPhotoPath,
+              receiptPhoto,
+              {
+                contentType:
+                  receiptPhoto.type,
+                upsert: false,
+              }
+            )
+
+        if (uploadError) {
+          throw uploadError
+        }
       }
 
-      let savedEntry: FahrtenbuchEntry
+      const payload = {
+        id: entryId,
+        user_id: userId,
+        trip_date: form.tripDate,
+        start_location:
+          form.startLocation.trim(),
+        destination:
+          form.destination.trim(),
+        purpose:
+          form.purpose.trim(),
+        distance_km: distance,
+        odometer_start_km:
+          odometerStart,
+        odometer_end_km:
+          odometerEnd,
+        trip_type: form.tripType,
+        business_partner:
+          form.businessPartner.trim(),
+        vehicle:
+          form.vehicle.trim(),
+        notes: form.notes.trim(),
+        receipt_photo_path:
+          receiptPhotoPath,
+      }
 
-      if (userId) {
-        const { data, error } = await supabase
+      const { data, error } =
+        await supabase
           .from('fahrtenbuch')
-          .insert({ ...payload, user_id: userId })
+          .insert(payload)
           .select()
           .single()
 
-        if (error) throw error
-        savedEntry = data as FahrtenbuchEntry
-      } else {
-        savedEntry = {
-          ...payload,
-          id: createFahrtenbuchId(),
-          created_at: now,
-          updated_at: now,
-        }
-        writeLocalEntries(userId, [savedEntry, ...entries])
-      }
+      if (error) throw error
 
-      setEntries((previous) => sortEntries([savedEntry, ...previous]))
+      setEntries((previous) =>
+        sortEntries([
+          data as FahrtenbuchEntry,
+          ...previous,
+        ])
+      )
+
       setForm((previous) => ({
         ...emptyForm(),
-        tripDate: previous.tripDate,
-        tripType: previous.tripType,
-        vehicle: previous.vehicle,
+        tripDate:
+          previous.tripDate,
+        tripType:
+          previous.tripType,
+        vehicle:
+          previous.vehicle,
       }))
+
       setReceiptPhoto(null)
-      setShowDetails(false)
-      setSuccessMessage('Fahrt wurde gespeichert')
+      setSuccessMessage(
+        'Fahrt wurde gespeichert.'
+      )
     } catch (error: any) {
-      console.error('Fahrt speichern fehlgeschlagen:', error)
       if (receiptPhotoPath) {
-        await supabase.storage.from('fahrtenbuch-belege').remove([receiptPhotoPath])
+        await supabase.storage
+          .from(
+            'fahrtenbuch-belege'
+          )
+          .remove([
+            receiptPhotoPath,
+          ])
       }
+
       setErrorMessage(
         error?.message ||
-          'Die Fahrt konnte nicht gespeichert werden. Bitte pr\u00fcfe zuerst die SQL-Tabelle.'
+          'Die Fahrt konnte nicht gespeichert werden.'
       )
     } finally {
       setIsSaving(false)
     }
   }
 
-  async function deleteEntry(entry: FahrtenbuchEntry) {
-    if (!window.confirm(`M\u00f6chtest du die Fahrt nach "${entry.destination}" l\u00f6schen?`)) {
+  async function deleteEntry(
+    entry: FahrtenbuchEntry
+  ) {
+    if (
+      !window.confirm(
+        `Fahrt nach "${entry.destination}" löschen?`
+      )
+    ) {
       return
     }
 
-    setErrorMessage('')
-
     try {
-      if (userId) {
-        if (entry.receipt_photo_path) {
-          const { error: photoError } = await supabase.storage
-            .from('fahrtenbuch-belege')
-            .remove([entry.receipt_photo_path])
+      if (
+        entry.receipt_photo_path
+      ) {
+        const { error: photoError } =
+          await supabase.storage
+            .from(
+              'fahrtenbuch-belege'
+            )
+            .remove([
+              entry.receipt_photo_path,
+            ])
 
-          if (photoError) throw photoError
+        if (photoError) {
+          throw photoError
         }
+      }
 
-        const { error } = await supabase
+      const { error } =
+        await supabase
           .from('fahrtenbuch')
           .delete()
           .eq('id', entry.id)
           .eq('user_id', userId)
 
-        if (error) throw error
-      } else {
-        const nextEntries = entries.filter((item) => item.id !== entry.id)
-        writeLocalEntries(userId, nextEntries)
-      }
+      if (error) throw error
 
       setEntries((previous) =>
-        previous.filter((item) => item.id !== entry.id)
+        previous.filter(
+          (item) =>
+            item.id !== entry.id
+        )
       )
     } catch (error: any) {
-      console.error('Fahrt loeschen fehlgeschlagen:', error)
-      setErrorMessage(error?.message || 'Die Fahrt konnte nicht gel\u00f6scht werden.')
+      setErrorMessage(
+        error?.message ||
+          'Die Fahrt konnte nicht gelöscht werden.'
+      )
     }
   }
 
-  async function openReceiptPhoto(path: string) {
-    const { data, error } = await supabase.storage
-      .from('fahrtenbuch-belege')
-      .createSignedUrl(path, 300)
+  async function openReceiptPhoto(
+    path: string
+  ) {
+    const { data, error } =
+      await supabase.storage
+        .from(
+          'fahrtenbuch-belege'
+        )
+        .createSignedUrl(
+          path,
+          300
+        )
 
-    if (error || !data?.signedUrl) {
-      setErrorMessage('Das Belegfoto konnte nicht geÃ¶ffnet werden.')
+    if (
+      error ||
+      !data?.signedUrl
+    ) {
+      setErrorMessage(
+        'Das Belegfoto konnte nicht geöffnet werden.'
+      )
       return
     }
 
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  if (premiumStatus === 'loading') {
-    return (
-      <main className="mx-auto min-h-screen max-w-md p-4 text-slate-950">
-        <section className="rounded-[2rem] bg-white p-6 text-center shadow-sm">
-          <p className="text-sm font-bold text-slate-500">Premium-Zugang wird geprÃ¼ft ...</p>
-        </section>
-      </main>
+    window.open(
+      data.signedUrl,
+      '_blank',
+      'noopener,noreferrer'
     )
   }
 
-  if (premiumStatus !== 'active') {
+  if (isLoading) {
     return (
-      <main className="mx-auto min-h-screen max-w-md space-y-4 p-4 text-slate-950">
-        <header className="rounded-[2rem] bg-white p-5 shadow-sm">
-          <Link
-            href="/buchungen"
-            className="text-xs font-black uppercase tracking-[0.16em] text-violet-600"
-          >
-            &larr; Finanzen
-          </Link>
-          <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-violet-500">Mila Modul</p>
-          <h1 className="mt-2 text-3xl font-black">Fahrtenbuch</h1>
-        </header>
-        <section className="rounded-[2rem] border border-violet-100 bg-white p-6 text-center shadow-sm">
-          <p className="text-4xl">&#x1F512;</p>
-          <h2 className="mt-3 text-xl font-black">Premium-Modul</h2>
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-            Das Fahrtenbuch ist in Mila Premium enthalten. Aktiviere Premium, um Fahrten und Belegfotos sicher zu speichern.
-          </p>
-          <Link
-            href="/profil"
-            className="mt-5 block rounded-2xl bg-violet-600 py-4 text-base font-black text-white"
-          >
-            Premium ansehen
-          </Link>
-        </section>
+      <main className="mx-auto min-h-screen max-w-md p-6">
+        <p className="text-sm font-bold text-slate-500">
+          Fahrten werden geladen ...
+        </p>
       </main>
     )
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-4 p-4 pb-40 text-slate-950">
-      <header className="rounded-[2rem] bg-white p-5 shadow-sm">
+    <main className="mx-auto min-h-screen max-w-md space-y-5 p-6 pb-40 text-slate-950">
+      <header>
         <Link
-          href="/buchungen"
-          className="text-xs font-black uppercase tracking-[0.16em] text-violet-600"
+          href="/"
+          className="text-sm font-semibold text-slate-500"
         >
-          &larr; Finanzen
+          ← Zurück
         </Link>
-        <div className="mt-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
-              Mila Modul
-            </p>
-            <h1 className="mt-2 text-3xl font-black">Fahrtenbuch</h1>
-            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-              Gesch&#228;ftliche Fahrten, Arbeitswege und private Strecken sauber an einem Ort dokumentieren.
-            </p>
-          </div>
-          <span className="text-4xl" aria-hidden="true">
-            &#x1F697;
-          </span>
-        </div>
+
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-violet-600">
+          Arbeitsnachweis
+        </p>
+
+        <h1 className="mt-2 text-3xl font-black">
+          Fahrtenbuch
+        </h1>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Fahrten und zugehörige Belege strukturiert dokumentieren.
+        </p>
       </header>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-3xl bg-violet-600 p-4 text-white shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">
+        <div className="rounded-3xl bg-violet-600 p-4 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-100">
             Dieser Monat
           </p>
-          <p className="mt-2 text-2xl font-black">{formatKm(currentMonthStats.km)}</p>
+
+          <p className="mt-2 text-2xl font-black">
+            {formatKm(
+              currentMonthStats.km
+            )}
+          </p>
         </div>
+
         <div className="rounded-3xl bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
             Fahrten
           </p>
-          <p className="mt-2 text-2xl font-black text-slate-950">
-            {currentMonthStats.count}
+
+          <p className="mt-2 text-2xl font-black">
+            {
+              currentMonthStats.count
+            }
           </p>
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-violet-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-violet-500">
-              Neue Fahrt
-            </p>
-            <h2 className="mt-1 text-xl font-black">Eintrag hinzuf&#252;gen</h2>
-          </div>
-          <span className="rounded-full bg-emerald-50 px-3 py-2 text-[10px] font-black text-emerald-700">
-            {userId ? 'Cloud gespeichert' : 'Ger\u00e4t gespeichert'}
-          </span>
-        </div>
+      {errorMessage && (
+        <section className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </section>
+      )}
 
-        <form onSubmit={saveEntry} className="mt-4 space-y-3">
-          <label className="block text-xs font-black text-slate-500">
-            Datum
-            <input
-              type="date"
-              value={form.tripDate}
-              onChange={(event) => setField('tripDate', event.target.value)}
-              className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-bold text-slate-900 outline-none focus:border-violet-500"
-            />
-          </label>
+      {successMessage && (
+        <section className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+          {successMessage}
+        </section>
+      )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-black text-slate-500">
-              Start
-              <input
-                value={form.startLocation}
-                onChange={(event) => setField('startLocation', event.target.value)}
-                placeholder="z. B. Stendal"
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-              />
-            </label>
-            <label className="block text-xs font-black text-slate-500">
-              Ziel
-              <input
-                value={form.destination}
-                onChange={(event) => setField('destination', event.target.value)}
-                placeholder="z. B. Kunde"
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-black text-slate-500">
-              Kilometerstand Start
-              <input
-                type="text"
-                inputMode="decimal"
-                value={form.odometerStartKm}
-                onChange={(event) => setField('odometerStartKm', event.target.value)}
-                placeholder="z. B. 12.345,6"
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-              />
-            </label>
-            <label className="block text-xs font-black text-slate-500">
-              Kilometerstand Ende
-              <input
-                type="text"
-                inputMode="decimal"
-                value={form.odometerEndKm}
-                onChange={(event) => setField('odometerEndKm', event.target.value)}
-                placeholder="z. B. 12.369,1"
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-violet-50 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-violet-500">
-                Automatische Strecke
-              </p>
-              <p className="mt-1 text-lg font-black text-violet-800">
-                {calculatedDistance === null ? 'Wird berechnet' : formatKm(calculatedDistance)}
-              </p>
-            </div>
-            <label className="block text-xs font-black text-slate-500">
-              Fahrtart
-              <select
-                value={form.tripType}
-                onChange={(event) => setField('tripType', event.target.value as TripType)}
-                className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500"
-              >
-                <option value="betrieblich">Betrieblich</option>
-                <option value="arbeitsweg">Arbeitsweg</option>
-                <option value="privat">Privat</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="block text-xs font-black text-slate-500">
-            Zweck der Fahrt
-            <input
-              value={form.purpose}
-              onChange={(event) => setField('purpose', event.target.value)}
-              placeholder="z. B. Kundentermin / Material holen"
-              className="mt-1 h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-            />
-          </label>
-
-          <label className="block text-xs font-black text-slate-500">
-            Belegfoto / Tacho-Foto (optional)
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              capture="environment"
-              onChange={(event) => {
-                const file = event.target.files?.[0] || null
-                if (file && file.size > 5 * 1024 * 1024) {
-                  setReceiptPhoto(null)
-                  setErrorMessage('Das Belegfoto darf hÃ¶chstens 5 MB groÃ sein.')
-                  event.currentTarget.value = ''
-                  return
-                }
-                setErrorMessage('')
-                setReceiptPhoto(file)
-              }}
-              className="mt-1 block w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-violet-100 file:px-3 file:py-2 file:text-xs file:font-black file:text-violet-700"
-            />
-            <span className="mt-1 block text-[11px] font-semibold text-slate-400">
-              Optional: Foto vom Kilometerstand oder Beleg. Maximal 5 MB.
-            </span>
-          </label>
-
-          <button
-            type="button"
-            onClick={() => setShowDetails((previous) => !previous)}
-            className="w-full rounded-2xl bg-violet-50 py-3 text-xs font-black text-violet-700"
-          >
-            {showDetails ? 'Weniger Details ausblenden' : 'Weitere Angaben anzeigen'}
-          </button>
-
-          {showDetails && (
-            <div className="space-y-3 rounded-2xl bg-slate-50 p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-xs font-black text-slate-500">
-                  Startzeit
-                  <input
-                    type="time"
-                    value={form.startTime}
-                    onChange={(event) => setField('startTime', event.target.value)}
-                    className="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
-                  />
-                </label>
-                <label className="block text-xs font-black text-slate-500">
-                  Endzeit
-                  <input
-                    type="time"
-                    value={form.endTime}
-                    onChange={(event) => setField('endTime', event.target.value)}
-                    className="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
-                  />
-                </label>
-              </div>
-
-              <label className="block text-xs font-black text-slate-500">
-                Gesch&#228;ftspartner / Kunde
-                <input
-                  value={form.businessPartner}
-                  onChange={(event) => setField('businessPartner', event.target.value)}
-                  placeholder="Optional"
-                  className="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
-                />
-              </label>
-
-              <label className="block text-xs font-black text-slate-500">
-                Fahrzeug
-                <input
-                  value={form.vehicle}
-                  onChange={(event) => setField('vehicle', event.target.value)}
-                  placeholder="z. B. Privatwagen"
-                  className="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
-                />
-              </label>
-
-              <label className="flex items-center gap-3 rounded-xl bg-white p-3 text-xs font-bold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.returnTrip}
-                  onChange={(event) => setField('returnTrip', event.target.checked)}
-                  className="h-5 w-5 accent-violet-600"
-                />
-                R&#252;ckfahrt enthalten
-              </label>
-
-              <label className="block text-xs font-black text-slate-500">
-                Route / Zwischenstopps
-                <input
-                  value={form.route}
-                  onChange={(event) => setField('route', event.target.value)}
-                  placeholder="Optional"
-                  className="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
-                />
-              </label>
-
-              <label className="block text-xs font-black text-slate-500">
-                Notiz
-                <textarea
-                  value={form.notes}
-                  onChange={(event) => setField('notes', event.target.value)}
-                  placeholder="Optional"
-                  rows={3}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-violet-500"
-                />
-              </label>
-            </div>
-          )}
-
-          {errorMessage && (
-            <p className="rounded-2xl bg-rose-50 p-3 text-xs font-bold leading-relaxed text-rose-700">
-              {errorMessage}
-            </p>
-          )}
-
-          {successMessage && (
-            <p className="rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
-              {successMessage}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="w-full rounded-2xl bg-violet-600 py-4 text-base font-black text-white shadow-sm transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
-          >
-            {isSaving ? 'Wird gespeichert ...' : 'Fahrt speichern'}
-          </button>
-        </form>
-
-        <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-400">
-          Mila unterst&#252;tzt dich bei der Dokumentation. Ob ein Fahrtenbuch steuerlich anerkannt wird, h&#228;ngt von Vollst&#228;ndigkeit und den Anforderungen des Finanzamts ab.
+      <form
+        onSubmit={saveEntry}
+        className="space-y-3 rounded-3xl border border-violet-100 bg-white p-5 shadow-sm"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">
+          Neue Fahrt
         </p>
-      </section>
 
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-              Verlauf
-            </p>
-            <h2 className="mt-1 text-xl font-black">Deine Fahrten</h2>
-          </div>
-          <span className="rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">
-            {entries.length}{' '}Eintr&#228;ge
-          </span>
+        <input
+          type="date"
+          value={form.tripDate}
+          onChange={(event) =>
+            setField(
+              'tripDate',
+              event.target.value
+            )
+          }
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <input
+          value={form.startLocation}
+          onChange={(event) =>
+            setField(
+              'startLocation',
+              event.target.value
+            )
+          }
+          placeholder="Start"
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <input
+          value={form.destination}
+          onChange={(event) =>
+            setField(
+              'destination',
+              event.target.value
+            )
+          }
+          placeholder="Ziel"
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <input
+          value={form.purpose}
+          onChange={(event) =>
+            setField(
+              'purpose',
+              event.target.value
+            )
+          }
+          placeholder="Zweck / Anlass"
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={
+              form.odometerStartKm
+            }
+            onChange={(event) =>
+              setField(
+                'odometerStartKm',
+                event.target.value
+              )
+            }
+            inputMode="decimal"
+            placeholder="KM Start"
+            className="w-full rounded-2xl border border-violet-100 p-4"
+          />
+
+          <input
+            value={
+              form.odometerEndKm
+            }
+            onChange={(event) =>
+              setField(
+                'odometerEndKm',
+                event.target.value
+              )
+            }
+            inputMode="decimal"
+            placeholder="KM Ende"
+            className="w-full rounded-2xl border border-violet-100 p-4"
+          />
         </div>
 
-        {isLoading ? (
-          <p className="mt-5 text-sm font-semibold text-slate-500">Fahrtenbuch wird geladen ...</p>
-        ) : entries.length === 0 ? (
-          <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-center">
-            <p className="text-3xl">&#x1F6E3;&#xFE0F;</p>
-            <p className="mt-2 text-sm font-black text-slate-700">Noch keine Fahrten</p>
-            <p className="mt-1 text-xs font-semibold text-slate-400">
-              Deine gespeicherten Fahrten erscheinen hier chronologisch.
+        <select
+          value={form.tripType}
+          onChange={(event) =>
+            setField(
+              'tripType',
+              event.target
+                .value as TripType
+            )
+          }
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        >
+          <option value="betrieblich">
+            Betrieblich
+          </option>
+          <option value="arbeitsweg">
+            Arbeitsweg
+          </option>
+          <option value="privat">
+            Privat
+          </option>
+        </select>
+
+        <input
+          value={
+            form.businessPartner
+          }
+          onChange={(event) =>
+            setField(
+              'businessPartner',
+              event.target.value
+            )
+          }
+          placeholder="Kunde / Geschäftspartner (optional)"
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <input
+          value={form.vehicle}
+          onChange={(event) =>
+            setField(
+              'vehicle',
+              event.target.value
+            )
+          }
+          placeholder="Fahrzeug (optional)"
+          className="w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <textarea
+          value={form.notes}
+          onChange={(event) =>
+            setField(
+              'notes',
+              event.target.value
+            )
+          }
+          placeholder="Notiz"
+          className="min-h-24 w-full rounded-2xl border border-violet-100 p-4"
+        />
+
+        <div>
+          <label className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+            Belegfoto optional
+          </label>
+
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) =>
+              setReceiptPhoto(
+                event.target.files?.[0] ||
+                  null
+              )
+            }
+            className="mt-2 block w-full text-sm"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="w-full rounded-2xl bg-violet-600 py-4 font-black text-white disabled:opacity-50"
+        >
+          {isSaving
+            ? 'Speichere ...'
+            : 'Fahrt speichern'}
+        </button>
+      </form>
+
+      <section className="space-y-3">
+        {entries.length === 0 ? (
+          <div className="rounded-3xl bg-violet-50 p-5">
+            <p className="font-black">
+              Noch keine Fahrten
             </p>
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
-            {entries.map((entry) => (
-              <article
-                key={entry.id}
-                className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">
-                      {entry.start_location} &rarr; {entry.destination}
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {formatDate(entry.trip_date)} &middot; {entry.purpose}
-                    </p>
-                    {entry.odometer_start_km != null && entry.odometer_end_km != null && (
-                      <p className="mt-1 text-[11px] font-semibold text-slate-400">
-                        Tacho {formatKm(entry.odometer_start_km)} -&gt; {formatKm(entry.odometer_end_km)}
-                      </p>
+          entries.map((entry) => (
+            <article
+              key={entry.id}
+              className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"
+            >
+              <div className="flex justify-between gap-3">
+                <div>
+                  <p className="font-black">
+                    {
+                      entry.destination
+                    }
+                  </p>
+
+                  <p className="text-sm text-slate-500">
+                    {formatDate(
+                      entry.trip_date
+                    )}{' '}
+                    ·{' '}
+                    {tripTypeLabel(
+                      entry.trip_type
                     )}
-                    {entry.receipt_photo_path && (
-                      <button
-                        type="button"
-                        onClick={() => void openReceiptPhoto(entry.receipt_photo_path as string)}
-                        className="mt-2 text-[11px] font-black text-violet-700 underline"
-                      >
-                        Belegfoto &ouml;ffnen
-                      </button>
-                    )}
-                  </div>
-                  <p className="shrink-0 text-sm font-black text-violet-700">
-                    {formatKm(entry.distance_km)}
                   </p>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black text-slate-600">
-                    {tripTypeLabel(entry.trip_type)}
-                  </span>
+
+                <p className="font-black text-violet-700">
+                  {formatKm(
+                    Number(
+                      entry.distance_km ||
+                        0
+                    )
+                  )}
+                </p>
+              </div>
+
+              <p className="mt-3 text-sm font-semibold text-slate-600">
+                {entry.start_location}
+                {' → '}
+                {entry.destination}
+              </p>
+
+              <p className="mt-2 text-sm text-slate-500">
+                {entry.purpose}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                {entry.receipt_photo_path && (
                   <button
                     type="button"
-                    onClick={() => void deleteEntry(entry)}
-                    className="text-[11px] font-black text-rose-600"
+                    onClick={() =>
+                      openReceiptPhoto(
+                        entry.receipt_photo_path!
+                      )
+                    }
+                    className="text-sm font-black text-violet-700"
                   >
-                    L&#246;schen
+                    Beleg öffnen
                   </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    deleteEntry(
+                      entry
+                    )
+                  }
+                  className="text-sm font-black text-red-500"
+                >
+                  Löschen
+                </button>
+              </div>
+            </article>
+          ))
         )}
       </section>
     </main>
