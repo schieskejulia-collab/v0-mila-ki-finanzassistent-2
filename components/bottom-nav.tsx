@@ -2,32 +2,39 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import {
+  FolderOpen,
+  Home,
+  PlusCircle,
+  UserRound,
+  Clock3,
+} from 'lucide-react'
 
 const navItems = [
   {
     href: '/',
-    label: 'Pilot',
-    icon: '🏠',
+    label: 'Start',
+    icon: Home,
   },
   {
     href: '/neue-buchungen',
-    label: 'Scan',
-    icon: '➕',
+    label: 'Erfassen',
+    icon: PlusCircle,
   },
   {
     href: '/dokumente',
     label: 'Mappe',
-    icon: '🧾',
+    icon: FolderOpen,
   },
   {
     href: '/verpflichtungen',
-    label: 'Pflichten',
-    icon: '⏰',
+    label: 'Offen',
+    icon: Clock3,
   },
   {
     href: '/profil',
     label: 'Profil',
-    icon: '👤',
+    icon: UserRound,
   },
 ]
 
@@ -50,7 +57,10 @@ export function BottomNav() {
           const isActive =
             item.href === '/'
               ? pathname === '/'
-              : pathname === item.href || pathname.startsWith(`${item.href}/`)
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`)
+
+          const Icon = item.icon
 
           return (
             <Link
@@ -62,7 +72,7 @@ export function BottomNav() {
                   : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-2 py-2 text-slate-500'
               }
             >
-              <span className="text-lg leading-none">{item.icon}</span>
+              <Icon className="h-5 w-5" strokeWidth={2.2} />
               <span className="mt-1 truncate text-[9px] font-black">
                 {item.label}
               </span>
