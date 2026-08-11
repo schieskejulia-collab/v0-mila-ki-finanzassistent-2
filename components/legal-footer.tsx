@@ -1,11 +1,3 @@
-
-
-============================================================
-DATEI 6
-Komponente für Footer-Links
-Pfad: components/legal-footer.tsx
-============================================================
-
 import Link from 'next/link'
 
 export function LegalFooter() {
