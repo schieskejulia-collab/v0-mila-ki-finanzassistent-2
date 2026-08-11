@@ -170,7 +170,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model:
-            'meta-llama/llama-4-scout-17b-16e-instruct',
+            'qwen/qwen3.6-27b',
           response_format: {
             type: 'json_object',
           },
