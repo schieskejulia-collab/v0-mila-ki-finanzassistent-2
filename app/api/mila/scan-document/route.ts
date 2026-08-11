@@ -236,11 +236,9 @@ ${pdfText}
             },
           ],
                 temperature: 0.1,
-      max_tokens: 700,
-      reasoning_format: 'hidden',
-      reasoning_effort: 'none',
-      response_format: {
-        type: 'json_object',
+max_tokens: 700,
+reasoning_format: 'hidden',
+reasoning_effort: 'none',
       },
     }),
   }
