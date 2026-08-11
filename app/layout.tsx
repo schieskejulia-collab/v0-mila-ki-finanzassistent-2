@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { FinanceProvider } from '@/lib/store'
 import { BottomNav } from '@/components/bottom-nav'
+import { LegalFooter } from '@/components/legal-footer'
 import { ThemeProvider } from '@/components/theme-provider'
 
 const inter = Inter({
@@ -50,13 +50,12 @@ export default function RootLayout({
         >
           <FinanceProvider>
             <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
-              <div className="relative z-10 flex-1 pb-28">{children}</div>
+              <div className="relative z-10 flex-1 pb-6">{children}</div>
+              <LegalFooter />
               <BottomNav />
             </div>
           </FinanceProvider>
         </ThemeProvider>
-
-        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
