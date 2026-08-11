@@ -276,7 +276,7 @@ export default function NeueBuchungPage() {
           category === INKASSO_LABEL
             ? 'inkasso'
             : 'rechnung',
-        area: 'betrieb',
+        area: 'business',
         dueDate,
         due_date: dueDate as any,
         status: 'offen',
