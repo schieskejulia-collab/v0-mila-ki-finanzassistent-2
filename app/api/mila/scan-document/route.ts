@@ -241,7 +241,6 @@ reasoning_format: 'hidden',
 reasoning_effort: 'none',
 response_format: {
   type: 'json_object',
-},
         }),
       }
     )
