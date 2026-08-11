@@ -239,7 +239,6 @@ ${pdfText}
 max_tokens: 700,
 reasoning_format: 'hidden',
 reasoning_effort: 'none',
-      },
     }),
   }
 )
