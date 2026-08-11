@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { createDocument } from '@/lib/mila-documents'
@@ -14,8 +15,8 @@ import {
   findMerchantMemory,
   saveMerchantMemory,
 } from '@/lib/merchant-memory'
-import { MilaScanReview } from '@/components/ui/mila-scan-review'
-const INKASSO_LABEL = '⚖️ Inkasso / Forderung'
+
+const INKASSO_LABEL = 'Inkasso / Forderung'
 
 const categories = Array.from(
   new Set([
@@ -23,36 +24,6 @@ const categories = Array.from(
     INKASSO_LABEL,
   ])
 )
-
-function getTaxHint(category: string) {
-  const pruefen = [
-    'Reisen & Unterkünfte',
-    'Bewirtung',
-    'Fahrtkosten & Fahrzeuge',
-    'Privat / Nicht absetzbar',
-    'Sonstiges',
-  ]
-
-  if (
-    category === 'Privat / Nicht absetzbar' ||
-    category === INKASSO_LABEL
-  ) {
-    return 'wahrscheinlich nein / private Verpflichtung'
-  }
-
-  if (pruefen.includes(category)) {
-    return 'prüfbar / abhängig vom Zweck'
-  }
-
-  return 'wahrscheinlich ja'
-}
-
-function formatEuro(value: number) {
-  return Number(value || 0).toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
-}
 
 function normalizeCategoryText(value: string) {
   return String(value || '')
@@ -76,24 +47,14 @@ function resolveCategoryLabel(value: string) {
       normalizeCategoryText(category) === normalized
   )
 
-  if (exactCategory) {
-    return exactCategory
-  }
+  if (exactCategory) return exactCategory
 
-  const detected = detectCategory(value)
-  return getCategoryLabel(detected)
-}
-
-function displayConfidence(value: number | null) {
-  if (value === null || !Number.isFinite(value)) {
-    return null
-  }
-
-  const percent = value <= 1 ? value * 100 : value
-  return Math.max(0, Math.min(100, Math.round(percent)))
+  return getCategoryLabel(detectCategory(value))
 }
 
 export default function NeueBuchungPage() {
+  const router = useRouter()
+
   const {
     addExpense,
     addIncome,
@@ -102,7 +63,6 @@ export default function NeueBuchungPage() {
     expenses,
     obligations,
     addDocument,
-    
   } = useFinance()
 
   const [type, setType] =
@@ -116,86 +76,46 @@ export default function NeueBuchungPage() {
   const [status, setStatus] = useState('offen')
   const [dueDate, setDueDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const [scannedFile, setScannedFile] = useState<File | null>(null)
-
-  const [scanSuggestion, setScanSuggestion] =
-    useState('')
-
-  const [scanConfidence, setScanConfidence] =
-    useState<number | null>(null)
-
-  const [
-    scanNeedsConfirmation,
-    setScanNeedsConfirmation,
-  ] = useState(false)
-
-  const [scanReviewReason, setScanReviewReason] =
-    useState('')
-
-  const [scanAlternatives, setScanAlternatives] =
-    useState<string[]>([])
+  const [scannedFile, setScannedFile] =
+    useState<File | null>(null)
+  const [scanMessage, setScanMessage] = useState('')
 
   const numericAmount = Number(
     String(amount || 0).replace(',', '.')
   )
 
-  const taxStatus = getTaxHint(category)
-
-  const deductible =
-    type === 'expense' &&
-    taxStatus === 'wahrscheinlich ja'
-
-  const taxReserve = 0
-  const taxHint = deductible
-    ? numericAmount * 0.3
-    : 0
-
-  const confidencePercent =
-    displayConfidence(scanConfidence)
-
-  function resetScanReview() {
-    setScanSuggestion('')
-    setScanConfidence(null)
-    setScanNeedsConfirmation(false)
-    setScanReviewReason('')
-    setScanAlternatives([])
+  function resetForm() {
+    setTitle('')
+    setAmount('')
+    setPartner('')
+    setCategory('Sonstiges')
+    setNote('')
+    setStatus('offen')
+    setDueDate('')
+    setScannedFile(null)
+    setScanMessage('')
   }
 
   function updateTitle(value: string) {
     setTitle(value)
 
-    if (type === 'expense' && !scanNeedsConfirmation) {
+    if (type === 'expense') {
       const detected = detectCategory(value)
       setCategory(getCategoryLabel(detected))
     }
   }
 
-  function updatePartner(value: string) {
-    setPartner(value)
-  }
-
-  function chooseScanCategory(option: string) {
-    const selectedCategory =
-      resolveCategoryLabel(option)
-
-    setCategory(selectedCategory)
-    setScanSuggestion(selectedCategory)
-    setScanNeedsConfirmation(false)
-    setScanReviewReason(
-      'Danke – ich übernehme deine Auswahl.'
-    )
-  }
-
-  const handleScanSuccess = (rawData: any, file: File) => {
+  function handleScanSuccess(rawData: any, file: File) {
     setScannedFile(file)
+
     const scannedData =
       rawData?.data?.data ||
       rawData?.data ||
       rawData
 
     if (!scannedData) {
-      alert(
-        'Mila hat keine auswertbaren Daten erhalten.'
+      setScanMessage(
+        'Mila konnte aus der Datei keine verwertbaren Angaben lesen.'
       )
       return
     }
@@ -212,21 +132,17 @@ export default function NeueBuchungPage() {
       scannedData.note || ''
     ).trim()
 
+    const suggestedCategory = String(
+      scannedData.suggestedCategory ||
+        scannedData.category ||
+        ''
+    ).trim()
+
     const documentType = String(
       scannedData.documentType || ''
     ).toLowerCase()
 
-    const scannedCategory = String(
-      scannedData.category || ''
-    ).trim()
-
-    const suggestedCategory = String(
-      scannedData.suggestedCategory ||
-        scannedCategory ||
-        ''
-    ).trim()
-
-    const scanText = `
+    const combinedText = `
       ${scannedTitle}
       ${scannedVendor}
       ${scannedNote}
@@ -236,77 +152,47 @@ export default function NeueBuchungPage() {
 
     const isInkasso =
       documentType === 'inkasso' ||
-      suggestedCategory.toLowerCase() ===
-        'inkasso' ||
-      scanText.includes('inkasso') ||
-      scanText.includes('forderung') ||
-      scanText.includes('aktenzeichen')
+      combinedText.includes('inkasso') ||
+      combinedText.includes('forderung') ||
+      combinedText.includes('aktenzeichen')
 
-    const detectedCategory = detectCategory(
-      `
-        ${scannedTitle}
-        ${scannedVendor}
-        ${scannedNote}
-        ${suggestedCategory}
-      `
-    )
+    const rememberedMerchant =
+      findMerchantMemory(scannedVendor)
 
-    const fallbackCategory =
-      getCategoryLabel(detectedCategory)
-const rememberedMerchant =
-  findMerchantMemory(scannedVendor)
-
-const rememberedCategory =
-  rememberedMerchant
-    ? getCategoryLabel(
-        rememberedMerchant.category
-      )
-    : ''
-   const proposedCategory = isInkasso
-  ? INKASSO_LABEL
-  : rememberedCategory
-    ? rememberedCategory
-    : suggestedCategory &&
-        suggestedCategory.toLowerCase() !==
-          'unklar'
-      ? resolveCategoryLabel(
-          suggestedCategory
-        )
-      : fallbackCategory
-    const needsConfirmation =
-  !isInkasso &&
-  !rememberedMerchant &&
-  Boolean(scannedData.needsConfirmation)
-
-    const alternatives: string[] = Array.isArray(
-      scannedData.alternatives
-    )
-      ? Array.from(
-          new Set<string>(
-            scannedData.alternatives
-              .map((item: unknown) =>
-                String(item || '').trim()
-              )
-              .filter(Boolean)
+    const rememberedCategory =
+      rememberedMerchant
+        ? getCategoryLabel(
+            rememberedMerchant.category
           )
-        )
-      : []
+        : ''
+
+    const proposedCategory = isInkasso
+      ? INKASSO_LABEL
+      : rememberedCategory
+        ? rememberedCategory
+        : suggestedCategory &&
+            suggestedCategory.toLowerCase() !==
+              'unklar'
+          ? resolveCategoryLabel(
+              suggestedCategory
+            )
+          : getCategoryLabel(
+              detectCategory(
+                `${scannedTitle} ${scannedVendor} ${scannedNote}`
+              )
+            )
 
     setType('expense')
-
     setTitle(
       scannedTitle ||
         (scannedVendor
           ? `Beleg von ${scannedVendor}`
           : 'Beleg')
     )
-
     setAmount(
       String(scannedData.amount ?? '')
     )
-
     setPartner(scannedVendor)
-
     setDueDate(
       String(
         scannedData.dueDate ||
@@ -316,56 +202,16 @@ const rememberedCategory =
           ''
       )
     )
-
-    setNote(
-      scannedNote ||
-        'Automatisch von Mila ausgelesen 📸'
-    )
-
-    setScanSuggestion(
-      isInkasso
-        ? INKASSO_LABEL
-        : proposedCategory || 'Unklar'
-    )
-
-    setScanConfidence(
-  rememberedMerchant
-    ? rememberedMerchant.confidence
-    : typeof scannedData.confidence ===
-        'number'
-      ? scannedData.confidence
-      : null
-)
-
-    setScanNeedsConfirmation(
-      needsConfirmation
-    )
-
-    setScanReviewReason(
-  rememberedMerchant
-    ? `Ich kenne ${scannedVendor} bereits aus deiner letzten Auswahl.`
-    : String(
-        scannedData.reviewReason || ''
-      )
-)
-    setScanAlternatives(alternatives)
-
-    if (isInkasso) {
-      setCategory(INKASSO_LABEL)
-      return
-    }
-
-    if (needsConfirmation) {
-      setCategory('Sonstiges')
-      return
-    }
-
+    setNote(scannedNote)
     setCategory(
       proposedCategory || 'Sonstiges'
     )
+    setScanMessage(
+      'Mila hat die erkannten Angaben übernommen. Bitte kurz prüfen und anschließend speichern.'
+    )
   }
 
-  async function alsVerpflichtungSpeichern() {
+  async function alsOffenenPunktSpeichern() {
     if (
       !title.trim() ||
       !amount ||
@@ -373,7 +219,7 @@ const rememberedCategory =
       !dueDate
     ) {
       alert(
-        'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen 🧾'
+        'Bitte Titel, Betrag, Anbieter und Fälligkeit eintragen.'
       )
       return
     }
@@ -414,7 +260,7 @@ const rememberedCategory =
 
     if (duplicate) {
       alert(
-        'Diese Verpflichtung kennt Mila bereits 🧾'
+        'Dieser offene Punkt ist bereits gespeichert.'
       )
       return
     }
@@ -430,7 +276,7 @@ const rememberedCategory =
           category === INKASSO_LABEL
             ? 'inkasso'
             : 'rechnung',
-        area: 'privat',
+        area: 'betrieb',
         dueDate,
         due_date: dueDate as any,
         status: 'offen',
@@ -442,15 +288,11 @@ const rememberedCategory =
         reminder_days: 3 as any,
       })
 
-      console.log(
-        'Als Verpflichtung gespeichert'
-      )
+      alert('Als offener Punkt gespeichert.')
     } catch (error: any) {
       alert(
-        `Verpflichtung konnte nicht gespeichert werden: ${
-          error?.message ||
-          'Unbekannter Fehler'
-        }`
+        error?.message ||
+          'Der offene Punkt konnte nicht gespeichert werden.'
       )
     }
   }
@@ -458,52 +300,61 @@ const rememberedCategory =
   async function speichern() {
     if (isSaving) return
 
-    if (!title.trim() || !amount) {
-      alert(
-        'Bitte zumindest Titel und Betrag ausfüllen! ⚠️'
-      )
-      return
-    }
-
     if (
-      type === 'expense' &&
-      scanNeedsConfirmation
+      !title.trim() ||
+      !amount ||
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
     ) {
       alert(
-        'Bitte beantworte zuerst Milas kurze Rückfrage zur Kategorie. 🧠'
+        'Bitte Titel und einen gültigen Betrag eintragen.'
       )
       return
     }
 
     setIsSaving(true)
 
-    const payload: any = {
-      title: title.trim(),
-      amount: numericAmount,
-      note: note || '',
-      date: new Date()
-        .toISOString()
-        .slice(0, 10),
-    }
-
-    if (type === 'expense') {
-      payload.vendor = partner || ''
-      payload.category =
-        category || 'Sonstiges'
-      payload.hasReceipt = true
-      payload.vat = 19
-      payload.source = 'manuell'
-    } else {
-      payload.client = partner || ''
-      payload.tax_reserve = taxReserve
-      payload.status = status
-      payload.due_date =
-        dueDate || null
-      payload.source = 'manuell'
-      payload.vat = 19
-    }
+    let uploadedPath = ''
 
     try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        throw new Error(
+          'Bitte melde dich erneut an, bevor du Unterlagen speicherst.'
+        )
+      }
+
+      const payload: any = {
+        title: title.trim(),
+        amount: numericAmount,
+        note: note.trim(),
+        date: new Date()
+          .toISOString()
+          .slice(0, 10),
+        source: scannedFile
+          ? 'scan'
+          : 'manuell',
+        vat: 19,
+      }
+
+      if (type === 'expense') {
+        payload.vendor = partner.trim()
+        payload.category =
+          category || 'Sonstiges'
+        payload.hasReceipt =
+          Boolean(scannedFile)
+      } else {
+        payload.client = partner.trim()
+        payload.status = status
+        payload.due_date =
+          dueDate || null
+        payload.tax_reserve = 0
+      }
+
       const existingItems =
         type === 'expense'
           ? expenses
@@ -529,8 +380,7 @@ const rememberedCategory =
                 item.client
             ) ===
             normalize(
-              payload.partner ||
-                payload.vendor ||
+              payload.vendor ||
                 payload.client
             )
 
@@ -558,33 +408,72 @@ const rememberedCategory =
       )
 
       if (duplicate) {
-        const trotzdemSpeichern =
-          window.confirm(
-            '⚠️ Eine sehr ähnliche Buchung existiert bereits.\n\nMöchtest du sie trotzdem speichern?'
-          )
+        const proceed = window.confirm(
+          'Eine sehr ähnliche Buchung existiert bereits. Trotzdem speichern?'
+        )
 
-        if (!trotzdemSpeichern) {
+        if (!proceed) {
           return
         }
       }
 
+      let documentId = ''
+
+      if (scannedFile) {
+        if (
+          scannedFile.size >
+          10 * 1024 * 1024
+        ) {
+          throw new Error(
+            'Die Datei ist größer als 10 MB.'
+          )
+        }
+
+        documentId = crypto.randomUUID()
+
+        const extension =
+          scannedFile.name
+            .split('.')
+            .pop()
+            ?.toLowerCase() ||
+          (scannedFile.type ===
+          'application/pdf'
+            ? 'pdf'
+            : 'jpg')
+
+        uploadedPath =
+          `${user.id}/${documentId}.${extension}`
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from('mila-dokumente')
+            .upload(
+              uploadedPath,
+              scannedFile,
+              {
+                contentType:
+                  scannedFile.type ||
+                  'application/octet-stream',
+                upsert: false,
+              }
+            )
+
+        if (uploadError) {
+          throw uploadError
+        }
+      }
+
       if (
-        partner &&
+        partner.trim() &&
         type === 'expense'
       ) {
         saveMerchantMemory({
-          merchant: partner,
+          merchant: partner.trim(),
           category:
             category === INKASSO_LABEL
               ? 'inkasso'
               : detectCategory(category),
-          taxHint:
-            taxStatus === 'wahrscheinlich ja'
-              ? 'likely'
-              : taxStatus ===
-                  'wahrscheinlich nein / private Verpflichtung'
-                ? 'private'
-                : 'depends',
+          taxHint: 'depends',
         })
       }
 
@@ -593,65 +482,60 @@ const rememberedCategory =
       } else {
         await addIncome(payload)
       }
-const {
-      data: { user },
-    } = await supabase.auth.getUser()
-       if (scannedFile && user?.id) {
-        if (scannedFile.size > 10 * 1024 * 1024) {
-          throw new Error('Die Datei ist größer als 10 MB.')
-        }
 
-        const documentId = crypto.randomUUID()
-        const extension =
-          scannedFile.name.split('.').pop()?.toLowerCase() ||
-          (scannedFile.type === 'application/pdf' ? 'pdf' : 'jpg')
-        const filePath = `${user.id}/${documentId}.${extension}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('mila-dokumente')
-          .upload(filePath, scannedFile, {
-            contentType: scannedFile.type || 'application/octet-stream',
-            upsert: false,
-          })
-
-        if (uploadError) throw uploadError
-
+      if (
+        scannedFile &&
+        uploadedPath &&
+        documentId
+      ) {
         try {
           await addDocument(
             createDocument({
               id: documentId,
               title: payload.title,
-              partner: partner || '',
+              partner: partner.trim(),
               amount: numericAmount,
-              type: type === 'income' ? 'rechnung' : 'beleg',
+              type:
+                type === 'income'
+                  ? 'rechnung'
+                  : 'beleg',
               status: 'neu',
-              dueDate: dueDate || undefined,
-              fileName: scannedFile.name,
-              fileUrl: filePath,
-              note: note || '',
+              dueDate:
+                dueDate || undefined,
+              fileName:
+                scannedFile.name,
+              fileUrl: uploadedPath,
+              note: note.trim(),
             })
           )
         } catch (documentError) {
-          await supabase.storage.from('mila-dokumente').remove([filePath])
+          await supabase.storage
+            .from('mila-dokumente')
+            .remove([uploadedPath])
+
           throw documentError
         }
       }
 
-      setTitle('')
-      setAmount('')
-      setPartner('')
-      setNote('')
-      setStatus('offen')
-      setDueDate('')
-      setCategory('Sonstiges')
-      setScannedFile(null)
-      resetScanReview()
-    } catch (error: any) {
+      resetForm()
+
       alert(
-        `Netzwerkfehler: ${
-          error?.message ||
-          'Unbekannter Fehler'
-        } ❌`
+        scannedFile
+          ? 'Unterlage wurde gespeichert und der Mandantenmappe hinzugefügt.'
+          : 'Eintrag wurde gespeichert.'
+      )
+
+      router.push('/dokumente')
+    } catch (error: any) {
+      if (uploadedPath) {
+        await supabase.storage
+          .from('mila-dokumente')
+          .remove([uploadedPath])
+      }
+
+      alert(
+        error?.message ||
+          'Speichern ist fehlgeschlagen.'
       )
     } finally {
       setIsSaving(false)
@@ -659,154 +543,117 @@ const {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-4 p-6 pb-40">
-      <h1 className="text-3xl font-black text-slate-950">
-        Neue Buchung
-      </h1>
+    <main className="mx-auto min-h-screen max-w-md space-y-5 p-6 pb-40 text-slate-950">
+      <header>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
+          Eingang
+        </p>
+
+        <h1 className="mt-2 text-3xl font-black">
+          Beleg erfassen
+        </h1>
+
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Foto oder PDF einlesen, erkannte Angaben prüfen und anschließend
+          strukturiert in der Mandantenmappe ablegen.
+        </p>
+      </header>
 
       <ReceiptUpload
         onScanSuccess={handleScanSuccess}
       />
 
-      <div className="border-t border-gray-100 pt-4">
-        <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-400">
-          Oder manuell eintragen
+      {scanMessage && (
+        <section className="rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-relaxed text-violet-800">
+          {scanMessage}
+        </section>
+      )}
+
+      <section className="border-t border-slate-100 pt-4">
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+          Angaben prüfen oder manuell ergänzen
         </p>
-      </div>
 
-      <div className="relative z-50 grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-2">
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault()
-            setType('expense')
-          }}
-          className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
-            type === 'expense'
-              ? 'bg-white text-gray-900 shadow-md'
-              : 'text-gray-500'
-          }`}
-        >
-          💸 Ausgabe
-        </button>
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-2">
+          <button
+            type="button"
+            onClick={() =>
+              setType('expense')
+            }
+            className={
+              type === 'expense'
+                ? 'rounded-2xl bg-white px-4 py-4 text-sm font-black text-slate-950 shadow-sm'
+                : 'rounded-2xl px-4 py-4 text-sm font-black text-slate-500'
+            }
+          >
+            Ausgabe
+          </button>
 
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault()
-            setType('income')
-            resetScanReview()
-          }}
-          className={`rounded-2xl px-4 py-4 text-base font-black transition-all ${
-            type === 'income'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-gray-500'
-          }`}
-        >
-          💰 Einnahme
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() =>
+              setType('income')
+            }
+            className={
+              type === 'income'
+                ? 'rounded-2xl bg-white px-4 py-4 text-sm font-black text-violet-700 shadow-sm'
+                : 'rounded-2xl px-4 py-4 text-sm font-black text-slate-500'
+            }
+          >
+            Einnahme
+          </button>
+        </div>
+      </section>
 
       <div className="space-y-3">
         <input
-          className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
           placeholder="Titel"
           value={title}
           onChange={(event) =>
-            updateTitle(event.target.value)
+            updateTitle(
+              event.target.value
+            )
           }
         />
 
         <input
-          className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
           placeholder="Betrag"
           type="number"
           step="0.01"
           value={amount}
           onChange={(event) =>
-            setAmount(event.target.value)
+            setAmount(
+              event.target.value
+            )
           }
         />
 
         <input
-          className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
           placeholder={
             type === 'expense'
-              ? 'Händler / Laden'
-              : 'Zahlungsquelle (optional)'
+              ? 'Händler / Anbieter'
+              : 'Zahlungsquelle'
           }
           value={partner}
           onChange={(event) =>
-            updatePartner(event.target.value)
+            setPartner(
+              event.target.value
+            )
           }
         />
 
-        {type === 'income' && (
-          <select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value)
-            }
-            className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="offen">
-              🟡 Erwartet
-            </option>
-
-            <option value="bezahlt">
-              🟢 Eingegangen
-            </option>
-
-            <option value="ueberfaellig">
-              🔴 Überfällig
-            </option>
-          </select>
-        )}
-
-        <div className="space-y-1">
-          <p className="text-xs font-bold text-slate-500">
-            Fällig am
-          </p>
-
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(event) =>
-              setDueDate(event.target.value)
-            }
-            className="h-14 w-full rounded-2xl border bg-white px-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-          />
-
-          <p className="text-xs text-slate-500">
-            Optional – Mila nutzt das für
-            Rechnungen, Fristen und
-            Erinnerungen 🧾
-          </p>
-        </div>
-
         {type === 'expense' && (
           <select
-            className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
             value={category}
-            onChange={(event) => {
+            onChange={(event) =>
               setCategory(
                 event.target.value
               )
-
-              if (
-                scanNeedsConfirmation
-              ) {
-                setScanSuggestion(
-                  event.target.value
-                )
-                setScanNeedsConfirmation(
-                  false
-                )
-                setScanReviewReason(
-                  'Danke – ich übernehme deine Auswahl.'
-                )
-              }
-            }}
+            }
           >
             {categories.map((cat) => (
               <option
@@ -819,114 +666,82 @@ const {
           </select>
         )}
 
-        <input
-          className="w-full rounded-2xl border bg-white p-4 text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-          placeholder="Notiz"
+        {type === 'income' && (
+          <select
+            value={status}
+            onChange={(event) =>
+              setStatus(
+                event.target.value
+              )
+            }
+            className="w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
+          >
+            <option value="offen">
+              Erwartet
+            </option>
+            <option value="bezahlt">
+              Eingegangen
+            </option>
+            <option value="ueberfaellig">
+              Überfällig
+            </option>
+          </select>
+        )}
+
+        <div>
+          <label className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+            Fällig am
+          </label>
+
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(event) =>
+              setDueDate(
+                event.target.value
+              )
+            }
+            className="mt-2 h-14 w-full rounded-2xl border border-violet-100 bg-white px-4 outline-none focus:ring-2 focus:ring-violet-500"
+          />
+        </div>
+
+        <textarea
+          className="min-h-28 w-full rounded-2xl border border-violet-100 bg-white p-4 outline-none focus:ring-2 focus:ring-violet-500"
+          placeholder="Notiz oder fehlender Kontext"
           value={note}
           onChange={(event) =>
-            setNote(event.target.value)
+            setNote(
+              event.target.value
+            )
           }
         />
       </div>
 
-      {type === 'expense' &&
-  amount &&
-  scanSuggestion && (
-    <MilaScanReview
-      suggestion={scanSuggestion}
-      confidence={scanConfidence}
-      needsConfirmation={scanNeedsConfirmation}
-      reviewReason={scanReviewReason}
-      alternatives={scanAlternatives}
-      category={category}
-      taxStatus={taxStatus}
-      taxHint={taxHint}
-      deductible={deductible}
-      onSelectCategory={chooseScanCategory}
-    />
-)}
-
-      {type === 'expense' &&
-        amount &&
-        !scanSuggestion && (
-          <section className="rounded-2xl bg-violet-50 p-4 text-sm text-slate-700">
-            <p className="font-black text-violet-700">
-              Mila Einschätzung
-            </p>
-
-            <p className="mt-1">
-              Kategorie:{' '}
-              <strong>{category}</strong>
-            </p>
-
-            <p>
-              Steuerlich absetzbar:{' '}
-              <strong>{taxStatus}</strong>
-            </p>
-
-            {deductible && (
-              <p>
-                Grobe Steuerwirkung bei
-                30 %:{' '}
-                <strong>
-                  {formatEuro(taxHint)}
-                </strong>
-              </p>
-            )}
-          </section>
-        )}
-
-      {type === 'income' && amount && (
-        <section className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-          <p className="font-black text-emerald-700">
-            Mila Einschätzung
-          </p>
-
-          <p>
-            Empfohlene Rücklage fürs
-            Finanzamt:{' '}
-            <strong>
-              {formatEuro(taxReserve)}
-            </strong>
-          </p>
-        </section>
-      )}
-
-      {type === 'expense' && title && (
+      {type === 'expense' && title && dueDate && (
         <button
           type="button"
-          onClick={
-            alsVerpflichtungSpeichern
-          }
-          className="w-full rounded-2xl bg-purple-600 py-4 font-black text-white shadow-md"
+          onClick={alsOffenenPunktSpeichern}
+          className="w-full rounded-2xl border border-violet-200 bg-white py-4 font-black text-violet-700"
         >
-          🧾 Als Verpflichtung speichern
+          Zusätzlich als offenen Punkt merken
         </button>
       )}
 
       <button
         type="button"
         onClick={speichern}
-        disabled={
-          isSaving ||
-          (type === 'expense' &&
-            scanNeedsConfirmation)
-        }
-        className={`w-full rounded-2xl py-4 font-black text-white shadow-md disabled:opacity-50 ${
-          type === 'expense'
-            ? 'bg-slate-900'
-            : 'bg-purple-600'
-        }`}
+        disabled={isSaving}
+        className="w-full rounded-2xl bg-violet-600 py-4 font-black text-white shadow-md disabled:opacity-50"
       >
         {isSaving
-          ? 'Speichere...'
-          : type === 'expense' &&
-              scanNeedsConfirmation
-            ? 'Bitte Kategorie bestätigen'
-            : type === 'expense'
-              ? 'Ausgabe speichern'
-              : 'Einnahme speichern'}
+          ? 'Speichere ...'
+          : 'Speichern & zur Mappe'}
       </button>
+
+      <section className="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
+        Mila strukturiert und ordnet die erfassten Angaben. Die fachliche
+        steuerliche Bewertung bleibt bei der zuständigen Kanzlei.
+      </section>
     </main>
   )
 }
