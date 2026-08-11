@@ -95,9 +95,7 @@ function sameLegacyExpense(left: any, right: any) {
     expenseTitle(left) === expenseTitle(right) &&
     expenseAmount(left) === expenseAmount(right) &&
     String(left?.merchant || left?.partner || '') ===
-      String(right?.merchant || right?.partner || '') &&
-    String(left?.createdAt || left?.created_at || left?.date || '') ===
-      String(right?.createdAt || right?.created_at || right?.date || '')
+      String(right?.merchant || right?.partner || '')
   )
 }
 
@@ -133,28 +131,56 @@ export default function DokumentePage() {
 
     try {
       if (!expense?.id) {
-        const storageKey = 'mila-expenses-guest'
-        const raw = window.localStorage.getItem(storageKey)
-        const saved = raw ? JSON.parse(raw) : []
+        const expenseKeys: string[] = []
 
-        if (!Array.isArray(saved)) {
-          throw new Error('Der alte lokale Ausgabenbestand konnte nicht gelesen werden.')
+        for (let index = 0; index < window.localStorage.length; index += 1) {
+          const key = window.localStorage.key(index)
+          if (key?.startsWith('mila-expenses-')) {
+            expenseKeys.push(key)
+          }
         }
 
         let removed = false
-        const cleaned = saved.filter((item: any) => {
-          if (!removed && !item?.id && sameLegacyExpense(item, expense)) {
-            removed = true
-            return false
-          }
-          return true
-        })
 
-        if (!removed) {
-          throw new Error('Der alte Testeintrag wurde im lokalen Speicher nicht gefunden.')
+        for (const storageKey of expenseKeys) {
+          const raw = window.localStorage.getItem(storageKey)
+          if (!raw) continue
+
+          let saved: any[] = []
+
+          try {
+            const parsed = JSON.parse(raw)
+            saved = Array.isArray(parsed) ? parsed : []
+          } catch {
+            continue
+          }
+
+          let removedFromThisKey = false
+          const cleaned = saved.filter((item: any) => {
+            if (
+              !removedFromThisKey &&
+              !item?.id &&
+              sameLegacyExpense(item, expense)
+            ) {
+              removedFromThisKey = true
+              removed = true
+              return false
+            }
+
+            return true
+          })
+
+          if (removedFromThisKey) {
+            window.localStorage.setItem(storageKey, JSON.stringify(cleaned))
+          }
         }
 
-        window.localStorage.setItem(storageKey, JSON.stringify(cleaned))
+        if (!removed) {
+          throw new Error(
+            'Der alte Testeintrag wurde in keinem Mila-Ausgabenspeicher gefunden.'
+          )
+        }
+
         window.location.reload()
         return
       }
