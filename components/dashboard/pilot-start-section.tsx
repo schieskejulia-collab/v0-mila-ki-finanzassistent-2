@@ -59,7 +59,7 @@ const workAreas = [
     cta: 'Offene Punkte prüfen',
   },
   {
-    href: '/dokumente?demo=1',
+    href: '/demo',
     eyebrow: 'Vorführung',
     title: 'Demo öffnen',
     text: 'Beispielbetrieb öffnen, um den Ablauf ohne echte Mandantendaten zu zeigen.',
