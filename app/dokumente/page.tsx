@@ -1,7 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { useFinance } from '@/lib/store'
+
+const LEGACY_DISMISSED_KEY = 'mila-dismissed-legacy-expenses'
 
 function formatEuro(value?: number) {
   if (!value) return ''
@@ -90,13 +93,25 @@ function expenseAmount(expense: any) {
   return Number.isFinite(value) ? value : 0
 }
 
-function sameLegacyExpense(left: any, right: any) {
-  return (
-    expenseTitle(left) === expenseTitle(right) &&
-    expenseAmount(left) === expenseAmount(right) &&
-    String(left?.merchant || left?.partner || '') ===
-      String(right?.merchant || right?.partner || '')
-  )
+function legacyFingerprint(expense: any) {
+  return [
+    expenseTitle(expense),
+    expenseAmount(expense),
+    String(expense?.merchant || expense?.partner || ''),
+    String(expense?.createdAt || expense?.created_at || expense?.date || ''),
+  ].join('|')
+}
+
+function loadDismissedLegacyExpenses() {
+  if (typeof window === 'undefined') return [] as string[]
+
+  try {
+    const raw = window.localStorage.getItem(LEGACY_DISMISSED_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return [] as string[]
+  }
 }
 
 export default function DokumentePage() {
@@ -108,8 +123,19 @@ export default function DokumentePage() {
     deleteExpense,
   } = useFinance()
 
+  const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(
+    loadDismissedLegacyExpenses
+  )
+
   const missingReceipts = expenses.filter((expense: any) => {
-    return expense?.hasReceipt === false || expense?.has_receipt === false
+    const isMissing = expense?.hasReceipt === false || expense?.has_receipt === false
+    if (!isMissing) return false
+
+    if (!expense?.id) {
+      return !dismissedLegacyExpenses.includes(legacyFingerprint(expense))
+    }
+
+    return true
   })
 
   const openQuestions = getOpenQuestions(documents)
@@ -131,57 +157,13 @@ export default function DokumentePage() {
 
     try {
       if (!expense?.id) {
-        const expenseKeys: string[] = []
+        const fingerprint = legacyFingerprint(expense)
+        const next = Array.from(
+          new Set([...dismissedLegacyExpenses, fingerprint])
+        )
 
-        for (let index = 0; index < window.localStorage.length; index += 1) {
-          const key = window.localStorage.key(index)
-          if (key?.startsWith('mila-expenses-')) {
-            expenseKeys.push(key)
-          }
-        }
-
-        let removed = false
-
-        for (const storageKey of expenseKeys) {
-          const raw = window.localStorage.getItem(storageKey)
-          if (!raw) continue
-
-          let saved: any[] = []
-
-          try {
-            const parsed = JSON.parse(raw)
-            saved = Array.isArray(parsed) ? parsed : []
-          } catch {
-            continue
-          }
-
-          let removedFromThisKey = false
-          const cleaned = saved.filter((item: any) => {
-            if (
-              !removedFromThisKey &&
-              !item?.id &&
-              sameLegacyExpense(item, expense)
-            ) {
-              removedFromThisKey = true
-              removed = true
-              return false
-            }
-
-            return true
-          })
-
-          if (removedFromThisKey) {
-            window.localStorage.setItem(storageKey, JSON.stringify(cleaned))
-          }
-        }
-
-        if (!removed) {
-          throw new Error(
-            'Der alte Testeintrag wurde in keinem Mila-Ausgabenspeicher gefunden.'
-          )
-        }
-
-        window.location.reload()
+        setDismissedLegacyExpenses(next)
+        window.localStorage.setItem(LEGACY_DISMISSED_KEY, JSON.stringify(next))
         return
       }
 
