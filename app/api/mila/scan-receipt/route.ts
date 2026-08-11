@@ -250,7 +250,12 @@ Antworte nur mit JSON und ohne zusätzliche Erklärung.
             },
           ],
           temperature: 0.1,
-          max_tokens: 450,
+max_tokens: 450,
+reasoning_format: 'hidden',
+reasoning_effort: 'none',
+response_format: {
+  type: 'json_object',
+},
         }),
       }
     )
