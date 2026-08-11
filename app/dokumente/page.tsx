@@ -90,6 +90,17 @@ function expenseAmount(expense: any) {
   return Number.isFinite(value) ? value : 0
 }
 
+function sameLegacyExpense(left: any, right: any) {
+  return (
+    expenseTitle(left) === expenseTitle(right) &&
+    expenseAmount(left) === expenseAmount(right) &&
+    String(left?.merchant || left?.partner || '') ===
+      String(right?.merchant || right?.partner || '') &&
+    String(left?.createdAt || left?.created_at || left?.date || '') ===
+      String(right?.createdAt || right?.created_at || right?.date || '')
+  )
+}
+
 export default function DokumentePage() {
   const {
     documents,
@@ -121,6 +132,33 @@ export default function DokumentePage() {
     if (!confirmed) return
 
     try {
+      if (!expense?.id) {
+        const storageKey = 'mila-expenses-guest'
+        const raw = window.localStorage.getItem(storageKey)
+        const saved = raw ? JSON.parse(raw) : []
+
+        if (!Array.isArray(saved)) {
+          throw new Error('Der alte lokale Ausgabenbestand konnte nicht gelesen werden.')
+        }
+
+        let removed = false
+        const cleaned = saved.filter((item: any) => {
+          if (!removed && !item?.id && sameLegacyExpense(item, expense)) {
+            removed = true
+            return false
+          }
+          return true
+        })
+
+        if (!removed) {
+          throw new Error('Der alte Testeintrag wurde im lokalen Speicher nicht gefunden.')
+        }
+
+        window.localStorage.setItem(storageKey, JSON.stringify(cleaned))
+        window.location.reload()
+        return
+      }
+
       await deleteExpense(expense)
     } catch (error: any) {
       window.alert(error?.message || 'Der offene Eintrag konnte nicht gelöscht werden.')
