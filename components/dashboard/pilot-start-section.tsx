@@ -8,69 +8,52 @@ function getStatusLabel(handoff: any) {
   const openQuestionCount = Number(handoff?.openQuestionCount || 0)
   const openObligationCount = Number(handoff?.openObligationCount || 0)
 
-  if (documentCount === 0) {
-    return {
-      label: 'Noch nicht gestartet',
-      text: 'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.',
-      tone: 'bg-slate-100 text-slate-600',
-    }
-  }
-
   const openCount =
     missingReceiptCount +
     openQuestionCount +
     openObligationCount
 
+  if (documentCount === 0 && openCount === 0) {
+    return {
+      label: 'Noch nicht gestartet',
+      text: 'Erfasse den ersten Beleg oder öffne die Mandantenmappe.',
+      tone: 'bg-slate-100 text-slate-600',
+    }
+  }
+
   if (openCount === 0) {
     return {
       label: 'Bereit zur Übergabe',
-      text: 'Die aktuell erfassten Unterlagen haben keine offenen organisatorischen Punkte.',
+      text: 'Aktuell sind keine organisatorischen Punkte offen.',
       tone: 'bg-emerald-100 text-emerald-700',
     }
   }
 
   return {
     label: 'In Bearbeitung',
-    text: `${openCount} offene Punkte sollten vor der Übergabe noch geklärt werden.`,
+    text: `${openCount} offene Punkte brauchen noch Aufmerksamkeit.`,
     tone: 'bg-amber-100 text-amber-700',
   }
 }
 
-const workAreas = [
+const actions = [
   {
-    href: '/mandanten',
-    eyebrow: 'Mandanten',
-    title: 'Mandant auswählen',
-    text: 'Mandanten mobil anlegen und eindeutig festlegen, für wen du gerade arbeitest.',
-    cta: 'Mandantenzentrale öffnen',
+    href: '/neue-buchungen',
+    title: 'Beleg erfassen',
+    text: 'Foto, PDF oder Rechnung einlesen.',
+    icon: '＋',
   },
   {
     href: '/dokumente',
-    eyebrow: 'Arbeitsmappe',
-    title: 'Mandantenmappe',
-    text: 'Unterlagen, fehlende Belege, Rückfragen und Übergabestatus an einem Ort.',
-    cta: 'Mappe öffnen',
-  },
-  {
-    href: '/neue-buchungen',
-    eyebrow: 'Eingang',
-    title: 'Beleg erfassen',
-    text: 'Foto, PDF oder Rechnung einlesen und strukturiert weiterverarbeiten.',
-    cta: 'Beleg erfassen',
+    title: 'Mappe öffnen',
+    text: 'Unterlagen und fehlende Belege prüfen.',
+    icon: '📂',
   },
   {
     href: '/verpflichtungen',
-    eyebrow: 'Offene Punkte',
-    title: 'Pflichten & Fristen',
-    text: 'Offene Zahlungen, Bescheide und wichtige Termine organisatorisch im Blick behalten.',
-    cta: 'Offene Punkte prüfen',
-  },
-  {
-    href: '/demo',
-    eyebrow: 'Vorführung',
-    title: 'Demo öffnen',
-    text: 'Beispielbetrieb öffnen, um den Ablauf ohne echte Mandantendaten zu zeigen.',
-    cta: 'Demo starten',
+    title: 'Offene Punkte',
+    text: 'Fristen und offene Vorgänge ansehen.',
+    icon: '◷',
   },
 ]
 
@@ -79,90 +62,69 @@ export function PilotStartSection({ model }: { model: any }) {
   const status = getStatusLabel(handoff)
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-4">
       <header className="overflow-hidden rounded-[2rem] border border-violet-100 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-6 text-white">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
+        <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-5 text-white">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
             Mila Arbeitsplatz
           </p>
-
-          <h1 className="mt-3 text-3xl font-black tracking-tight">
-            Unterlagen vorbereiten. Offene Punkte klären. Sauber übergeben.
+          <h1 className="mt-2 text-2xl font-black tracking-tight">
+            Vorbereiten. Klären. Übergeben.
           </h1>
-
-          <p className="mt-4 max-w-xl text-sm font-semibold leading-relaxed text-white/85">
-            Mila unterstützt die organisatorische Vorbereitung von Unterlagen.
-            Steuerliche Bewertung und finale Buchungsentscheidungen bleiben bei
-            der zuständigen Kanzlei.
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-white/85">
+            Organisatorische Vorbereitung für den aktuell ausgewählten Mandanten.
           </p>
         </div>
 
-        <div className="p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                Aktueller Arbeitsstand
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                Arbeitsstand
               </p>
-              <p className="mt-2 text-xl font-black text-slate-950">
+              <p className="mt-1 text-lg font-black text-slate-950">
                 {status.label}
               </p>
             </div>
-
             <span className={`rounded-full px-3 py-2 text-xs font-black ${status.tone}`}>
               {Number(handoff?.documentCount || 0)} Dokumente
             </span>
           </div>
-
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
+          <p className="mt-2 text-sm font-semibold text-slate-600">
             {status.text}
           </p>
         </div>
       </header>
 
-      <section>
-        <div className="mb-3">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-            Was möchtest du bearbeiten?
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {workAreas.map((area) => (
-            <Link
-              key={area.title}
-              href={area.href}
-              className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm transition active:scale-[0.99]"
-            >
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-500">
-                {area.eyebrow}
-              </p>
-
-              <h2 className="mt-2 text-xl font-black text-slate-950">
-                {area.title}
-              </h2>
-
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-                {area.text}
-              </p>
-
-              <p className="mt-4 text-sm font-black text-violet-700">
-                {area.cta} →
-              </p>
-            </Link>
-          ))}
-        </div>
+      <section className="grid gap-3">
+        {actions.map((action) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm active:scale-[0.99]"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-xl font-black text-violet-700">
+              {action.icon}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-black text-slate-950">{action.title}</p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-500">{action.text}</p>
+            </div>
+            <span className="shrink-0 text-lg font-black text-violet-600">›</span>
+          </Link>
+        ))}
       </section>
 
-      <section className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-          Klare Grenze
-        </p>
+      <Link
+        href="/demo"
+        className="block rounded-2xl border border-dashed border-violet-200 bg-violet-50 px-4 py-3 text-center text-sm font-black text-violet-700"
+      >
+        Demo für einen Termin öffnen
+      </Link>
 
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Mila ordnet, sammelt und macht fehlende Angaben sichtbar. Sie ersetzt
-          keine steuerliche oder rechtliche Fachentscheidung.
-        </p>
-      </section>
+      <p className="px-2 text-center text-[11px] font-semibold leading-relaxed text-slate-400">
+        Mila organisiert und bereitet vor. Steuerliche und rechtliche Entscheidungen bleiben bei der zuständigen Fachstelle.
+      </p>
     </section>
   )
 }
