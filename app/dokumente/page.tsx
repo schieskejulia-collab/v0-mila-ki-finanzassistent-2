@@ -68,6 +68,14 @@ function monthKey(item: any) {
   return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date)
 }
 
+function questionHref(doc: any) {
+  const params = new URLSearchParams({
+    documentId: String(doc.id),
+    title: String(doc.title || 'Dokument'),
+  })
+  return `/rueckfragen?${params.toString()}`
+}
+
 export default function DokumentePage() {
   const { documents, expenses, obligations, deleteDocument, deleteExpense } = useFinance()
   const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(loadDismissedLegacyExpenses)
@@ -86,7 +94,6 @@ export default function DokumentePage() {
   const openQuestions = getOpenQuestions(documents)
   const openObligations = getOpenObligations(obligations)
   const status = getStatus({ documentCount: documents.length, missingReceiptCount: missingReceipts.length, openQuestionCount: openQuestions.length, openObligationCount: openObligations.length })
-
   const attentionIds = new Set(openQuestions.map((doc: any) => String(doc.id)))
 
   const filteredDocuments = useMemo(() => {
@@ -209,10 +216,37 @@ export default function DokumentePage() {
         <div className="space-y-3">
           {groups.map(([month, docs]) => {
             const collapsed = collapsedMonths[month]
-            return <section key={month} className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-              <button type="button" onClick={() => setCollapsedMonths((old) => ({ ...old, [month]: !old[month] }))} className="flex w-full items-center justify-between px-5 py-4 text-left"><div><p className="text-sm font-black capitalize">📁 {month}</p><p className="mt-1 text-xs font-semibold text-slate-400">{docs.length} Unterlagen</p></div><span className="font-black text-violet-700">{collapsed ? '▶' : '▼'}</span></button>
-              {!collapsed && <div className="border-t border-slate-100 p-3 space-y-2">{docs.map((doc: any) => <article key={doc.id} className="rounded-2xl bg-slate-50 p-4"><div className="flex justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{doc.title}</p>{doc.partner && <p className="truncate text-xs font-semibold text-slate-500">{doc.partner}</p>}</div>{doc.amount && <span className="shrink-0 text-sm font-black">{formatEuro(doc.amount)}</span>}</div>{doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}<div className="mt-3 flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{attentionIds.has(String(doc.id)) ? 'Rückfrage' : doc.type}</span><button type="button" onClick={() => deleteDocument(doc.id)} className="text-xs font-black text-red-500">Löschen</button></div></article>)}</div>}
-            </section>
+            return (
+              <section key={month} className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+                <button type="button" onClick={() => setCollapsedMonths((old) => ({ ...old, [month]: !old[month] }))} className="flex w-full items-center justify-between px-5 py-4 text-left">
+                  <div><p className="text-sm font-black capitalize">📁 {month}</p><p className="mt-1 text-xs font-semibold text-slate-400">{docs.length} Unterlagen</p></div>
+                  <span className="font-black text-violet-700">{collapsed ? '▶' : '▼'}</span>
+                </button>
+                {!collapsed && (
+                  <div className="space-y-2 border-t border-slate-100 p-3">
+                    {docs.map((doc: any) => (
+                      <article key={doc.id} className="rounded-2xl bg-slate-50 p-4">
+                        <div className="flex justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-black">{doc.title}</p>
+                            {doc.partner && <p className="truncate text-xs font-semibold text-slate-500">{doc.partner}</p>}
+                          </div>
+                          {doc.amount && <span className="shrink-0 text-sm font-black">{formatEuro(doc.amount)}</span>}
+                        </div>
+                        {doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{attentionIds.has(String(doc.id)) ? 'Rückfrage' : doc.type}</span>
+                          <div className="flex items-center gap-2">
+                            <Link href={questionHref(doc)} className="rounded-lg bg-violet-100 px-2.5 py-2 text-xs font-black text-violet-700">Rückfrage</Link>
+                            <button type="button" onClick={() => deleteDocument(doc.id)} className="text-xs font-black text-red-500">Löschen</button>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )
           })}
         </div>
       )}
