@@ -86,6 +86,11 @@ export function PilotStartSection({ model }: { model: any }) {
   })
   const overdueItems = dueItems.filter((item: any) => dayOnly(item.dueDate || item.due_date) < today)
   const todayCount = missingReceipts.length + openQuestions.length + dueItems.length
+  const documentCount = Number(handoff?.documentCount || finance.documents?.length || 0)
+  const workflowOpenCount = missingReceipts.length + openQuestions.length + dueItems.length
+  const workflowPhase = documentCount === 0 ? 'eingang' : workflowOpenCount > 0 ? 'klaerung' : 'uebergabe'
+  const nextHref = documentCount === 0 ? '/neue-buchungen' : workflowOpenCount > 0 ? (dueItems.length > 0 ? '/verpflichtungen' : '/dokumente') : '/dokumente'
+  const nextLabel = documentCount === 0 ? 'Ersten Eingang erfassen' : workflowOpenCount > 0 ? 'Nächsten offenen Punkt bearbeiten' : 'Übergabe vorbereiten'
 
   return (
     <section className="space-y-4">
@@ -123,6 +128,34 @@ export function PilotStartSection({ model }: { model: any }) {
           )}
         </Link>
       )}
+
+      <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Arbeitsablauf</p>
+            <h2 className="mt-1 text-xl font-black">Mila führt dich zum nächsten Schritt</h2>
+          </div>
+          <span className={`rounded-full px-3 py-2 text-xs font-black ${workflowPhase === 'uebergabe' ? 'bg-emerald-100 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>
+            {workflowPhase === 'eingang' ? 'Eingang' : workflowPhase === 'klaerung' ? 'Klärung' : 'Übergabebereit'}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-5 gap-1.5">
+          <WorkflowStage label="Eingang" state={documentCount > 0 ? 'done' : 'active'} />
+          <WorkflowStage label="Prüfung" state={documentCount > 0 ? 'done' : 'pending'} />
+          <WorkflowStage label="Klärung" state={workflowPhase === 'klaerung' ? 'active' : workflowPhase === 'uebergabe' ? 'done' : 'pending'} />
+          <WorkflowStage label="Vollständig" state={workflowPhase === 'uebergabe' ? 'done' : 'pending'} />
+          <WorkflowStage label="Übergabe" state={workflowPhase === 'uebergabe' ? 'active' : 'pending'} />
+        </div>
+
+        <div className={`mt-4 rounded-2xl p-4 ${workflowPhase === 'uebergabe' ? 'bg-emerald-50' : workflowPhase === 'klaerung' ? 'bg-amber-50' : 'bg-violet-50'}`}>
+          {workflowPhase === 'eingang' && <p className="text-sm font-semibold leading-relaxed text-slate-700">Noch keine Unterlagen im aktuellen Arbeitsstand. Starte mit dem ersten Beleg oder dem übernommenen Bestand.</p>}
+          {workflowPhase === 'klaerung' && <p className="text-sm font-semibold leading-relaxed text-slate-700">{workflowOpenCount} organisatorische Punkte sind noch offen. Mila führt dich zuerst zu fehlenden Belegen, Rückfragen oder fälligen Vorgängen.</p>}
+          {workflowPhase === 'uebergabe' && <p className="text-sm font-semibold leading-relaxed text-slate-700">Für die aktuell erfassten Unterlagen sind keine organisatorischen Punkte offen. Der Vorgang kann für die Übergabe vorbereitet werden.</p>}
+        </div>
+
+        <Link href={nextHref} className="mt-4 flex w-full items-center justify-center rounded-2xl bg-violet-600 px-4 py-3.5 text-sm font-black text-white active:scale-[0.99]">{nextLabel} →</Link>
+      </section>
 
       <section className={`rounded-3xl border p-5 shadow-sm ${todayCount > 0 ? 'border-amber-100 bg-amber-50' : 'border-emerald-100 bg-emerald-50'}`}>
         <div className="flex items-start justify-between gap-3">
@@ -162,6 +195,11 @@ export function PilotStartSection({ model }: { model: any }) {
       <p className="px-2 text-center text-[11px] font-semibold leading-relaxed text-slate-400">Mila organisiert und bereitet vor. Steuerliche und rechtliche Entscheidungen bleiben bei der zuständigen Fachstelle.</p>
     </section>
   )
+}
+
+function WorkflowStage({ label, state }: { label: string; state: 'pending' | 'active' | 'done' }) {
+  const tone = state === 'active' ? 'bg-violet-600 text-white' : state === 'done' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-50 text-slate-400'
+  return <div className={`rounded-xl px-1 py-2.5 text-center ${tone}`}><p className="text-[9px] font-black leading-tight">{state === 'done' ? '✓ ' : ''}{label}</p></div>
 }
 
 function TodayMetric({ label, value }: { label: string; value: number }) {
