@@ -1,7 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useFinance } from '@/lib/store'
+
+const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
+const TAKEOVER_KEY = 'mila-client-takeovers-v1'
 
 function getStatusLabel(handoff: any) {
   const documentCount = Number(handoff?.documentCount || 0)
@@ -26,6 +30,21 @@ function dayOnly(value?: string) {
   return parsed.toISOString().slice(0, 10)
 }
 
+function handoffLabel(value?: string) {
+  if (value === 'monthly') return 'monatlich'
+  if (value === 'quarterly') return 'quartalsweise'
+  if (value === 'halfyear') return 'halbjährlich'
+  if (value === 'yearly') return 'jährlich'
+  if (value === 'individual') return 'individuell'
+  return 'laut Kanzlei'
+}
+
+function completenessLabel(value?: string) {
+  if (value === 'yes') return 'Bestand als vollständig angegeben'
+  if (value === 'no') return 'Bestand noch unvollständig'
+  return 'Bestand noch zu prüfen'
+}
+
 const actions = [
   { href: '/neue-buchungen', title: 'Beleg erfassen', text: 'Foto, PDF oder Rechnung einlesen.', icon: '＋' },
   { href: '/dokumente', title: 'Mappe öffnen', text: 'Unterlagen und fehlende Belege prüfen.', icon: '📂' },
@@ -37,6 +56,21 @@ export function PilotStartSection({ model }: { model: any }) {
   const status = getStatusLabel(handoff)
   const finance = useFinance()
   const today = new Date().toISOString().slice(0, 10)
+  const [takeover, setTakeover] = useState<any>(null)
+  const [hasActiveClient, setHasActiveClient] = useState(false)
+
+  useEffect(() => {
+    try {
+      const activeClientId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
+      setHasActiveClient(Boolean(activeClientId))
+      if (!activeClientId) return
+      const raw = window.localStorage.getItem(TAKEOVER_KEY)
+      const parsed = raw ? JSON.parse(raw) : {}
+      setTakeover(parsed?.[activeClientId] || null)
+    } catch {
+      setTakeover(null)
+    }
+  }, [])
 
   const missingReceipts = (finance.expenses || []).filter((item: any) => item?.hasReceipt === false || item?.has_receipt === false)
   const openQuestions = (finance.documents || []).filter((doc: any) => {
@@ -70,6 +104,25 @@ export function PilotStartSection({ model }: { model: any }) {
           <p className="mt-2 text-sm font-semibold text-slate-600">{status.text}</p>
         </div>
       </header>
+
+      {hasActiveClient && (
+        <Link href="/mandanten" className={`block rounded-3xl border p-4 shadow-sm active:scale-[0.99] ${takeover ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${takeover ? 'text-emerald-700' : 'text-amber-700'}`}>Mandanten-Onboarding</p>
+              <h2 className="mt-1 text-lg font-black">{takeover ? 'Übernahme dokumentiert' : 'Übernahme noch festlegen'}</h2>
+            </div>
+            <span className="shrink-0 text-lg font-black text-violet-700">›</span>
+          </div>
+          {takeover ? (
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
+              Start {String(takeover.period || '').replace('-', '/')} · {completenessLabel(takeover.completeness)} · Übergabe {handoffLabel(takeover.handoffRhythm)}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">Bearbeitungsbeginn, übernommenen Bestand und Übergaberhythmus einmal sauber erfassen.</p>
+          )}
+        </Link>
+      )}
 
       <section className={`rounded-3xl border p-5 shadow-sm ${todayCount > 0 ? 'border-amber-100 bg-amber-50' : 'border-emerald-100 bg-emerald-50'}`}>
         <div className="flex items-start justify-between gap-3">
