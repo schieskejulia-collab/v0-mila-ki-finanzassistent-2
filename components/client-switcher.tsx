@@ -127,7 +127,7 @@ export function ClientSwitcher() {
       if (navigator.share) {
         await navigator.share({
           title: `Mila Upload-Link · ${activeClient.name}`,
-          text: `Hier können Unterlagen und Antworten sicher übermittelt werden:`,
+          text: 'Hier können Unterlagen und Antworten sicher übermittelt werden:',
           url: data.url,
         })
         setPortalStatus('Link geteilt ✓')
@@ -160,83 +160,50 @@ export function ClientSwitcher() {
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-violet-500">
-                  Mandant
-                </p>
-                <p className="truncate text-sm font-black text-slate-950">
-                  {activeClient?.name || 'Noch keinen ausgewählt'}
-                </p>
+                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-violet-500">Mandant</p>
+                <p className="truncate text-sm font-black text-slate-950">{activeClient?.name || 'Noch keinen ausgewählt'}</p>
               </div>
-              <span className="shrink-0 text-xs font-black text-violet-700">
-                {open ? '▲' : '▼'}
-              </span>
+              <span className="shrink-0 text-xs font-black text-violet-700">{open ? '▲' : '▼'}</span>
             </div>
           </button>
 
           <Link
             href="/mandanten"
             className="shrink-0 rounded-xl border border-violet-100 bg-white px-3 py-3 text-[11px] font-black text-violet-700"
-            aria-label="Mandanten verwalten"
+            aria-label="Mandanten-Onboarding und Verwaltung öffnen"
           >
-            Verwalten
+            Onboarding
           </Link>
         </div>
 
         {activeClient && (
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Link
-              href="/rueckfragen"
-              className="rounded-xl bg-violet-50 px-3 py-2.5 text-center text-[11px] font-black text-violet-700"
-            >
-              💬 Rückfrage
-            </Link>
-            <button
-              type="button"
-              onClick={() => void sharePortalLink()}
-              className="rounded-xl bg-violet-600 px-3 py-2.5 text-center text-[11px] font-black text-white"
-            >
-              🔗 Upload-Link
-            </button>
+            <Link href="/rueckfragen" className="rounded-xl bg-violet-50 px-3 py-2.5 text-center text-[11px] font-black text-violet-700">💬 Rückfrage</Link>
+            <button type="button" onClick={() => void sharePortalLink()} className="rounded-xl bg-violet-600 px-3 py-2.5 text-center text-[11px] font-black text-white">🔗 Upload-Link</button>
           </div>
         )}
 
-        {portalStatus && (
-          <p className="mt-2 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>
-        )}
+        {portalStatus && <p className="mt-2 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>}
 
         {open && (
           <div className="absolute left-2 right-2 top-[calc(100%+0.4rem)] z-50 max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-violet-100 bg-white p-2 shadow-xl">
             {clients.length === 0 ? (
               <div className="p-2">
-                <p className="text-sm font-semibold text-slate-500">
-                  Noch keine Mandanten vorhanden.
-                </p>
-                <Link
-                  href="/mandanten"
-                  className="mt-2 inline-flex text-sm font-black text-violet-700"
-                >
-                  Mandant anlegen →
-                </Link>
+                <p className="text-sm font-semibold text-slate-500">Noch keine Mandanten vorhanden.</p>
+                <Link href="/mandanten" className="mt-2 inline-flex text-sm font-black text-violet-700">Mandant anlegen →</Link>
               </div>
             ) : (
               clients.map((client) => {
                 const selected = client.id === activeClientId
-
                 return (
                   <button
                     key={client.id}
                     type="button"
                     onClick={() => switchClient(client)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-black ${
-                      selected
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-slate-50 text-slate-800'
-                    }`}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-black ${selected ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-800'}`}
                   >
                     <span className="truncate">{client.name}</span>
-                    <span className="ml-3 shrink-0 text-xs">
-                      {selected ? 'Aktiv' : 'Wechseln'}
-                    </span>
+                    <span className="ml-3 shrink-0 text-xs">{selected ? 'Aktiv' : 'Wechseln'}</span>
                   </button>
                 )
               })
