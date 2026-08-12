@@ -33,6 +33,11 @@ export type MilaDocument = {
   fileName?: string
   fileUrl?: string
 
+  // Kompatibilitaets-Aliase fuer bestehende UI-Pfade, die noch
+  // Supabase-Spaltennamen verwenden. Beide Werte zeigen auf dieselbe Datei.
+  file_name?: string
+  file_url?: string
+
   keepUntil?: string
   note?: string
 
@@ -40,6 +45,9 @@ export type MilaDocument = {
 }
 
 export function createDocument(data: Partial<MilaDocument>): MilaDocument {
+  const fileName = data.fileName || data.file_name
+  const fileUrl = data.fileUrl || data.file_url
+
   return {
     id: data.id || crypto.randomUUID(),
     clientId: data.clientId,
@@ -56,8 +64,10 @@ export function createDocument(data: Partial<MilaDocument>): MilaDocument {
     relatedObligationId: data.relatedObligationId,
     relatedBookingId: data.relatedBookingId,
 
-    fileName: data.fileName,
-    fileUrl: data.fileUrl,
+    fileName,
+    fileUrl,
+    file_name: fileName,
+    file_url: fileUrl,
 
     keepUntil:
       data.keepUntil ||
