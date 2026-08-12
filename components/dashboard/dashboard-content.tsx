@@ -4,6 +4,7 @@ import { PilotStartSection } from './pilot-start-section'
 import { HandoffRhythmSection } from './handoff-rhythm-section'
 import { HandoffPackageSection } from './handoff-package-section'
 import { RecurringPatternsSection } from './recurring-patterns-section'
+import { AuditTrailSection } from './audit-trail-section'
 
 export function DashboardContent({ model }: { model: any }) {
   return (
@@ -12,6 +13,7 @@ export function DashboardContent({ model }: { model: any }) {
       <HandoffRhythmSection />
       <HandoffPackageSection />
       <RecurringPatternsSection />
+      <AuditTrailSection />
     </main>
   )
 }
