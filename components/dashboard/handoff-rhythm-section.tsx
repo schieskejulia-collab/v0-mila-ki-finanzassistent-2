@@ -1,12 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { periodLabel, readHandoffCycle, type HandoffRhythm as Rhythm } from '@/lib/handoff-cycles'
 
 const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 const TAKEOVER_KEY = 'mila-client-takeovers-v1'
-
-type Rhythm = 'kanzlei' | 'monthly' | 'quarterly' | 'halfyear' | 'yearly' | 'individual'
 
 type Takeover = {
   period?: string
@@ -22,23 +21,6 @@ function rhythmLabel(value?: Rhythm) {
   return 'Laut Kanzlei'
 }
 
-function monthName(date: Date) {
-  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date)
-}
-
-function currentCollectionPeriod(rhythm?: Rhythm) {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth()
-
-  if (rhythm === 'monthly') return monthName(now)
-  if (rhythm === 'quarterly') return `Q${Math.floor(month / 3) + 1} ${year}`
-  if (rhythm === 'halfyear') return `${month < 6 ? '1.' : '2.'} Halbjahr ${year}`
-  if (rhythm === 'yearly') return `Jahr ${year}`
-  if (rhythm === 'individual') return 'Individuell vereinbarter Zeitraum'
-  return 'Zeitraum laut Kanzleivorgabe'
-}
-
 function startPeriodLabel(period?: string) {
   if (!period) return 'noch nicht festgelegt'
   const [year, month] = period.split('-').map(Number)
@@ -49,22 +31,32 @@ function startPeriodLabel(period?: string) {
 export function HandoffRhythmSection() {
   const [takeover, setTakeover] = useState<Takeover | null>(null)
   const [hasActiveClient, setHasActiveClient] = useState(false)
+  const [cyclePeriod, setCyclePeriod] = useState('')
 
   useEffect(() => {
-    try {
-      const activeClientId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
-      setHasActiveClient(Boolean(activeClientId))
-      if (!activeClientId) return
-      const raw = window.localStorage.getItem(TAKEOVER_KEY)
-      const parsed = raw ? JSON.parse(raw) : {}
-      setTakeover(parsed?.[activeClientId] || null)
-    } catch {
-      setTakeover(null)
+    function load() {
+      try {
+        const activeClientId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
+        setHasActiveClient(Boolean(activeClientId))
+        if (!activeClientId) return
+        const raw = window.localStorage.getItem(TAKEOVER_KEY)
+        const parsed = raw ? JSON.parse(raw) : {}
+        const current = parsed?.[activeClientId] || null
+        setTakeover(current)
+        const cycle = readHandoffCycle(activeClientId)
+        setCyclePeriod(cycle.activePeriod || current?.period || '')
+      } catch {
+        setTakeover(null)
+      }
     }
+
+    load()
+    window.addEventListener('mila-handoff-cycle-updated', load)
+    return () => window.removeEventListener('mila-handoff-cycle-updated', load)
   }, [])
 
   const rhythm = takeover?.handoffRhythm || 'kanzlei'
-  const collectionPeriod = useMemo(() => currentCollectionPeriod(rhythm), [rhythm])
+  const collectionPeriod = cyclePeriod ? periodLabel(cyclePeriod, rhythm) : 'Zeitraum laut Kanzleivorgabe'
 
   if (!hasActiveClient) return null
 
@@ -98,11 +90,11 @@ export function HandoffRhythmSection() {
           </div>
 
           <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-semibold leading-relaxed text-slate-600">
-            Mila sammelt und prüft Unterlagen laufend. Der Übergaberhythmus bestimmt nur, wann der vorbereitete Zeitraum gebündelt an die Kanzlei weitergegeben wird. Die Mandantenhistorie läuft unabhängig davon weiter.
+            Mila sammelt und prüft Unterlagen laufend. Der Übergaberhythmus bestimmt nur, wann der vorbereitete Zeitraum gebündelt an die Kanzlei weitergegeben wird. Nach einem abgeschlossenen Zeitraum startet Mila bei festen Rhythmen automatisch den nächsten Sammelzeitraum.
           </p>
 
           {rhythm === 'kanzlei' && (
-            <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-relaxed text-amber-900">Kein automatischer Übergabetermin: Mila wartet auf die Vorgabe der zuständigen Kanzlei.</p>
+            <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-relaxed text-amber-900">Kein automatischer Folgetermin: Mila wartet auf die Vorgabe der zuständigen Kanzlei.</p>
           )}
 
           <Link href="/mandanten" className="mt-4 flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-violet-700 ring-1 ring-violet-100">Rhythmus ändern →</Link>
