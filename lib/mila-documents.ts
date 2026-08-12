@@ -15,6 +15,8 @@ export type MilaDocumentStatus =
 export type MilaDocument = {
   id: string
 
+  clientId?: string
+
   title: string
   partner?: string
   amount?: number
@@ -40,6 +42,7 @@ export type MilaDocument = {
 export function createDocument(data: Partial<MilaDocument>): MilaDocument {
   return {
     id: data.id || crypto.randomUUID(),
+    clientId: data.clientId,
     title: data.title || 'Dokument',
     partner: data.partner || '',
     amount: data.amount,
@@ -72,6 +75,7 @@ export function createDocument(data: Partial<MilaDocument>): MilaDocument {
 export function documentFromRow(row: any): MilaDocument {
   return createDocument({
     id: row.id,
+    clientId: row.client_id || undefined,
     title: row.title,
     partner: row.partner,
     amount: row.amount == null ? undefined : Number(row.amount),
