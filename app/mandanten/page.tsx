@@ -89,13 +89,7 @@ export default function MandantenPage() {
 
     const id = globalThis.crypto?.randomUUID?.() || `client-${Date.now()}`
     const createdAt = new Date().toISOString()
-    const client: MilaClient = {
-      id,
-      name: cleanName,
-      contact: contact.trim(),
-      note: note.trim(),
-      createdAt,
-    }
+    const client: MilaClient = { id, name: cleanName, contact: contact.trim(), note: note.trim(), createdAt }
 
     const { error } = await supabase.from('clients').insert({
       id,
@@ -122,11 +116,11 @@ export default function MandantenPage() {
   function selectClient(client: MilaClient) {
     window.localStorage.setItem(ACTIVE_CLIENT_KEY, client.id)
     setActiveClientId(client.id)
-    window.location.assign('/')
+    window.location.assign('/mandanten')
   }
 
   async function createPortalLink(client: MilaClient) {
-    setLinkStatus((current) => ({ ...current, [client.id]: 'Erstelle Link …' }))
+    setLinkStatus((current) => ({ ...current, [client.id]: 'Erstelle sicheren Link …' }))
 
     const { data: sessionData } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
@@ -137,35 +131,41 @@ export default function MandantenPage() {
 
     const response = await fetch('/api/client-portal/link', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ clientId: client.id }),
     })
 
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.url) {
-      setLinkStatus((current) => ({
-        ...current,
-        [client.id]: data?.error || 'Link konnte nicht erstellt werden.',
-      }))
+      setLinkStatus((current) => ({ ...current, [client.id]: data?.error || 'Link konnte nicht erstellt werden.' }))
       return
     }
 
     try {
-      await navigator.clipboard.writeText(data.url)
-      setLinkStatus((current) => ({ ...current, [client.id]: 'Link kopiert ✓' }))
-    } catch {
-      window.prompt('Mandanten-Link kopieren:', data.url)
-      setLinkStatus((current) => ({ ...current, [client.id]: 'Link erstellt ✓' }))
+      if (navigator.share) {
+        await navigator.share({ title: `Unterlagen für ${client.name}`, text: 'Hier kannst du deine Unterlagen sicher einreichen:', url: data.url })
+        setLinkStatus((current) => ({ ...current, [client.id]: 'Link bereit zum Teilen ✓' }))
+      } else {
+        await navigator.clipboard.writeText(data.url)
+        setLinkStatus((current) => ({ ...current, [client.id]: 'Link kopiert ✓' }))
+      }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        setLinkStatus((current) => ({ ...current, [client.id]: 'Teilen abgebrochen – Link bleibt verfügbar.' }))
+        return
+      }
+      try {
+        await navigator.clipboard.writeText(data.url)
+        setLinkStatus((current) => ({ ...current, [client.id]: 'Link kopiert ✓' }))
+      } catch {
+        window.prompt('Mandanten-Link kopieren:', data.url)
+        setLinkStatus((current) => ({ ...current, [client.id]: 'Link erstellt ✓' }))
+      }
     }
   }
 
   async function deleteClient(client: MilaClient) {
-    const confirmed = window.confirm(
-      `${client.name} wirklich aus der Mandantenliste entfernen? Die bereits zugeordneten Unterlagen werden dabei nicht gelöscht.`
-    )
+    const confirmed = window.confirm(`${client.name} wirklich aus der Mandantenliste entfernen? Die bereits zugeordneten Unterlagen werden dabei nicht gelöscht.`)
     if (!confirmed) return
 
     const { error } = await supabase.from('clients').delete().eq('id', client.id)
@@ -176,7 +176,6 @@ export default function MandantenPage() {
 
     const nextClients = clients.filter((item) => item.id !== client.id)
     persistLocal(nextClients)
-
     if (activeClientId === client.id) {
       setActiveClientId('')
       window.localStorage.removeItem(ACTIVE_CLIENT_KEY)
@@ -189,20 +188,30 @@ export default function MandantenPage() {
         <Link href="/" className="text-sm font-semibold text-slate-500">← Arbeitsplatz</Link>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-violet-600">Mobile Mandantenzentrale</p>
         <h1 className="mt-2 text-3xl font-black">Mandanten</h1>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Mandanten auswählen, Rückfragen verwalten und sichere Upload-Links teilen.
-        </p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">Mandanten auswählen, Rückfragen verwalten und sichere Upload-Links teilen.</p>
       </header>
 
       {activeClient && (
         <section className="rounded-3xl bg-violet-600 p-5 text-white shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Aktiver Mandant</p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Du arbeitest gerade für</p>
           <h2 className="mt-2 text-2xl font-black">{activeClient.name}</h2>
-          <p className="mt-2 text-sm font-semibold text-white/80">Neue Buchungen, Dokumente und Rückfragen werden diesem Mandanten zugeordnet.</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Link href="/dokumente" className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-violet-700">Mappe öffnen</Link>
-            <Link href="/rueckfragen" className="rounded-2xl bg-violet-500 px-4 py-3 text-center text-sm font-black text-white">Rückfragen</Link>
+          <p className="mt-2 text-sm font-semibold text-white/80">Alles hier wird eindeutig diesem Mandanten zugeordnet.</p>
+
+          <div className="mt-5 space-y-2">
+            <button type="button" onClick={() => void createPortalLink(activeClient)} className="w-full rounded-2xl bg-white px-4 py-4 text-base font-black text-violet-700">
+              🔗 Upload-Link erstellen & teilen
+            </button>
+            <Link href="/rueckfragen" className="block w-full rounded-2xl bg-violet-500 px-4 py-4 text-center text-base font-black text-white ring-1 ring-white/20">
+              💬 Allgemeine Rückfrage erstellen
+            </Link>
+            <Link href="/dokumente" className="block w-full rounded-2xl bg-violet-500 px-4 py-4 text-center text-base font-black text-white ring-1 ring-white/20">
+              📁 Mandantenmappe öffnen
+            </Link>
           </div>
+
+          {linkStatus[activeClient.id] && (
+            <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-center text-xs font-bold text-white">{linkStatus[activeClient.id]}</p>
+          )}
         </section>
       )}
 
@@ -226,9 +235,7 @@ export default function MandantenPage() {
         </div>
 
         {!loading && clients.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50 p-5 text-sm font-semibold leading-relaxed text-slate-600">
-            Noch keine Mandanten angelegt. Für den Test kannst du zwei fiktive Betriebe anlegen; echte Daten brauchen wir dafür nicht.
-          </div>
+          <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50 p-5 text-sm font-semibold leading-relaxed text-slate-600">Noch keine Mandanten angelegt. Für den Test kannst du zwei fiktive Betriebe anlegen; echte Daten brauchen wir dafür nicht.</div>
         ) : (
           clients.map((client) => {
             const selected = client.id === activeClientId
@@ -244,14 +251,11 @@ export default function MandantenPage() {
                 {client.note && <p className="mt-3 rounded-2xl bg-white/80 p-3 text-sm font-semibold leading-relaxed text-slate-600">{client.note}</p>}
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => selectClient(client)} className={`rounded-xl px-3 py-3 text-sm font-black ${selected ? 'bg-white text-violet-700 ring-1 ring-violet-200' : 'bg-violet-600 text-white'}`}>{selected ? 'Neu laden' : 'Auswählen'}</button>
+                  <button type="button" onClick={() => selectClient(client)} className={`rounded-xl px-3 py-3 text-sm font-black ${selected ? 'bg-white text-violet-700 ring-1 ring-violet-200' : 'bg-violet-600 text-white'}`}>{selected ? 'Aktiv' : 'Auswählen'}</button>
                   <button type="button" onClick={() => void createPortalLink(client)} className="rounded-xl bg-white px-3 py-3 text-sm font-black text-violet-700 ring-1 ring-violet-200">Upload-Link</button>
                 </div>
 
-                {linkStatus[client.id] && (
-                  <p className="mt-2 text-center text-xs font-bold text-slate-500">{linkStatus[client.id]}</p>
-                )}
-
+                {linkStatus[client.id] && <p className="mt-2 text-center text-xs font-bold text-slate-500">{linkStatus[client.id]}</p>}
                 <button type="button" onClick={() => void deleteClient(client)} className="mt-3 w-full rounded-xl bg-white px-3 py-3 text-sm font-black text-red-500 ring-1 ring-red-100">Entfernen</button>
               </article>
             )
@@ -261,9 +265,7 @@ export default function MandantenPage() {
 
       <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Sicherer Ablauf</p>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Der Mandant erhält nur seinen persönlichen Upload-Link. Er bekommt keinen Zugriff auf deinen Mila-Arbeitsplatz oder andere Mandanten.
-        </p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">Der Mandant erhält nur seinen persönlichen Upload-Link. Er bekommt keinen Zugriff auf deinen Mila-Arbeitsplatz oder andere Mandanten.</p>
       </section>
     </main>
   )
