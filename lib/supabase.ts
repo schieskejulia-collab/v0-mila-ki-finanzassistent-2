@@ -21,6 +21,7 @@ const CLIENT_SCOPED_TABLES = new Set([
   'incomes',
   'obligations',
   'documents',
+  'client_questions',
 ])
 
 export function getActiveClientId() {
@@ -55,7 +56,6 @@ function addClientId(values: any, clientId: string) {
 }
 
 function scopeRead(builder: any, clientId: string) {
-  // Ohne aktiven Mandanten niemals versehentlich Daten aller Mandanten laden.
   return builder.eq(
     'client_id',
     clientId || NO_ACTIVE_CLIENT
