@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
+const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
 function bearerToken(request: Request) {
   const value = request.headers.get('authorization') || ''
   return value.startsWith('Bearer ') ? value.slice(7).trim() : ''
@@ -38,9 +40,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Mandant nicht gefunden.' }, { status: 404 })
     }
 
-    const { data: existing } = await admin
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + LINK_TTL_MS).toISOString()
+
+    let existing: any = null
+    const existingWithExpiry = await admin
       .from('client_upload_links')
-      .select('token')
+      .select('token,expires_at')
       .eq('user_id', user.id)
       .eq('client_id', clientId)
       .eq('active', true)
@@ -48,27 +54,67 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle()
 
-    let portalToken = existing?.token
+    if (!existingWithExpiry.error) {
+      existing = existingWithExpiry.data
+    } else {
+      const fallback = await admin
+        .from('client_upload_links')
+        .select('token')
+        .eq('user_id', user.id)
+        .eq('client_id', clientId)
+        .eq('active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      existing = fallback.data
+    }
+
+    const existingValid =
+      existing?.token &&
+      (!existing?.expires_at || new Date(existing.expires_at).getTime() > now.getTime())
+
+    let portalToken = existingValid ? existing.token : null
+    let portalExpiresAt = existingValid ? existing.expires_at || null : null
 
     if (!portalToken) {
-      const { data: created, error: createError } = await admin
+      await admin
         .from('client_upload_links')
-        .insert({ user_id: user.id, client_id: clientId, active: true })
-        .select('token')
+        .update({ active: false })
+        .eq('user_id', user.id)
+        .eq('client_id', clientId)
+        .eq('active', true)
+
+      let createdResult = await admin
+        .from('client_upload_links')
+        .insert({ user_id: user.id, client_id: clientId, active: true, expires_at: expiresAt })
+        .select('token,expires_at')
         .single()
 
-      if (createError || !created) {
-        return NextResponse.json({ error: createError?.message || 'Link konnte nicht erstellt werden.' }, { status: 500 })
+      if (createdResult.error) {
+        createdResult = await admin
+          .from('client_upload_links')
+          .insert({ user_id: user.id, client_id: clientId, active: true })
+          .select('token')
+          .single() as any
       }
 
-      portalToken = created.token
+      if (createdResult.error || !createdResult.data) {
+        return NextResponse.json({ error: createdResult.error?.message || 'Link konnte nicht erstellt werden.' }, { status: 500 })
+      }
+
+      portalToken = createdResult.data.token
+      portalExpiresAt = createdResult.data.expires_at || null
     }
 
     const origin = new URL(request.url).origin
-    return NextResponse.json({
-      clientName: client.name,
-      url: `${origin}/mandant-upload?token=${encodeURIComponent(portalToken)}`,
-    })
+    return NextResponse.json(
+      {
+        clientName: client.name,
+        url: `${origin}/mandant-upload?token=${encodeURIComponent(portalToken)}`,
+        expiresAt: portalExpiresAt,
+      },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Mandanten-Link konnte nicht erstellt werden.' }, { status: 500 })
   }
