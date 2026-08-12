@@ -13,7 +13,9 @@ const baseSupabase = createClient(
   supabaseAnonKey || 'mila-not-configured'
 )
 
-const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
+export const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
+const NO_ACTIVE_CLIENT = '__mila_no_active_client__'
+
 const CLIENT_SCOPED_TABLES = new Set([
   'expenses',
   'incomes',
@@ -21,14 +23,24 @@ const CLIENT_SCOPED_TABLES = new Set([
   'documents',
 ])
 
-function getActiveClientId() {
+export function getActiveClientId() {
   if (typeof window === 'undefined') return ''
   return window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
 }
 
-function addClientId(values: any, clientId: string) {
-  if (!clientId) return values
+function requireActiveClientId() {
+  const clientId = getActiveClientId()
 
+  if (!clientId) {
+    throw new Error(
+      'Bitte zuerst oben einen Mandanten auswählen. Mila speichert keine Mandantendaten ohne eindeutige Zuordnung.'
+    )
+  }
+
+  return clientId
+}
+
+function addClientId(values: any, clientId: string) {
   if (Array.isArray(values)) {
     return values.map((value) => ({
       ...value,
@@ -42,10 +54,16 @@ function addClientId(values: any, clientId: string) {
   }
 }
 
-function scopeResult(builder: any, clientId: string) {
-  return clientId
-    ? builder.eq('client_id', clientId)
-    : builder
+function scopeRead(builder: any, clientId: string) {
+  // Ohne aktiven Mandanten niemals versehentlich Daten aller Mandanten laden.
+  return builder.eq(
+    'client_id',
+    clientId || NO_ACTIVE_CLIENT
+  )
+}
+
+function scopeWrite(builder: any, clientId: string) {
+  return builder.eq('client_id', clientId)
 }
 
 export const supabase = new Proxy(baseSupabase, {
@@ -65,42 +83,50 @@ export const supabase = new Proxy(baseSupabase, {
         get(tableTarget, method, tableReceiver) {
           if (method === 'select') {
             return (...args: any[]) =>
-              scopeResult(
+              scopeRead(
                 tableTarget.select(...args),
                 getActiveClientId()
               )
           }
 
           if (method === 'insert') {
-            return (values: any, options?: any) =>
-              tableTarget.insert(
-                addClientId(values, getActiveClientId()),
+            return (values: any, options?: any) => {
+              const clientId = requireActiveClientId()
+              return tableTarget.insert(
+                addClientId(values, clientId),
                 options
               )
+            }
           }
 
           if (method === 'upsert') {
-            return (values: any, options?: any) =>
-              tableTarget.upsert(
-                addClientId(values, getActiveClientId()),
+            return (values: any, options?: any) => {
+              const clientId = requireActiveClientId()
+              return tableTarget.upsert(
+                addClientId(values, clientId),
                 options
               )
+            }
           }
 
           if (method === 'update') {
-            return (values: any, options?: any) =>
-              scopeResult(
+            return (values: any, options?: any) => {
+              const clientId = requireActiveClientId()
+              return scopeWrite(
                 tableTarget.update(values, options),
-                getActiveClientId()
+                clientId
               )
+            }
           }
 
           if (method === 'delete') {
-            return (options?: any) =>
-              scopeResult(
+            return (options?: any) => {
+              const clientId = requireActiveClientId()
+              return scopeWrite(
                 tableTarget.delete(options),
-                getActiveClientId()
+                clientId
               )
+            }
           }
 
           return Reflect.get(
