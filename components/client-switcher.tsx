@@ -35,6 +35,7 @@ export function ClientSwitcher() {
   const [clients, setClients] = useState<MilaClient[]>([])
   const [activeClientId, setActiveClientId] = useState('')
   const [open, setOpen] = useState(false)
+  const [portalStatus, setPortalStatus] = useState('')
 
   const hidden =
     pathname === '/login' ||
@@ -45,7 +46,8 @@ export function ClientSwitcher() {
     pathname.startsWith('/agb') ||
     pathname.startsWith('/widerruf') ||
     pathname.startsWith('/sicherheit') ||
-    pathname.startsWith('/mandanten')
+    pathname.startsWith('/mandanten') ||
+    pathname.startsWith('/mandant-upload')
 
   useEffect(() => {
     if (hidden) return
@@ -90,6 +92,60 @@ export function ClientSwitcher() {
     window.location.reload()
   }
 
+  async function sharePortalLink() {
+    if (!activeClient) {
+      window.alert('Bitte zuerst einen Mandanten auswählen.')
+      return
+    }
+
+    setPortalStatus('Link wird erstellt …')
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+
+    if (!accessToken) {
+      setPortalStatus('Bitte neu anmelden.')
+      return
+    }
+
+    const response = await fetch('/api/client-portal/link', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ clientId: activeClient.id }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.url) {
+      setPortalStatus(data?.error || 'Link konnte nicht erstellt werden.')
+      return
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Mila Upload-Link · ${activeClient.name}`,
+          text: `Hier können Unterlagen und Antworten sicher übermittelt werden:`,
+          url: data.url,
+        })
+        setPortalStatus('Link geteilt ✓')
+        return
+      }
+
+      await navigator.clipboard.writeText(data.url)
+      setPortalStatus('Link kopiert ✓')
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        setPortalStatus('Teilen abgebrochen.')
+        return
+      }
+      window.prompt('Mandanten-Link kopieren:', data.url)
+      setPortalStatus('Link erstellt ✓')
+    }
+  }
+
   if (hidden) return null
 
   return (
@@ -125,6 +181,28 @@ export function ClientSwitcher() {
             Verwalten
           </Link>
         </div>
+
+        {activeClient && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link
+              href="/rueckfragen"
+              className="rounded-xl bg-violet-50 px-3 py-2.5 text-center text-[11px] font-black text-violet-700"
+            >
+              💬 Rückfrage
+            </Link>
+            <button
+              type="button"
+              onClick={() => void sharePortalLink()}
+              className="rounded-xl bg-violet-600 px-3 py-2.5 text-center text-[11px] font-black text-white"
+            >
+              🔗 Upload-Link
+            </button>
+          </div>
+        )}
+
+        {portalStatus && (
+          <p className="mt-2 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>
+        )}
 
         {open && (
           <div className="absolute left-2 right-2 top-[calc(100%+0.4rem)] z-50 max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-violet-100 bg-white p-2 shadow-xl">
