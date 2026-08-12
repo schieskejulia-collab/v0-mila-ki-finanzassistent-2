@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_NOTE_LENGTH = 2000
 const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
 
 function safeName(name: string) {
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const form = await request.formData()
     const token = String(form.get('token') || '').trim()
-    const note = String(form.get('note') || '').trim()
+    const note = String(form.get('note') || '').trim().slice(0, MAX_NOTE_LENGTH)
     const questionId = String(form.get('questionId') || '').trim()
     const file = form.get('file')
 
@@ -29,15 +30,29 @@ export async function POST(request: Request) {
     }
 
     const admin = getSupabaseAdmin()
-    const { data: link } = await admin
+
+    let link: any = null
+    const withExpiry = await admin
       .from('client_upload_links')
-      .select('user_id,client_id')
+      .select('user_id,client_id,expires_at')
       .eq('token', token)
       .eq('active', true)
       .maybeSingle()
 
-    if (!link) {
-      return NextResponse.json({ error: 'Link ungültig oder deaktiviert.' }, { status: 404 })
+    if (!withExpiry.error) {
+      link = withExpiry.data
+    } else {
+      const fallback = await admin
+        .from('client_upload_links')
+        .select('user_id,client_id')
+        .eq('token', token)
+        .eq('active', true)
+        .maybeSingle()
+      link = fallback.data
+    }
+
+    if (!link || (link.expires_at && new Date(link.expires_at).getTime() <= Date.now())) {
+      return NextResponse.json({ error: 'Link ungültig, abgelaufen oder deaktiviert.' }, { status: 404 })
     }
 
     if (questionId) {
@@ -61,7 +76,11 @@ export async function POST(request: Request) {
 
     const { error: uploadError } = await admin.storage
       .from('client-uploads')
-      .upload(storagePath, bytes, { contentType: file.type, upsert: false })
+      .upload(storagePath, bytes, {
+        contentType: file.type,
+        upsert: false,
+        cacheControl: '0',
+      })
 
     if (uploadError) {
       return NextResponse.json({ error: `Upload fehlgeschlagen: ${uploadError.message}` }, { status: 500 })
@@ -103,7 +122,18 @@ export async function POST(request: Request) {
         .eq('client_id', link.client_id)
     }
 
-    return NextResponse.json({ ok: true, filename })
+    if ('expires_at' in link) {
+      await admin
+        .from('client_upload_links')
+        .update({ last_used_at: now.toISOString() })
+        .eq('token', token)
+        .eq('active', true)
+    }
+
+    return NextResponse.json(
+      { ok: true, filename },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Upload konnte nicht verarbeitet werden.' }, { status: 500 })
   }
