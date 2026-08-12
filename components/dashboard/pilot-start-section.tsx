@@ -38,6 +38,13 @@ function getStatusLabel(handoff: any) {
 
 const workAreas = [
   {
+    href: '/mandanten',
+    eyebrow: 'Mandanten',
+    title: 'Mandant auswählen',
+    text: 'Mandanten mobil anlegen und eindeutig festlegen, für wen du gerade arbeitest.',
+    cta: 'Mandantenzentrale öffnen',
+  },
+  {
     href: '/dokumente',
     eyebrow: 'Arbeitsmappe',
     title: 'Mandantenmappe',
