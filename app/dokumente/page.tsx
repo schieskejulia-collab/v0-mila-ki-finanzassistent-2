@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { supabase } from '@/lib/supabase'
 
 const LEGACY_DISMISSED_KEY = 'mila-dismissed-legacy-expenses'
 
@@ -83,6 +84,7 @@ export default function DokumentePage() {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sort, setSort] = useState<SortKey>('newest')
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
+  const [openingDocumentId, setOpeningDocumentId] = useState('')
 
   const missingReceipts = expenses.filter((expense: any) => {
     const isMissing = expense?.hasReceipt === false || expense?.has_receipt === false
@@ -140,6 +142,42 @@ export default function DokumentePage() {
       await deleteExpense(expense)
     } catch (error: any) {
       window.alert(error?.message || 'Der offene Eintrag konnte nicht gelöscht werden.')
+    }
+  }
+
+  async function openDocument(doc: any) {
+    if (!doc?.id || !doc?.file_url) {
+      window.alert('Für dieses Dokument ist keine Datei hinterlegt.')
+      return
+    }
+
+    const previewWindow = window.open('', '_blank')
+    setOpeningDocumentId(String(doc.id))
+
+    try {
+      if (String(doc.file_url).startsWith('http://') || String(doc.file_url).startsWith('https://')) {
+        if (previewWindow) previewWindow.location.href = String(doc.file_url)
+        else window.location.href = String(doc.file_url)
+        return
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Bitte neu anmelden, um die Datei zu öffnen.')
+
+      const response = await fetch(`/api/documents/view?id=${encodeURIComponent(String(doc.id))}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.url) throw new Error(data?.error || 'Datei konnte nicht geöffnet werden.')
+
+      if (previewWindow) previewWindow.location.href = data.url
+      else window.location.href = data.url
+    } catch (error: any) {
+      previewWindow?.close()
+      window.alert(error?.message || 'Datei konnte nicht geöffnet werden.')
+    } finally {
+      setOpeningDocumentId('')
     }
   }
 
@@ -231,12 +269,21 @@ export default function DokumentePage() {
                             <p className="truncate font-black">{doc.title}</p>
                             {doc.partner && <p className="truncate text-xs font-semibold text-slate-500">{doc.partner}</p>}
                           </div>
-                          {doc.amount && <span className="shrink-0 text-sm font-black">{formatEuro(doc.amount)}</span>}
+                          {Number(doc.amount || 0) > 0 ? (
+                            <span className="shrink-0 text-sm font-black">{formatEuro(Number(doc.amount))}</span>
+                          ) : (
+                            <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-slate-400">Betrag offen</span>
+                          )}
                         </div>
                         {doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}
                         <div className="mt-3 flex items-center justify-between gap-2">
                           <span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{attentionIds.has(String(doc.id)) ? 'Rückfrage' : doc.type}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {doc.file_url && (
+                              <button type="button" onClick={() => void openDocument(doc)} disabled={openingDocumentId === String(doc.id)} className="rounded-lg bg-white px-2.5 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 disabled:opacity-50">
+                                {openingDocumentId === String(doc.id) ? 'Öffne …' : 'Ansehen'}
+                              </button>
+                            )}
                             <Link href={questionHref(doc)} className="rounded-lg bg-violet-100 px-2.5 py-2 text-xs font-black text-violet-700">Rückfrage</Link>
                             <button type="button" onClick={() => deleteDocument(doc.id)} className="text-xs font-black text-red-500">Löschen</button>
                           </div>
