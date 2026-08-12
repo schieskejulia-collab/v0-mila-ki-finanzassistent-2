@@ -6,6 +6,7 @@ import { FinanceProvider } from '@/lib/store'
 import { BottomNav } from '@/components/bottom-nav'
 import { LegalFooter } from '@/components/legal-footer'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ClientSwitcher } from '@/components/client-switcher'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -50,6 +51,7 @@ export default function RootLayout({
         >
           <FinanceProvider>
             <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
+              <ClientSwitcher />
               <div className="relative z-10 flex-1 pb-6">{children}</div>
               <LegalFooter />
               <BottomNav />
