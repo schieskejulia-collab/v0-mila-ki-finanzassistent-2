@@ -74,13 +74,17 @@ export default function MandantenPage() {
   }
 
   function selectClient(client: MilaClient) {
-    setActiveClientId(client.id)
     window.localStorage.setItem(ACTIVE_CLIENT_KEY, client.id)
+    setActiveClientId(client.id)
+
+    // Der FinanceProvider lädt beim Seitenwechsel neu. Dadurch greifen alle
+    // Supabase-Abfragen sofort im Kontext des ausgewählten Mandanten.
+    window.location.assign('/')
   }
 
   function deleteClient(client: MilaClient) {
     const confirmed = window.confirm(
-      `${client.name} wirklich aus der Mandantenliste entfernen? In diesem ersten Schritt werden noch keine Belege oder Dokumente gelöscht.`
+      `${client.name} wirklich aus der Mandantenliste entfernen? Die bereits zugeordneten Unterlagen werden dabei nicht gelöscht.`
     )
     if (!confirmed) return
 
@@ -104,7 +108,7 @@ export default function MandantenPage() {
         </p>
         <h1 className="mt-2 text-3xl font-black">Mandanten</h1>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Lege deine Mandanten an und wähle eindeutig aus, für wen du gerade arbeitest.
+          Wähle eindeutig aus, für wen du arbeitest. Mila begrenzt die zugehörigen Buchungen und Unterlagen anschließend auf diesen Mandanten.
         </p>
       </header>
 
@@ -115,7 +119,7 @@ export default function MandantenPage() {
           </p>
           <h2 className="mt-2 text-2xl font-black">{activeClient.name}</h2>
           <p className="mt-2 text-sm font-semibold text-white/80">
-            Dieser Mandant ist für die nächsten Arbeitsschritte ausgewählt.
+            Neue Buchungen und Dokumente werden diesem Mandanten zugeordnet.
           </p>
           <Link
             href="/dokumente"
@@ -175,7 +179,7 @@ export default function MandantenPage() {
 
         {clients.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50 p-5 text-sm font-semibold leading-relaxed text-slate-600">
-            Noch keine Mandanten angelegt. Für den Test kannst du später zwei fiktive Betriebe anlegen; echte Daten brauchen wir dafür noch nicht.
+            Noch keine Mandanten angelegt. Für den Test kannst du zwei fiktive Betriebe anlegen; echte Daten brauchen wir dafür nicht.
           </div>
         ) : (
           clients.map((client) => {
@@ -221,7 +225,7 @@ export default function MandantenPage() {
                         : 'bg-violet-600 text-white'
                     }`}
                   >
-                    {selected ? 'Ausgewählt' : 'Auswählen'}
+                    {selected ? 'Neu laden' : 'Auswählen'}
                   </button>
                   <button
                     type="button"
@@ -237,12 +241,12 @@ export default function MandantenPage() {
         )}
       </section>
 
-      <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
-          Schritt 1
+      <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+          Schritt 2
         </p>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Die Auswahl funktioniert bereits mobil. Dokumente und Buchungen werden in diesem Schritt bewusst noch nicht automatisch umgehängt. Als Nächstes verbinden wir den aktiven Mandanten sicher mit den Daten.
+          Der aktive Mandant wird jetzt als Datenkontext verwendet. Neue Datensätze bekommen automatisch seine Mandanten-ID, und Abfragen werden auf diesen Mandanten begrenzt.
         </p>
       </section>
     </main>
