@@ -6,23 +6,26 @@ export default function DatenschutzSicherheitPage() {
           <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">Sicherheit</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight">Datenschutz & Sicherheit bei Mila</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            Mila verarbeitet Finanz-, Beleg- und Geschäftsdaten. Deshalb gilt: lieber weniger Daten,
-            klare Trennung, saubere Löschung und keine unnötige Auswertung.
+            Mila verarbeitet Finanz-, Beleg- und Geschäftsdaten. Deshalb werden Datenzugriffe getrennt,
+            Uploads begrenzt und Datenschutzfunktionen direkt im Nutzerkonto bereitgestellt.
           </p>
         </div>
 
-        <SecurityCard title="Datensparsamkeit" text="Mila soll nur Daten erfassen, die für Vorbereitung, Ordnung, Vollständigkeit und Rückfragen wirklich gebraucht werden." />
-        <SecurityCard title="Getrennte Nutzerkonten" text="Jeder Nutzer arbeitet in seinem eigenen Konto. Daten dürfen nicht zwischen Konten sichtbar werden." />
-        <SecurityCard title="RLS in Supabase" text="Row Level Security muss für alle nutzerbezogenen Tabellen aktiv sein. Nutzer dürfen nur eigene Datensätze lesen, ändern oder löschen." />
-        <SecurityCard title="Kein unnötiges Tracking" text="Für die sichere Startversion werden Analyse- und Marketingtools entfernt oder nur nach Einwilligung geladen." />
-        <SecurityCard title="Export & Löschung" text="Nutzer sollen ihre Daten exportieren und Löschung verlangen oder auslösen können. Das ist ein wichtiger Vertrauenspunkt." />
-        <SecurityCard title="Keine Steuerberatung" text="Mila unterstützt Vorbereitung und Struktur, trifft aber keine verbindlichen steuerlichen Entscheidungen." />
+        <SecurityCard title="Mandantentrennung" text="Nutzerbezogene Tabellen werden mit Row Level Security abgesichert. Datensätze sind zusätzlich über Nutzer- und Mandantenzuordnung getrennt." />
+        <SecurityCard title="Private Dokumentablage" text="Mandanten-Uploads liegen in einem nicht öffentlichen Storage-Bucket. Erlaubt sind nur PDF, JPG, PNG und WEBP bis maximal 10 MB." />
+        <SecurityCard title="Begrenzte Upload-Links" text="Mandanten-Portal-Links sind als widerrufbare Tokens angelegt. Mit der Datenschutz-Hardening-Migration erhalten neu erzeugte Links eine Laufzeit von sieben Tagen." />
+        <SecurityCard title="Originaldateien bleiben erhalten" text="Arbeits- und Exportnamen verändern die hochgeladene Originaldatei nicht. Der Audit-Trail dokumentiert nur vorhandene Zeitstempel." />
+        <SecurityCard title="Export & Löschung" text="Im Profil können Nutzer eine Datenkopie exportieren, gespeicherte Mila-Daten löschen oder nach zusätzlicher Bestätigung das gesamte Login-Konto entfernen." />
+        <SecurityCard title="Sichere HTTP-Grundregeln" text="Mila setzt Schutzheader gegen MIME-Sniffing und Framing, eine restriktive Referrer-Policy sowie No-Store-Header für API-Antworten ein." />
+        <SecurityCard title="Datensparsamkeit" text="Mila soll nur Informationen verarbeiten, die für Vorbereitung, Ordnung, Vollständigkeit, Rückfragen und Übergabe benötigt werden." />
+        <SecurityCard title="Externe KI" text="Chat-Inhalte können zur Antworterzeugung an den technisch eingebundenen KI-Dienst weitergegeben werden. Deshalb sollten nur Daten verarbeitet werden, deren Übermittlung für den jeweiligen Zweck zulässig und erforderlich ist." />
 
         <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-          <h2 className="font-black">Sicherheitsversprechen</h2>
+          <h2 className="font-black">Wichtig vor echten Mandantendaten</h2>
           <p className="mt-2">
-            Mila wird so gebaut, dass Vertrauen wichtiger ist als schnelles Wachstum: keine versteckten Datenwege,
-            keine unnötige Sammlung und keine Vermischung fremder Nutzerinformationen.
+            Technische Schutzmaßnahmen ersetzen keine organisatorischen Pflichten. Auftragsverarbeitungsverträge,
+            Verzeichnis der Verarbeitungstätigkeiten, Löschkonzept, Berechtigungskonzept und die konkrete Datenschutzerklärung
+            müssen zum tatsächlichen Betrieb und zu den eingesetzten Dienstleistern passen.
           </p>
         </div>
       </section>
