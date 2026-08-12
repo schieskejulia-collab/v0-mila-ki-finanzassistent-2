@@ -3,14 +3,29 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 async function resolvePortal(token: string) {
   const admin = getSupabaseAdmin()
-  const { data: link, error } = await admin
+
+  let link: any = null
+  const withExpiry = await admin
     .from('client_upload_links')
-    .select('user_id,client_id,active')
+    .select('user_id,client_id,active,expires_at')
     .eq('token', token)
     .eq('active', true)
     .maybeSingle()
 
-  if (error || !link) return null
+  if (!withExpiry.error) {
+    link = withExpiry.data
+  } else {
+    const fallback = await admin
+      .from('client_upload_links')
+      .select('user_id,client_id,active')
+      .eq('token', token)
+      .eq('active', true)
+      .maybeSingle()
+    link = fallback.data
+  }
+
+  if (!link) return null
+  if (link.expires_at && new Date(link.expires_at).getTime() <= Date.now()) return null
 
   const { data: client } = await admin
     .from('clients')
@@ -30,7 +45,7 @@ export async function GET(request: Request) {
     if (!token) return NextResponse.json({ error: 'Link unvollständig.' }, { status: 400 })
 
     const portal = await resolvePortal(token)
-    if (!portal) return NextResponse.json({ error: 'Link ungültig oder deaktiviert.' }, { status: 404 })
+    if (!portal) return NextResponse.json({ error: 'Link ungültig, abgelaufen oder deaktiviert.' }, { status: 404 })
 
     const { data: questions, error } = await portal.admin
       .from('client_questions')
@@ -42,7 +57,10 @@ export async function GET(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    return NextResponse.json({ clientName: portal.client.name, questions: questions || [] })
+    return NextResponse.json(
+      { clientName: portal.client.name, questions: questions || [] },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Portal konnte nicht geladen werden.' }, { status: 500 })
   }
@@ -53,14 +71,14 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const token = String(body?.token || '').trim()
     const questionId = String(body?.questionId || '').trim()
-    const answer = String(body?.answer || '').trim()
+    const answer = String(body?.answer || '').trim().slice(0, 4000)
 
     if (!token || !questionId || !answer) {
       return NextResponse.json({ error: 'Antwort unvollständig.' }, { status: 400 })
     }
 
     const portal = await resolvePortal(token)
-    if (!portal) return NextResponse.json({ error: 'Link ungültig oder deaktiviert.' }, { status: 404 })
+    if (!portal) return NextResponse.json({ error: 'Link ungültig, abgelaufen oder deaktiviert.' }, { status: 404 })
 
     const { data: question } = await portal.admin
       .from('client_questions')
@@ -81,7 +99,16 @@ export async function POST(request: Request) {
       .eq('client_id', portal.link.client_id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true })
+
+    if ('expires_at' in portal.link) {
+      await portal.admin
+        .from('client_upload_links')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('token', token)
+        .eq('active', true)
+    }
+
+    return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store, max-age=0' } })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Antwort konnte nicht gespeichert werden.' }, { status: 500 })
   }
