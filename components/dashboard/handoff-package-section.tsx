@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
+import { appendAuditEvent } from '@/lib/audit-trail'
 
 const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 const TAKEOVER_KEY = 'mila-client-takeovers-v1'
@@ -47,10 +48,12 @@ export function HandoffPackageSection() {
   const finance = useFinance()
   const [takeover, setTakeover] = useState<Takeover | null>(null)
   const [clientName, setClientName] = useState('Mandant')
+  const [clientId, setClientId] = useState('')
 
   useEffect(() => {
     try {
       const activeClientId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
+      setClientId(activeClientId)
       if (!activeClientId) return
       const takeoversRaw = window.localStorage.getItem(TAKEOVER_KEY)
       const takeovers = takeoversRaw ? JSON.parse(takeoversRaw) : {}
@@ -81,13 +84,15 @@ export function HandoffPackageSection() {
   }, [finance.documents, finance.expenses, finance.obligations])
 
   function downloadManifest() {
+    const createdAt = new Date()
+    const currentPeriod = periodLabel(takeover)
     const lines = [
       'MILA – ORGANISATORISCHE ÜBERGABEÜBERSICHT',
       '',
       `Mandant: ${clientName}`,
-      `Zeitraum: ${periodLabel(takeover)}`,
+      `Zeitraum: ${currentPeriod}`,
       `Übergaberhythmus: ${rhythmLabel(takeover?.handoffRhythm)}`,
-      `Erstellt am: ${new Date().toLocaleString('de-DE')}`,
+      `Erstellt am: ${createdAt.toLocaleString('de-DE')}`,
       '',
       `Dokumente: ${data.documents.length}`,
       `Fehlende Belege: ${data.missingReceipts.length}`,
@@ -110,11 +115,21 @@ export function HandoffPackageSection() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${safeFileName(`Mila_Uebergabe_${clientName}_${periodLabel(takeover)}`)}.txt`
+    link.download = `${safeFileName(`Mila_Uebergabe_${clientName}_${currentPeriod}`)}.txt`
     document.body.appendChild(link)
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+
+    if (clientId) {
+      appendAuditEvent({
+        clientId,
+        type: 'handoff_created',
+        title: 'Übergabeübersicht erstellt',
+        detail: `${currentPeriod} · ${data.documents.length} Dokumente`,
+        createdAt: createdAt.toISOString(),
+      })
+    }
   }
 
   return (
