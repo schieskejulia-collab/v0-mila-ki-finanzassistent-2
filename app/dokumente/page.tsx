@@ -1,91 +1,40 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
 
 const LEGACY_DISMISSED_KEY = 'mila-dismissed-legacy-expenses'
 
+type FilterKey = 'all' | 'attention' | 'missing' | 'questions' | 'done'
+type SortKey = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'partner'
+
 function formatEuro(value?: number) {
   if (!value) return ''
-
-  return value.toLocaleString('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
 function getOpenQuestions(documents: any[]) {
   return documents.filter((doc) => {
     const status = String(doc.status || '').toLowerCase()
     const note = String(doc.note || '').toLowerCase()
-
-    return (
-      status === 'neu' ||
-      note.includes('unklar') ||
-      note.includes('rückfrage') ||
-      note.includes('rueckfrage') ||
-      note.includes('prüfen') ||
-      note.includes('pruefen')
-    )
+    return status === 'neu' || note.includes('unklar') || note.includes('rückfrage') || note.includes('rueckfrage') || note.includes('prüfen') || note.includes('pruefen')
   })
 }
 
 function getOpenObligations(obligations: any[]) {
-  return obligations.filter((item) => {
-    const status = String(item.status || '').toLowerCase()
-    return !['erledigt', 'bezahlt', 'archiviert'].includes(status)
-  })
+  return obligations.filter((item) => !['erledigt', 'bezahlt', 'archiviert'].includes(String(item.status || '').toLowerCase()))
 }
 
-function getStatus({
-  documentCount,
-  missingReceiptCount,
-  openQuestionCount,
-  openObligationCount,
-}: {
-  documentCount: number
-  missingReceiptCount: number
-  openQuestionCount: number
-  openObligationCount: number
-}) {
-  if (documentCount === 0 && missingReceiptCount === 0) {
-    return {
-      label: 'Noch nicht gestartet',
-      description:
-        'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.',
-      badge: 'bg-slate-100 text-slate-600',
-    }
-  }
-
-  const openCount =
-    missingReceiptCount + openQuestionCount + openObligationCount
-
-  if (openCount === 0) {
-    return {
-      label: 'Bereit zur Übergabe',
-      description:
-        'Für die aktuell erfassten Unterlagen sind keine organisatorischen Rückfragen mehr offen.',
-      badge: 'bg-emerald-100 text-emerald-700',
-    }
-  }
-
-  return {
-    label: 'In Bearbeitung',
-    description: `${openCount} offene Punkte sollten vor der Übergabe noch geklärt werden.`,
-    badge: 'bg-amber-100 text-amber-700',
-  }
+function getStatus({ documentCount, missingReceiptCount, openQuestionCount, openObligationCount }: any) {
+  if (documentCount === 0 && missingReceiptCount === 0) return { label: 'Noch nicht gestartet', description: 'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.', badge: 'bg-slate-100 text-slate-600' }
+  const openCount = missingReceiptCount + openQuestionCount + openObligationCount
+  if (openCount === 0) return { label: 'Bereit zur Übergabe', description: 'Für die aktuell erfassten Unterlagen sind keine organisatorischen Rückfragen mehr offen.', badge: 'bg-emerald-100 text-emerald-700' }
+  return { label: 'In Bearbeitung', description: `${openCount} offene Punkte sollten vor der Übergabe noch geklärt werden.`, badge: 'bg-amber-100 text-amber-700' }
 }
 
 function expenseTitle(expense: any) {
-  return (
-    expense?.title ||
-    expense?.description ||
-    expense?.merchant ||
-    expense?.partner ||
-    expense?.vendor ||
-    'Nicht zugeordneter Eintrag'
-  )
+  return expense?.title || expense?.description || expense?.merchant || expense?.partner || expense?.vendor || 'Nicht zugeordneter Eintrag'
 }
 
 function expenseAmount(expense: any) {
@@ -94,17 +43,11 @@ function expenseAmount(expense: any) {
 }
 
 function legacyFingerprint(expense: any) {
-  return [
-    expenseTitle(expense),
-    expenseAmount(expense),
-    String(expense?.merchant || expense?.partner || ''),
-    String(expense?.createdAt || expense?.created_at || expense?.date || ''),
-  ].join('|')
+  return [expenseTitle(expense), expenseAmount(expense), String(expense?.merchant || expense?.partner || ''), String(expense?.createdAt || expense?.created_at || expense?.date || '')].join('|')
 }
 
 function loadDismissedLegacyExpenses() {
   if (typeof window === 'undefined') return [] as string[]
-
   try {
     const raw = window.localStorage.getItem(LEGACY_DISMISSED_KEY)
     const parsed = raw ? JSON.parse(raw) : []
@@ -114,59 +57,79 @@ function loadDismissedLegacyExpenses() {
   }
 }
 
-export default function DokumentePage() {
-  const {
-    documents,
-    expenses,
-    obligations,
-    deleteDocument,
-    deleteExpense,
-  } = useFinance()
+function itemDate(item: any) {
+  return String(item?.date || item?.createdAt || item?.created_at || item?.dueDate || item?.due_date || '')
+}
 
-  const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(
-    loadDismissedLegacyExpenses
-  )
+function monthKey(item: any) {
+  const raw = itemDate(item)
+  const date = raw ? new Date(raw) : new Date()
+  if (Number.isNaN(date.getTime())) return 'Ohne Datum'
+  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date)
+}
+
+export default function DokumentePage() {
+  const { documents, expenses, obligations, deleteDocument, deleteExpense } = useFinance()
+  const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(loadDismissedLegacyExpenses)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<FilterKey>('all')
+  const [sort, setSort] = useState<SortKey>('newest')
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
 
   const missingReceipts = expenses.filter((expense: any) => {
     const isMissing = expense?.hasReceipt === false || expense?.has_receipt === false
     if (!isMissing) return false
-
-    if (!expense?.id) {
-      return !dismissedLegacyExpenses.includes(legacyFingerprint(expense))
-    }
-
+    if (!expense?.id) return !dismissedLegacyExpenses.includes(legacyFingerprint(expense))
     return true
   })
 
   const openQuestions = getOpenQuestions(documents)
   const openObligations = getOpenObligations(obligations)
+  const status = getStatus({ documentCount: documents.length, missingReceiptCount: missingReceipts.length, openQuestionCount: openQuestions.length, openObligationCount: openObligations.length })
 
-  const status = getStatus({
-    documentCount: documents.length,
-    missingReceiptCount: missingReceipts.length,
-    openQuestionCount: openQuestions.length,
-    openObligationCount: openObligations.length,
-  })
+  const attentionIds = new Set(openQuestions.map((doc: any) => String(doc.id)))
+
+  const filteredDocuments = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    let list = documents.filter((doc: any) => {
+      const text = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.type || ''}`.toLowerCase()
+      if (needle && !text.includes(needle)) return false
+      if (filter === 'questions' || filter === 'attention') return attentionIds.has(String(doc.id))
+      if (filter === 'done') return !attentionIds.has(String(doc.id))
+      return true
+    })
+
+    list = [...list].sort((a: any, b: any) => {
+      if (sort === 'amount-desc') return Number(b.amount || 0) - Number(a.amount || 0)
+      if (sort === 'amount-asc') return Number(a.amount || 0) - Number(b.amount || 0)
+      if (sort === 'partner') return String(a.partner || a.title || '').localeCompare(String(b.partner || b.title || ''), 'de')
+      const aTime = new Date(itemDate(a) || 0).getTime() || 0
+      const bTime = new Date(itemDate(b) || 0).getTime() || 0
+      return sort === 'oldest' ? aTime - bTime : bTime - aTime
+    })
+
+    return list
+  }, [documents, query, filter, sort, attentionIds])
+
+  const groups = useMemo(() => {
+    const map = new Map<string, any[]>()
+    for (const doc of filteredDocuments) {
+      const key = monthKey(doc)
+      map.set(key, [...(map.get(key) || []), doc])
+    }
+    return Array.from(map.entries())
+  }, [filteredDocuments])
 
   async function removeMissingReceipt(expense: any) {
-    const confirmed = window.confirm(
-      'Diesen offenen Eintrag wirklich löschen? Der zugehörige Ausgaben-Datensatz wird entfernt.'
-    )
-
-    if (!confirmed) return
-
+    if (!window.confirm('Diesen offenen Eintrag wirklich löschen? Der zugehörige Ausgaben-Datensatz wird entfernt.')) return
     try {
       if (!expense?.id) {
         const fingerprint = legacyFingerprint(expense)
-        const next = Array.from(
-          new Set([...dismissedLegacyExpenses, fingerprint])
-        )
-
+        const next = Array.from(new Set([...dismissedLegacyExpenses, fingerprint]))
         setDismissedLegacyExpenses(next)
         window.localStorage.setItem(LEGACY_DISMISSED_KEY, JSON.stringify(next))
         return
       }
-
       await deleteExpense(expense)
     } catch (error: any) {
       window.alert(error?.message || 'Der offene Eintrag konnte nicht gelöscht werden.')
@@ -174,166 +137,95 @@ export default function DokumentePage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-5 p-6 pb-40 text-slate-950">
+    <main className="mx-auto min-h-screen max-w-md space-y-5 p-5 pb-40 text-slate-950">
       <header>
-        <Link href="/" className="text-sm font-semibold text-slate-500">
-          ← Zurück
-        </Link>
-
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-          Arbeitsmappe
-        </p>
-
+        <Link href="/" className="text-sm font-semibold text-slate-500">← Zurück</Link>
+        <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-violet-600">Arbeitsmappe</p>
         <h1 className="mt-2 text-3xl font-black">Mandantenmappe</h1>
-
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Dokumente, fehlende Belege, Rückfragen und offene Punkte für die
-          organisatorische Übergabe.
-        </p>
       </header>
 
       <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-              Bearbeitungsstand
-            </p>
-            <h2 className="mt-2 text-2xl font-black">{status.label}</h2>
-          </div>
-
-          <span className={`rounded-full px-3 py-2 text-xs font-black ${status.badge}`}>
-            {documents.length} Dokumente
-          </span>
+          <div><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Bearbeitungsstand</p><h2 className="mt-2 text-2xl font-black">{status.label}</h2></div>
+          <span className={`rounded-full px-3 py-2 text-xs font-black ${status.badge}`}>{documents.length} Dokumente</span>
         </div>
-
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          {status.description}
-        </p>
-
+        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">{status.description}</p>
         <div className="mt-5 grid grid-cols-3 gap-2">
           <MappeMetric label="Dokumente" value={documents.length} />
-          <MappeMetric label="Fehlende Belege" value={missingReceipts.length} />
+          <MappeMetric label="Fehlende" value={missingReceipts.length} />
           <MappeMetric label="Rückfragen" value={openQuestions.length} />
         </div>
-
-        <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-          <p className="text-sm font-black">Offene Punkte</p>
-
-          <div className="mt-3 space-y-2 text-sm font-semibold text-slate-600">
-            <p>{missingReceipts.length === 0 ? '✓' : '•'} Fehlende Belege: {missingReceipts.length}</p>
-            <p>{openQuestions.length === 0 ? '✓' : '•'} Rückfragen: {openQuestions.length}</p>
-            <p>{openObligations.length === 0 ? '✓' : '•'} Offene Pflichten/Fristen: {openObligations.length}</p>
-          </div>
-        </div>
       </section>
 
-      {missingReceipts.length > 0 && (
+      {(missingReceipts.length > 0 || openQuestions.length > 0) && (
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
-            Fehlende Belege
-          </p>
-
-          <h2 className="mt-2 text-xl font-black">Diese offenen Einträge brauchen Aufmerksamkeit</h2>
-
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-            Diese Ausgaben sind vorhanden, haben aber keinen zugeordneten Beleg. Du kannst einen neuen Beleg erfassen oder einen fehlerhaften Testeintrag löschen.
-          </p>
-
-          <div className="mt-4 space-y-3">
-            {missingReceipts.map((expense: any, index: number) => (
-              <div key={expense?.id || `missing-${index}`} className="rounded-2xl bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-black text-slate-900">{expenseTitle(expense)}</p>
-                    {(expense?.merchant || expense?.partner) && (
-                      <p className="mt-1 text-xs font-semibold text-slate-500">
-                        {expense?.merchant || expense?.partner}
-                      </p>
-                    )}
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Aufmerksamkeit zuerst</p>
+          <h2 className="mt-2 text-xl font-black">{missingReceipts.length + openQuestions.length} Einträge brauchen dich</h2>
+          {missingReceipts.length > 0 && (
+            <div className="mt-4 space-y-3">
+              {missingReceipts.slice(0, 5).map((expense: any, index: number) => (
+                <div key={expense?.id || `missing-${index}`} className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3"><p className="font-black">{expenseTitle(expense)}</p>{expenseAmount(expense) > 0 && <span className="text-sm font-black">{formatEuro(expenseAmount(expense))}</span>}</div>
+                  <p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Link href="/neue-buchungen" className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white">Beleg erfassen</Link>
+                    <button type="button" onClick={() => void removeMissingReceipt(expense)} className="rounded-xl bg-white px-3 py-3 text-xs font-black text-red-500 ring-1 ring-red-100">Löschen</button>
                   </div>
-
-                  {expenseAmount(expense) > 0 && (
-                    <span className="text-sm font-black text-slate-900">
-                      {formatEuro(expenseAmount(expense))}
-                    </span>
-                  )}
                 </div>
-
-                <p className="mt-3 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <Link
-                    href="/neue-buchungen"
-                    className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white"
-                  >
-                    Beleg erfassen
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => void removeMissingReceipt(expense)}
-                    className="rounded-xl bg-white px-3 py-3 text-xs font-black text-red-500 ring-1 ring-red-100"
-                  >
-                    Eintrag löschen
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+              {missingReceipts.length > 5 && <p className="text-center text-xs font-black text-amber-700">+ {missingReceipts.length - 5} weitere offene Einträge</p>}
+            </div>
+          )}
         </section>
       )}
 
-      {documents.length === 0 && (
-        <section className="rounded-3xl bg-violet-50 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Noch keine Unterlagen</p>
-          <h2 className="mt-2 text-xl font-black">Starte mit dem ersten Beleg</h2>
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-            Scanne einen Beleg oder lade eine Rechnung hoch. Mila legt die erfassten Unterlagen anschließend in dieser Mappe ab.
-          </p>
-          <Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">
-            Beleg erfassen
-          </Link>
-        </section>
-      )}
-
-      <div className="space-y-3">
-        {documents.map((doc) => (
-          <section key={doc.id} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex justify-between gap-3">
-              <div>
-                <p className="font-black text-slate-900">{doc.title}</p>
-                {doc.partner && <p className="text-sm text-slate-500">{doc.partner}</p>}
-              </div>
-              <span className="text-xs font-black uppercase text-violet-600">{doc.type}</span>
-            </div>
-
-            {doc.amount && <p className="mt-3 text-xl font-black">{formatEuro(doc.amount)}</p>}
-            {doc.note && <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-relaxed text-slate-600">{doc.note}</p>}
-            {doc.dueDate && <p className="mt-3 text-sm font-bold text-amber-700">Fällig: {doc.dueDate}</p>}
-
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <p className="text-xs text-slate-400">{doc.keepUntil ? `gespeichert bis ${doc.keepUntil}` : ''}</p>
-              <button type="button" onClick={() => deleteDocument(doc.id)} className="text-sm font-black text-red-500">Löschen</button>
-            </div>
-          </section>
-        ))}
-      </div>
-
-      <section className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Grenze</p>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-600">
-          Mila organisiert und macht fehlende Angaben sichtbar. Steuerliche Bewertung und finale Buchungsentscheidungen bleiben bei der zuständigen Kanzlei.
-        </p>
+      <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔎 Beleg, Anbieter oder Notiz suchen" className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold outline-none ring-1 ring-slate-100 focus:ring-violet-300" />
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Alle {documents.length}</FilterButton>
+          <FilterButton active={filter === 'attention'} onClick={() => setFilter('attention')}>Offen {openQuestions.length}</FilterButton>
+          <FilterButton active={filter === 'missing'} onClick={() => setFilter('missing')}>Ohne Beleg {missingReceipts.length}</FilterButton>
+          <FilterButton active={filter === 'questions'} onClick={() => setFilter('questions')}>Rückfragen {openQuestions.length}</FilterButton>
+          <FilterButton active={filter === 'done'} onClick={() => setFilter('done')}>Fertig</FilterButton>
+        </div>
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="mt-3 w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none ring-1 ring-slate-100">
+          <option value="newest">Neueste zuerst</option>
+          <option value="oldest">Älteste zuerst</option>
+          <option value="amount-desc">Betrag: hoch → niedrig</option>
+          <option value="amount-asc">Betrag: niedrig → hoch</option>
+          <option value="partner">Anbieter A–Z</option>
+        </select>
       </section>
+
+      {filter === 'missing' ? (
+        <section className="space-y-3">
+          {missingReceipts.map((expense: any, index: number) => (
+            <div key={expense?.id || index} className="rounded-2xl bg-white p-4 shadow-sm"><div className="flex justify-between gap-3"><p className="font-black">{expenseTitle(expense)}</p><span className="font-black">{formatEuro(expenseAmount(expense))}</span></div><p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p></div>
+          ))}
+        </section>
+      ) : groups.length === 0 ? (
+        <section className="rounded-3xl bg-violet-50 p-5"><p className="font-black text-violet-700">Keine passenden Unterlagen</p><p className="mt-2 text-sm font-semibold text-slate-600">Passe Suche oder Filter an – oder erfasse den nächsten Beleg.</p><Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Beleg erfassen</Link></section>
+      ) : (
+        <div className="space-y-3">
+          {groups.map(([month, docs]) => {
+            const collapsed = collapsedMonths[month]
+            return <section key={month} className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+              <button type="button" onClick={() => setCollapsedMonths((old) => ({ ...old, [month]: !old[month] }))} className="flex w-full items-center justify-between px-5 py-4 text-left"><div><p className="text-sm font-black capitalize">📁 {month}</p><p className="mt-1 text-xs font-semibold text-slate-400">{docs.length} Unterlagen</p></div><span className="font-black text-violet-700">{collapsed ? '▶' : '▼'}</span></button>
+              {!collapsed && <div className="border-t border-slate-100 p-3 space-y-2">{docs.map((doc: any) => <article key={doc.id} className="rounded-2xl bg-slate-50 p-4"><div className="flex justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{doc.title}</p>{doc.partner && <p className="truncate text-xs font-semibold text-slate-500">{doc.partner}</p>}</div>{doc.amount && <span className="shrink-0 text-sm font-black">{formatEuro(doc.amount)}</span>}</div>{doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}<div className="mt-3 flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{attentionIds.has(String(doc.id)) ? 'Rückfrage' : doc.type}</span><button type="button" onClick={() => deleteDocument(doc.id)} className="text-xs font-black text-red-500">Löschen</button></div></article>)}</div>}
+            </section>
+          })}
+        </div>
+      )}
+
+      <Link href="/neue-buchungen" className="flex w-full items-center justify-center rounded-2xl bg-violet-600 px-4 py-4 text-sm font-black text-white shadow-sm">+ Nächsten Beleg erfassen</Link>
     </main>
   )
 }
 
 function MappeMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl bg-violet-50 p-3 text-center">
-      <p className="text-xl font-black text-slate-950">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase leading-tight tracking-wider text-slate-400">{label}</p>
-    </div>
-  )
+  return <div className="rounded-2xl bg-violet-50 p-3 text-center"><p className="text-xl font-black">{value}</p><p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p></div>
+}
+
+function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={`shrink-0 rounded-full px-3 py-2 text-xs font-black ${active ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{children}</button>
 }
