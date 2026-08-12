@@ -3,7 +3,7 @@
 export type MilaAuditEvent = {
   id: string
   clientId: string
-  type: 'handoff_created' | 'manual_note'
+  type: 'handoff_created' | 'handoff_completed' | 'manual_note'
   title: string
   detail?: string
   createdAt: string
