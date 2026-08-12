@@ -9,6 +9,18 @@ const LEGACY_DISMISSED_KEY = 'mila-dismissed-legacy-expenses'
 
 type FilterKey = 'all' | 'attention' | 'missing' | 'questions' | 'done'
 type SortKey = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'partner'
+type CategoryKey = 'all' | 'klaerung' | 'einnahmen' | 'ausgaben' | 'bank-kasse' | 'vertraege' | 'steuer' | 'sonstiges'
+
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  all: 'Alle',
+  klaerung: 'Klärung nötig',
+  einnahmen: 'Einnahmen',
+  ausgaben: 'Ausgaben',
+  'bank-kasse': 'Bank & Kasse',
+  vertraege: 'Verträge',
+  steuer: 'Steuerunterlagen',
+  sonstiges: 'Sonstiges',
+}
 
 function formatEuro(value?: number) {
   if (!value) return ''
@@ -77,12 +89,28 @@ function questionHref(doc: any) {
   return `/rueckfragen?${params.toString()}`
 }
 
+function categoryForDocument(doc: any, attentionIds: Set<string>): CategoryKey {
+  if (attentionIds.has(String(doc.id))) return 'klaerung'
+
+  const type = String(doc.type || '').toLowerCase()
+  const text = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.file_name || ''}`.toLowerCase()
+
+  if (type === 'vertrag' || /miete|leasing|versicherung|vertrag/.test(text)) return 'vertraege'
+  if (type === 'bescheid' || /steuerbescheid|ust|umsatzsteuer|finanzamt|steuerunterlage/.test(text)) return 'steuer'
+  if (/kontoauszug|paypal|kreditkarte|bank|kassenbuch|barbeleg|kasse/.test(text)) return 'bank-kasse'
+  if (/ausgangsrechnung|zahlungseingang|einnahme|kunde/.test(text)) return 'einnahmen'
+  if (type === 'beleg' || /eingangsrechnung|quittung|abo|tank|büro|buero|bewirtung|ausgabe/.test(text)) return 'ausgaben'
+
+  return 'sonstiges'
+}
+
 export default function DokumentePage() {
   const { documents, expenses, obligations, deleteDocument, deleteExpense } = useFinance()
   const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(loadDismissedLegacyExpenses)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sort, setSort] = useState<SortKey>('newest')
+  const [category, setCategory] = useState<CategoryKey>('all')
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
   const [openingDocumentId, setOpeningDocumentId] = useState('')
 
@@ -98,11 +126,27 @@ export default function DokumentePage() {
   const status = getStatus({ documentCount: documents.length, missingReceiptCount: missingReceipts.length, openQuestionCount: openQuestions.length, openObligationCount: openObligations.length })
   const attentionIds = new Set(openQuestions.map((doc: any) => String(doc.id)))
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<CategoryKey, number> = {
+      all: documents.length,
+      klaerung: 0,
+      einnahmen: 0,
+      ausgaben: 0,
+      'bank-kasse': 0,
+      vertraege: 0,
+      steuer: 0,
+      sonstiges: 0,
+    }
+    for (const doc of documents) counts[categoryForDocument(doc, attentionIds)] += 1
+    return counts
+  }, [documents, attentionIds])
+
   const filteredDocuments = useMemo(() => {
     const needle = query.trim().toLowerCase()
     let list = documents.filter((doc: any) => {
       const text = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.type || ''}`.toLowerCase()
       if (needle && !text.includes(needle)) return false
+      if (category !== 'all' && categoryForDocument(doc, attentionIds) !== category) return false
       if (filter === 'questions' || filter === 'attention') return attentionIds.has(String(doc.id))
       if (filter === 'done') return !attentionIds.has(String(doc.id))
       return true
@@ -118,7 +162,7 @@ export default function DokumentePage() {
     })
 
     return list
-  }, [documents, query, filter, sort, attentionIds])
+  }, [documents, query, filter, sort, category, attentionIds])
 
   const groups = useMemo(() => {
     const map = new Map<string, any[]>()
@@ -202,6 +246,27 @@ export default function DokumentePage() {
         </div>
       </section>
 
+      <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Arbeitskategorien</p>
+            <h2 className="mt-2 text-xl font-black">Schneller statt endlos scrollen</h2>
+          </div>
+          {category !== 'all' && (
+            <button type="button" onClick={() => setCategory('all')} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Zurücksetzen</button>
+          )}
+        </div>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">Mila sortiert hier als Arbeitsvorschlag. Die Kanzlei-Struktur bleibt später anpassbar.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {(['klaerung','einnahmen','ausgaben','bank-kasse','vertraege','steuer','sonstiges'] as CategoryKey[]).map((key) => (
+            <button key={key} type="button" onClick={() => setCategory(key)} className={`rounded-2xl p-3 text-left ${category === key ? 'bg-violet-600 text-white' : key === 'klaerung' ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-violet-50 text-slate-800'}`}>
+              <p className="text-lg font-black">{categoryCounts[key]}</p>
+              <p className="mt-1 text-[10px] font-black uppercase tracking-wider">{CATEGORY_LABELS[key]}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {(missingReceipts.length > 0 || openQuestions.length > 0) && (
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Aufmerksamkeit zuerst</p>
@@ -226,6 +291,7 @@ export default function DokumentePage() {
 
       <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔎 Beleg, Anbieter oder Notiz suchen" className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold outline-none ring-1 ring-slate-100 focus:ring-violet-300" />
+        {category !== 'all' && <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Kategorie: {CATEGORY_LABELS[category]} · {filteredDocuments.length} Treffer</p>}
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
           <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Alle {documents.length}</FilterButton>
           <FilterButton active={filter === 'attention'} onClick={() => setFilter('attention')}>Offen {openQuestions.length}</FilterButton>
@@ -249,7 +315,7 @@ export default function DokumentePage() {
           ))}
         </section>
       ) : groups.length === 0 ? (
-        <section className="rounded-3xl bg-violet-50 p-5"><p className="font-black text-violet-700">Keine passenden Unterlagen</p><p className="mt-2 text-sm font-semibold text-slate-600">Passe Suche oder Filter an – oder erfasse den nächsten Beleg.</p><Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Beleg erfassen</Link></section>
+        <section className="rounded-3xl bg-violet-50 p-5"><p className="font-black text-violet-700">Keine passenden Unterlagen</p><p className="mt-2 text-sm font-semibold text-slate-600">Passe Suche, Kategorie oder Filter an – oder erfasse den nächsten Beleg.</p><Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Beleg erfassen</Link></section>
       ) : (
         <div className="space-y-3">
           {groups.map(([month, docs]) => {
@@ -277,7 +343,7 @@ export default function DokumentePage() {
                         </div>
                         {doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}
                         <div className="mt-3 flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{attentionIds.has(String(doc.id)) ? 'Rückfrage' : doc.type}</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{CATEGORY_LABELS[categoryForDocument(doc, attentionIds)]}</span>
                           <div className="flex flex-wrap items-center justify-end gap-2">
                             {doc.file_url && (
                               <button type="button" onClick={() => void openDocument(doc)} disabled={openingDocumentId === String(doc.id)} className="rounded-lg bg-white px-2.5 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 disabled:opacity-50">
