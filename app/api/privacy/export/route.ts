@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const TABLES = [
   'expenses',
-  'income',
+  'incomes',
   'projects',
   'categories',
   'tax_summaries',
@@ -16,6 +16,11 @@ const TABLES = [
   'documents',
   'obligations',
   'mileage_log',
+  'merchant_memory',
+  'clients',
+  'client_questions',
+  'client_upload_links',
+  'notifications',
 ]
 
 export async function GET(request: NextRequest) {
@@ -33,11 +38,8 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
   })
 
   const {
@@ -51,12 +53,10 @@ export async function GET(request: NextRequest) {
 
   const exportData: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),
-    user: {
-      id: user.id,
-      email: user.email,
-    },
+    user: { id: user.id, email: user.email },
     tables: {},
     skipped: [],
+    note: 'Der Export enthält nur Datensätze, die über die aktive Nutzer-Session zugreifbar sind. Tabellen, die in einer Installation nicht existieren, werden unter skipped dokumentiert.',
   }
 
   for (const table of TABLES) {
@@ -75,7 +75,9 @@ export async function GET(request: NextRequest) {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': 'attachment; filename="mila-datenexport.json"',
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'no-store, max-age=0',
+      Pragma: 'no-cache',
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }
