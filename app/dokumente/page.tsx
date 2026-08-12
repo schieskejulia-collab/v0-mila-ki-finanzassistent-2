@@ -39,11 +39,29 @@ function getOpenObligations(obligations: any[]) {
   return obligations.filter((item) => !['erledigt', 'bezahlt', 'archiviert'].includes(String(item.status || '').toLowerCase()))
 }
 
-function getStatus({ documentCount, missingReceiptCount, openQuestionCount, openObligationCount, qualityIssueCount }: any) {
-  if (documentCount === 0 && missingReceiptCount === 0) return { label: 'Noch nicht gestartet', description: 'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.', badge: 'bg-slate-100 text-slate-600' }
-  const openCount = missingReceiptCount + openQuestionCount + openObligationCount + qualityIssueCount
-  if (openCount === 0) return { label: 'Bereit zur Übergabe', description: 'Für die aktuell erfassten Unterlagen sind keine organisatorischen Rückfragen mehr offen.', badge: 'bg-emerald-100 text-emerald-700' }
-  return { label: 'In Bearbeitung', description: `${openCount} offene Punkte sollten vor der Übergabe noch geklärt werden.`, badge: 'bg-amber-100 text-amber-700' }
+function getStatus({ documentCount, missingReceiptCount, clarificationCount, openObligationCount }: any) {
+  if (documentCount === 0 && missingReceiptCount === 0) {
+    return {
+      label: 'Noch nicht gestartet',
+      description: 'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.',
+      badge: 'bg-slate-100 text-slate-600',
+    }
+  }
+
+  const openCount = missingReceiptCount + clarificationCount + openObligationCount
+  if (openCount === 0) {
+    return {
+      label: 'Bereit zur Übergabe',
+      description: 'Für die aktuell erfassten Unterlagen sind keine organisatorischen Rückfragen mehr offen.',
+      badge: 'bg-emerald-100 text-emerald-700',
+    }
+  }
+
+  return {
+    label: 'In Bearbeitung',
+    description: `${openCount} organisatorische Punkte sollten vor der Übergabe noch geklärt werden.`,
+    badge: 'bg-amber-100 text-amber-700',
+  }
 }
 
 function expenseTitle(expense: any) {
@@ -102,11 +120,6 @@ function baseCategoryForDocument(doc: any): Exclude<CategoryKey, 'all' | 'klaeru
   return 'sonstiges'
 }
 
-function categoryForDocument(doc: any, attentionIds: Set<string>): CategoryKey {
-  if (attentionIds.has(String(doc.id)) || !checkDocumentQuality(doc).ok) return 'klaerung'
-  return baseCategoryForDocument(doc)
-}
-
 export default function DokumentePage() {
   const { documents, expenses, obligations, deleteDocument, deleteExpense } = useFinance()
   const [dismissedLegacyExpenses, setDismissedLegacyExpenses] = useState<string[]>(loadDismissedLegacyExpenses)
@@ -127,13 +140,28 @@ export default function DokumentePage() {
   const openQuestions = getOpenQuestions(documents)
   const openObligations = getOpenObligations(obligations)
   const attentionIds = new Set(openQuestions.map((doc: any) => String(doc.id)))
+
+  const documentNeedsClarification = (doc: any) =>
+    attentionIds.has(String(doc.id)) || !checkDocumentQuality(doc).ok
+
+  const clarificationCount = documents.filter(documentNeedsClarification).length
   const qualityIssueCount = documents.filter((doc: any) => !checkDocumentQuality(doc).ok).length
-  const status = getStatus({ documentCount: documents.length, missingReceiptCount: missingReceipts.length, openQuestionCount: openQuestions.length, openObligationCount: openObligations.length, qualityIssueCount })
+  const receiptsPresentCount = Math.max(0, expenses.length - missingReceipts.length)
+  const completenessPercent = expenses.length > 0
+    ? Math.round((receiptsPresentCount / expenses.length) * 100)
+    : 0
+
+  const status = getStatus({
+    documentCount: documents.length,
+    missingReceiptCount: missingReceipts.length,
+    clarificationCount,
+    openObligationCount: openObligations.length,
+  })
 
   const categoryCounts = useMemo(() => {
     const counts: Record<CategoryKey, number> = {
       all: documents.length,
-      klaerung: 0,
+      klaerung: clarificationCount,
       einnahmen: 0,
       ausgaben: 0,
       'bank-kasse': 0,
@@ -141,9 +169,13 @@ export default function DokumentePage() {
       steuer: 0,
       sonstiges: 0,
     }
-    for (const doc of documents) counts[categoryForDocument(doc, attentionIds)] += 1
+
+    for (const doc of documents) {
+      counts[baseCategoryForDocument(doc)] += 1
+    }
+
     return counts
-  }, [documents, attentionIds])
+  }, [documents, clarificationCount])
 
   const filteredDocuments = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -151,10 +183,13 @@ export default function DokumentePage() {
       const baseCategory = baseCategoryForDocument(doc)
       const workName = buildDocumentWorkName(doc, CATEGORY_LABELS[baseCategory])
       const text = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.type || ''} ${doc.file_name || ''} ${workName}`.toLowerCase()
+
       if (needle && !text.includes(needle)) return false
-      if (category !== 'all' && categoryForDocument(doc, attentionIds) !== category) return false
-      if (filter === 'questions' || filter === 'attention') return attentionIds.has(String(doc.id)) || !checkDocumentQuality(doc).ok
-      if (filter === 'done') return !attentionIds.has(String(doc.id)) && checkDocumentQuality(doc).ok
+      if (category === 'klaerung' && !documentNeedsClarification(doc)) return false
+      if (category !== 'all' && category !== 'klaerung' && baseCategory !== category) return false
+      if (filter === 'questions') return attentionIds.has(String(doc.id))
+      if (filter === 'attention') return documentNeedsClarification(doc)
+      if (filter === 'done') return !documentNeedsClarification(doc)
       return true
     })
 
@@ -168,7 +203,7 @@ export default function DokumentePage() {
     })
 
     return list
-  }, [documents, query, filter, sort, category, attentionIds])
+  }, [documents, query, filter, sort, category, attentionIds, clarificationCount])
 
   const groups = useMemo(() => {
     const map = new Map<string, any[]>()
@@ -241,15 +276,58 @@ export default function DokumentePage() {
 
       <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
-          <div><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Bearbeitungsstand</p><h2 className="mt-2 text-2xl font-black">{status.label}</h2></div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Bearbeitungsstand</p>
+            <h2 className="mt-2 text-2xl font-black">{status.label}</h2>
+          </div>
           <span className={`rounded-full px-3 py-2 text-xs font-black ${status.badge}`}>{documents.length} Dokumente</span>
         </div>
         <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">{status.description}</p>
         <div className="mt-5 grid grid-cols-3 gap-2">
           <MappeMetric label="Dokumente" value={documents.length} />
-          <MappeMetric label="Fehlende" value={missingReceipts.length} />
-          <MappeMetric label="Belegcheck" value={qualityIssueCount} />
+          <MappeMetric label="Ohne Beleg" value={missingReceipts.length} />
+          <MappeMetric label="Klärung" value={clarificationCount} />
         </div>
+      </section>
+
+      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Vollständigkeitscheck</p>
+            <h2 className="mt-2 text-xl font-black">Zahlung ↔ Beleg</h2>
+          </div>
+          <span className={`rounded-full px-3 py-2 text-xs font-black ${missingReceipts.length === 0 && expenses.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+            {expenses.length > 0 ? `${completenessPercent}%` : 'Noch offen'}
+          </span>
+        </div>
+
+        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
+          Mila gleicht die bereits erfassten Zahlungen organisatorisch mit vorhandenen Belegen ab. Noch kein automatischer Bankkonto-Import.
+        </p>
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <MappeMetric label="Zahlungen" value={expenses.length} />
+          <MappeMetric label="Mit Beleg" value={receiptsPresentCount} />
+          <MappeMetric label="Fehlen" value={missingReceipts.length} />
+        </div>
+
+        {expenses.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
+            Noch keine Zahlungen für den Abgleich erfasst.
+          </p>
+        ) : missingReceipts.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-black text-emerald-700">
+            ✓ Für alle aktuell erfassten Zahlungen ist ein Beleg hinterlegt.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFilter('missing')}
+            className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-4 text-left text-sm font-black text-amber-800 ring-1 ring-amber-100"
+          >
+            {missingReceipts.length} Zahlungen ohne Beleg prüfen →
+          </button>
+        )}
       </section>
 
       <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
@@ -262,10 +340,17 @@ export default function DokumentePage() {
             <button type="button" onClick={() => setCategory('all')} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Zurücksetzen</button>
           )}
         </div>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">Mila sortiert hier als Arbeitsvorschlag. Die Kanzlei-Struktur bleibt später anpassbar.</p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+          Die Kategorie beschreibt, was ein Dokument ist. „Klärung nötig“ bleibt davon getrennt als Arbeitsstatus.
+        </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(['klaerung','einnahmen','ausgaben','bank-kasse','vertraege','steuer','sonstiges'] as CategoryKey[]).map((key) => (
-            <button key={key} type="button" onClick={() => setCategory(key)} className={`rounded-2xl p-3 text-left ${category === key ? 'bg-violet-600 text-white' : key === 'klaerung' ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-violet-50 text-slate-800'}`}>
+            <button
+              key={key}
+              type="button"
+              onClick={() => setCategory(key)}
+              className={`rounded-2xl p-3 text-left ${category === key ? 'bg-violet-600 text-white' : key === 'klaerung' ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-violet-50 text-slate-800'}`}
+            >
               <p className="text-lg font-black">{categoryCounts[key]}</p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-wider">{CATEGORY_LABELS[key]}</p>
             </button>
@@ -273,15 +358,22 @@ export default function DokumentePage() {
         </div>
       </section>
 
-      {(missingReceipts.length > 0 || openQuestions.length > 0 || qualityIssueCount > 0) && (
+      {(missingReceipts.length > 0 || clarificationCount > 0) && (
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Aufmerksamkeit zuerst</p>
-          <h2 className="mt-2 text-xl font-black">{missingReceipts.length + openQuestions.length + qualityIssueCount} Einträge brauchen dich</h2>
+          <h2 className="mt-2 text-xl font-black">Was noch offen ist</h2>
+          <p className="mt-2 text-sm font-semibold text-slate-600">
+            {missingReceipts.length} Zahlungen ohne Beleg · {clarificationCount} Dokumente in Klärung
+          </p>
+
           {missingReceipts.length > 0 && (
             <div className="mt-4 space-y-3">
               {missingReceipts.slice(0, 5).map((expense: any, index: number) => (
                 <div key={expense?.id || `missing-${index}`} className="rounded-2xl bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3"><p className="font-black">{expenseTitle(expense)}</p>{expenseAmount(expense) > 0 && <span className="text-sm font-black">{formatEuro(expenseAmount(expense))}</span>}</div>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-black">{expenseTitle(expense)}</p>
+                    {expenseAmount(expense) > 0 && <span className="text-sm font-black">{formatEuro(expenseAmount(expense))}</span>}
+                  </div>
                   <p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Link href="/neue-buchungen" className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white">Beleg erfassen</Link>
@@ -297,10 +389,10 @@ export default function DokumentePage() {
 
       <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔎 Beleg, Anbieter, Arbeitsname oder Notiz suchen" className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold outline-none ring-1 ring-slate-100 focus:ring-violet-300" />
-        {category !== 'all' && <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Kategorie: {CATEGORY_LABELS[category]} · {filteredDocuments.length} Treffer</p>}
+        {category !== 'all' && <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Ansicht: {CATEGORY_LABELS[category]} · {filteredDocuments.length} Treffer</p>}
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
           <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>Alle {documents.length}</FilterButton>
-          <FilterButton active={filter === 'attention'} onClick={() => setFilter('attention')}>Klärung {categoryCounts.klaerung}</FilterButton>
+          <FilterButton active={filter === 'attention'} onClick={() => setFilter('attention')}>Klärung {clarificationCount}</FilterButton>
           <FilterButton active={filter === 'missing'} onClick={() => setFilter('missing')}>Ohne Beleg {missingReceipts.length}</FilterButton>
           <FilterButton active={filter === 'questions'} onClick={() => setFilter('questions')}>Rückfragen {openQuestions.length}</FilterButton>
           <FilterButton active={filter === 'done'} onClick={() => setFilter('done')}>Fertig</FilterButton>
@@ -317,11 +409,21 @@ export default function DokumentePage() {
       {filter === 'missing' ? (
         <section className="space-y-3">
           {missingReceipts.map((expense: any, index: number) => (
-            <div key={expense?.id || index} className="rounded-2xl bg-white p-4 shadow-sm"><div className="flex justify-between gap-3"><p className="font-black">{expenseTitle(expense)}</p><span className="font-black">{formatEuro(expenseAmount(expense))}</span></div><p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p></div>
+            <div key={expense?.id || index} className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="flex justify-between gap-3">
+                <p className="font-black">{expenseTitle(expense)}</p>
+                <span className="font-black">{formatEuro(expenseAmount(expense))}</span>
+              </div>
+              <p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
+            </div>
           ))}
         </section>
       ) : groups.length === 0 ? (
-        <section className="rounded-3xl bg-violet-50 p-5"><p className="font-black text-violet-700">Keine passenden Unterlagen</p><p className="mt-2 text-sm font-semibold text-slate-600">Passe Suche, Kategorie oder Filter an – oder erfasse den nächsten Beleg.</p><Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Beleg erfassen</Link></section>
+        <section className="rounded-3xl bg-violet-50 p-5">
+          <p className="font-black text-violet-700">Keine passenden Unterlagen</p>
+          <p className="mt-2 text-sm font-semibold text-slate-600">Passe Suche, Kategorie oder Filter an – oder erfasse den nächsten Beleg.</p>
+          <Link href="/neue-buchungen" className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Beleg erfassen</Link>
+        </section>
       ) : (
         <div className="space-y-3">
           {groups.map(([month, docs]) => {
@@ -329,9 +431,13 @@ export default function DokumentePage() {
             return (
               <section key={month} className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
                 <button type="button" onClick={() => setCollapsedMonths((old) => ({ ...old, [month]: !old[month] }))} className="flex w-full items-center justify-between px-5 py-4 text-left">
-                  <div><p className="text-sm font-black capitalize">📁 {month}</p><p className="mt-1 text-xs font-semibold text-slate-400">{docs.length} Unterlagen</p></div>
+                  <div>
+                    <p className="text-sm font-black capitalize">📁 {month}</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">{docs.length} Unterlagen</p>
+                  </div>
                   <span className="font-black text-violet-700">{collapsed ? '▶' : '▼'}</span>
                 </button>
+
                 {!collapsed && (
                   <div className="space-y-2 border-t border-slate-100 p-3">
                     {docs.map((doc: any) => {
@@ -339,6 +445,7 @@ export default function DokumentePage() {
                       const quality = checkDocumentQuality(doc)
                       const workName = buildDocumentWorkName(doc, CATEGORY_LABELS[baseCategory])
                       const originalName = String(doc.fileName || doc.file_name || '')
+                      const needsClarification = documentNeedsClarification(doc)
 
                       return (
                         <article key={doc.id} className="rounded-2xl bg-slate-50 p-4">
@@ -369,8 +476,12 @@ export default function DokumentePage() {
                           </div>
 
                           {doc.note && <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">{doc.note}</p>}
-                          <div className="mt-3 flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-violet-600">{CATEGORY_LABELS[categoryForDocument(doc, attentionIds)]}</span>
+
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full bg-violet-100 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700">{CATEGORY_LABELS[baseCategory]}</span>
+                              {needsClarification && <span className="rounded-full bg-amber-100 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-800">Klärung nötig</span>}
+                            </div>
                             <div className="flex flex-wrap items-center justify-end gap-2">
                               {doc.file_url && (
                                 <button type="button" onClick={() => void openDocument(doc)} disabled={openingDocumentId === String(doc.id)} className="rounded-lg bg-white px-2.5 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 disabled:opacity-50">
