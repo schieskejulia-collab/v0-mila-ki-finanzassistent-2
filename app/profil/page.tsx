@@ -207,19 +207,6 @@ export default function ProfilPage() {
         </Link>
       </section>
 
-      <section className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-          Weitere Module
-        </p>
-
-        <Link
-          href="/fahrtenbuch"
-          className="mt-3 block rounded-2xl bg-white p-4 font-black text-violet-700 shadow-sm"
-        >
-          Fahrtenbuch öffnen →
-        </Link>
-      </section>
-
       <button
         type="button"
         onClick={handleLogout}
