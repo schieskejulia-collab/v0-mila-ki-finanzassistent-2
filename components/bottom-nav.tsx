@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   FolderOpen,
   Home,
+  Inbox,
   PlusCircle,
   UserRound,
   Clock3,
@@ -21,6 +22,11 @@ const navItems = [
     href: '/jetzt',
     label: 'JETZT',
     icon: Zap,
+  },
+  {
+    href: '/eingang',
+    label: 'Eingang',
+    icon: Inbox,
   },
   {
     href: '/neue-buchungen',
