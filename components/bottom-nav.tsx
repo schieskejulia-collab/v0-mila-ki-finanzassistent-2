@@ -8,7 +8,6 @@ import {
   Inbox,
   PlusCircle,
   UserRound,
-  Clock3,
   Zap,
 } from 'lucide-react'
 
@@ -37,11 +36,6 @@ const navItems = [
     href: '/dokumente',
     label: 'Mappe',
     icon: FolderOpen,
-  },
-  {
-    href: '/verpflichtungen',
-    label: 'Offen',
-    icon: Clock3,
   },
   {
     href: '/profil',
