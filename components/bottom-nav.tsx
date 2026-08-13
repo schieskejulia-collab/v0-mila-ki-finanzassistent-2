@@ -8,6 +8,7 @@ import {
   PlusCircle,
   UserRound,
   Clock3,
+  Zap,
 } from 'lucide-react'
 
 const navItems = [
@@ -15,6 +16,11 @@ const navItems = [
     href: '/',
     label: 'Start',
     icon: Home,
+  },
+  {
+    href: '/jetzt',
+    label: 'JETZT',
+    icon: Zap,
   },
   {
     href: '/neue-buchungen',
@@ -68,12 +74,12 @@ export function BottomNav() {
               href={item.href}
               className={
                 isActive
-                  ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-2 py-2 text-white'
-                  : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-2 py-2 text-slate-500'
+                  ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-1 py-2 text-white'
+                  : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-1 py-2 text-slate-500'
               }
             >
               <Icon className="h-5 w-5" strokeWidth={2.2} />
-              <span className="mt-1 truncate text-[9px] font-black">
+              <span className="mt-1 truncate text-[8px] font-black">
                 {item.label}
               </span>
             </Link>
