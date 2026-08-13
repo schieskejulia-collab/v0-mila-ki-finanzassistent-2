@@ -3,126 +3,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Source = 'phone' | 'email' | 'upload' | 'form' | 'manual'
-type Urgency = 'low' | 'normal' | 'high' | 'critical'
-type CaseStatus = 'new' | 'needs_info' | 'standard' | 'human_review' | 'in_progress' | 'waiting' | 'done'
+type CaseStatus = 'new'|'needs_info'|'standard'|'human_review'|'in_progress'|'waiting'|'done'
+type CaseItem = { id:string; source:string; caller_name:string|null; company:string|null; phone:string|null; email:string|null; subject:string; summary:string; urgency:string; category:string; status:CaseStatus; requires_human:boolean; sensitive:boolean; handoff_summary:string|null; handoff_ready:boolean }
+type Task = { id:string; case_id:string|null; title:string; status:string; next_action:string|null }
+type Update = { id:string; case_id:string; kind:'question'|'answer'|'note'|'handoff'; content:string; status:'open'|'waiting'|'done'; created_at:string }
 
-type IntakeCase = {
-  id: string
-  source: Source
-  caller_name: string | null
-  company: string | null
-  phone: string | null
-  email: string | null
-  subject: string
-  summary: string
-  urgency: Urgency
-  category: string
-  status: CaseStatus
-  requires_human: boolean
-  sensitive: boolean
-  created_at: string
-}
+const statusLabel:Record<CaseStatus,string>={new:'Neu',needs_info:'Infos fehlen',standard:'Standardfall',human_review:'Mensch prüfen',in_progress:'In Arbeit',waiting:'Wartet',done:'Erledigt'}
 
-type CoordinationTask = {
-  id: string
-  case_id: string | null
-  title: string
-  contact_name: string | null
-  contact_channel: string | null
-  goal: string | null
-  status: 'open' | 'waiting' | 'blocked' | 'done'
-  due_at: string | null
-  next_action: string | null
-}
-
-const initialForm = { source: 'phone' as Source, caller_name: '', company: '', phone: '', email: '', subject: '', summary: '', urgency: 'normal' as Urgency, category: 'Allgemein', sensitive: false }
-const statusLabels: Record<CaseStatus, string> = { new: 'Neu', needs_info: 'Infos fehlen', standard: 'Standardfall', human_review: 'Mensch prüfen', in_progress: 'In Arbeit', waiting: 'Wartet', done: 'Erledigt' }
-const urgencyLabels: Record<Urgency, string> = { low: 'Niedrig', normal: 'Normal', high: 'Hoch', critical: 'Kritisch' }
-
-function classify(form: typeof initialForm) {
-  const text = `${form.subject} ${form.summary}`.toLowerCase()
-  const sensitive = form.sensitive || /(finanzamt|mahnung|frist|bescheid|kündigung|klage|datenschutz|beschwerde|steuer|prüfung)/i.test(text)
-  const missingInfo = !form.caller_name.trim() || !form.summary.trim()
-  if (missingInfo) return { status: 'needs_info' as CaseStatus, requires_human: true, sensitive }
-  if (form.urgency === 'critical' || form.urgency === 'high' || sensitive) return { status: 'human_review' as CaseStatus, requires_human: true, sensitive }
-  return { status: 'standard' as CaseStatus, requires_human: false, sensitive }
-}
-
-export default function EingangPage() {
-  const [cases, setCases] = useState<IntakeCase[]>([])
-  const [tasks, setTasks] = useState<CoordinationTask[]>([])
-  const [form, setForm] = useState(initialForm)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
-
-  async function load() {
-    setLoading(true)
-    setError('')
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) { setError('Bitte zuerst anmelden.'); setLoading(false); return }
-    const [caseResult, taskResult] = await Promise.all([
-      supabase.from('mila_intake_cases').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('mila_coordination_tasks').select('*').neq('status', 'done').order('due_at', { ascending: true, nullsFirst: false }).limit(30),
-    ])
-    if (caseResult.error || taskResult.error) setError('Mila konnte den Eingang nicht laden. Bitte Supabase-Verbindung und Tabellen prüfen.')
-    setCases((caseResult.data || []) as IntakeCase[])
-    setTasks((taskResult.data || []) as CoordinationTask[])
-    setLoading(false)
-  }
-
-  useEffect(() => { void load() }, [])
-
-  async function saveCase() {
-    if (!form.subject.trim()) { setError('Bitte ein Anliegen eintragen.'); return }
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) { setError('Bitte zuerst anmelden.'); return }
-    setSaving(true); setError(''); setNotice('')
-    const triage = classify(form)
-    const { error: insertError } = await supabase.from('mila_intake_cases').insert({ user_id: userData.user.id, source: form.source, caller_name: form.caller_name.trim() || null, company: form.company.trim() || null, phone: form.phone.trim() || null, email: form.email.trim() || null, subject: form.subject.trim(), summary: form.summary.trim(), urgency: form.urgency, category: form.category.trim() || 'Allgemein', status: triage.status, requires_human: triage.requires_human, sensitive: triage.sensitive })
-    if (insertError) setError('Vorgang konnte nicht gespeichert werden.')
-    else { setNotice(triage.requires_human ? 'Vorgang gespeichert und für menschliche Prüfung markiert.' : 'Standardfall gespeichert und vorsortiert.'); setForm(initialForm); await load() }
-    setSaving(false)
-  }
-
-  async function updateStatus(id: string, status: CaseStatus) {
-    const { error: updateError } = await supabase.from('mila_intake_cases').update({ status }).eq('id', id)
-    if (updateError) setError('Status konnte nicht geändert werden.')
-    else await load()
-  }
-
-  async function createTask(item: IntakeCase) {
-    const { data: userData } = await supabase.auth.getUser()
-    if (!userData.user) { setError('Bitte zuerst anmelden.'); return }
-    const { error: taskError } = await supabase.from('mila_coordination_tasks').insert({ user_id: userData.user.id, case_id: item.id, title: `Nachfassen: ${item.subject}`, contact_name: item.caller_name || item.company, contact_channel: item.email || item.phone, goal: item.summary || item.subject, status: 'open', next_action: item.requires_human ? 'Menschliche oder fachliche Prüfung organisieren' : 'Nächsten Schritt koordinieren' })
-    if (taskError) setError('Koordinationsaufgabe konnte nicht angelegt werden.')
-    else { setNotice('Koordinationsaufgabe angelegt.'); await load() }
-  }
-
-  const stats = useMemo(() => ({ open: cases.filter((item) => item.status !== 'done').length, human: cases.filter((item) => item.requires_human && item.status !== 'done').length, critical: cases.filter((item) => item.urgency === 'critical' && item.status !== 'done').length, tasks: tasks.length }), [cases, tasks])
-
-  return (
-    <main className="min-h-screen bg-[#fbf9ff] px-4 pb-40 pt-5 text-slate-950">
-      <header><p className="text-[11px] font-black uppercase tracking-[0.22em] text-violet-500">Mila Intake · Triage · Koordination</p><h1 className="mt-1 text-3xl font-black tracking-tight">Der zentrale Eingang</h1><p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-500">Anrufe, E-Mails, Uploads und manuelle Anliegen werden strukturiert erfasst, vorsortiert und sauber an Mensch oder nächsten Prozess übergeben.</p></header>
-      <section className="mt-5 grid grid-cols-2 gap-3">{[['Offene Vorgänge', stats.open], ['Mensch prüfen', stats.human], ['Kritisch', stats.critical], ['Koordination', stats.tasks]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"><p className="text-2xl font-black text-violet-700">{value}</p><p className="mt-1 text-xs font-black text-slate-500">{label}</p></div>)}</section>
-      <section className="mt-5 rounded-3xl border border-violet-100 bg-white p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-500">Neuer Eingang</p><h2 className="mt-1 text-xl font-black">Anliegen aufnehmen</h2></div><span className="rounded-full bg-violet-50 px-3 py-1 text-[10px] font-black text-violet-700">Voice-ready</span></div>
-        <div className="mt-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3"><select className="rounded-xl border border-slate-200 p-3 text-sm" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value as Source })}><option value="phone">Telefon</option><option value="email">E-Mail</option><option value="upload">Upload</option><option value="form">Formular</option><option value="manual">Manuell</option></select><select className="rounded-xl border border-slate-200 p-3 text-sm" value={form.urgency} onChange={(e) => setForm({ ...form, urgency: e.target.value as Urgency })}><option value="low">Niedrig</option><option value="normal">Normal</option><option value="high">Hoch</option><option value="critical">Kritisch</option></select></div>
-          <div className="grid grid-cols-2 gap-3"><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Name / Mandant" value={form.caller_name} onChange={(e) => setForm({ ...form, caller_name: e.target.value })} /><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Unternehmen" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-3"><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Telefon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><input className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="E-Mail" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <input className="w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Anliegen, z. B. Schreiben vom Finanzamt erhalten" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
-          <input className="w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Kategorie, z. B. Unterlagen, Rückruf, Frist, Technik" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-          <textarea className="min-h-28 w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Was ist passiert? Was möchte die Person? Welche Daten oder Fristen wurden genannt?" value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
-          <label className="flex items-center gap-3 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900"><input type="checkbox" checked={form.sensitive} onChange={(e) => setForm({ ...form, sensitive: e.target.checked })} />Sensibler oder fachlich kritischer Vorgang – Mila entscheidet nicht selbst</label>
-          <button type="button" onClick={saveCase} disabled={saving} className="w-full rounded-xl bg-violet-600 py-3 font-black text-white disabled:opacity-50">{saving ? 'Wird vorsortiert...' : 'Erfassen & vorsortieren'}</button>
-        </div>
-      </section>
-      {notice && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</p>}{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}
-      <section className="mt-7"><div className="flex items-end justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Triage</p><h2 className="text-xl font-black">Vorgänge</h2></div><span className="text-xs font-bold text-slate-400">{cases.length} geladen</span></div><div className="mt-3 space-y-3">{loading ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Eingang wird geladen...</div> : cases.length === 0 ? <div className="rounded-2xl bg-white p-5 font-bold text-slate-500">Noch keine Vorgänge.</div> : cases.map((item) => <article key={item.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-500">{item.source} · {item.category}</p><h3 className="mt-1 text-base font-black">{item.subject}</h3><p className="mt-1 text-sm font-semibold text-slate-500">{item.caller_name || item.company || 'Unbekannter Kontakt'}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${item.urgency === 'critical' ? 'bg-rose-100 text-rose-700' : item.urgency === 'high' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{urgencyLabels[item.urgency]}</span></div>{item.summary && <p className="mt-3 text-sm leading-6 text-slate-600">{item.summary}</p>}<div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-black text-violet-700">{statusLabels[item.status]}</span>{item.requires_human && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">Mensch erforderlich</span>}{item.sensitive && <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-700">Sensibel</span>}</div><div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => createTask(item)} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Koordinieren</button><button type="button" onClick={() => updateStatus(item.id, 'in_progress')} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">In Arbeit</button><button type="button" onClick={() => updateStatus(item.id, 'waiting')} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">Wartet</button><button type="button" onClick={() => updateStatus(item.id, 'done')} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">Erledigt</button></div></article>)}</div></section>
-      <section className="mt-7 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Schnittstellen-Übernahme</p><h2 className="mt-1 text-xl font-black">Koordination</h2><p className="mt-2 text-sm font-semibold leading-6 text-slate-500">Offene Aufgaben aus Kunden-, Kanzlei- und Partnerkommunikation bleiben hier sichtbar, bis der Vorgang wirklich abgeschlossen ist.</p><div className="mt-4 space-y-3">{tasks.length === 0 ? <p className="rounded-xl bg-slate-50 p-3 text-sm font-bold text-slate-500">Keine offenen Koordinationsaufgaben.</p> : tasks.map((task) => <div key={task.id} className="rounded-2xl border border-slate-100 p-3"><p className="font-black">{task.title}</p>{task.contact_name && <p className="mt-1 text-sm font-semibold text-slate-500">{task.contact_name}</p>}{task.next_action && <p className="mt-2 text-sm text-slate-600">Nächster Schritt: {task.next_action}</p>}</div>)}</div></section>
-    </main>
-  )
-}
+export default function EingangPage(){
+ const [cases,setCases]=useState<CaseItem[]>([]),[tasks,setTasks]=useState<Task[]>([]),[updates,setUpdates]=useState<Update[]>([])
+ const [selected,setSelected]=useState<string|null>(null),[text,setText]=useState(''),[handoff,setHandoff]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true)
+ async function load(){setLoading(true);setError('');const {data:u}=await supabase.auth.getUser();if(!u.user){setError('Bitte zuerst anmelden.');setLoading(false);return}const [c,t,x]=await Promise.all([supabase.from('mila_intake_cases').select('*').order('created_at',{ascending:false}).limit(50),supabase.from('mila_coordination_tasks').select('*').order('created_at',{ascending:false}).limit(100),supabase.from('mila_case_updates').select('*').order('created_at',{ascending:true}).limit(300)]);if(c.error||t.error||x.error)setError('Mila konnte den Vorgangskreis nicht vollständig laden.');setCases((c.data||[]) as CaseItem[]);setTasks((t.data||[]) as Task[]);setUpdates((x.data||[]) as Update[]);setLoading(false)}
+ useEffect(()=>{void load()},[])
+ const current=cases.find(c=>c.id===selected)||null
+ const currentUpdates=updates.filter(x=>x.case_id===selected),currentTasks=tasks.filter(x=>x.case_id===selected)
+ const stats=useMemo(()=>({open:cases.filter(c=>c.status!=='done').length,questions:updates.filter(x=>x.kind==='question'&&x.status!=='done').length,follow:tasks.filter(t=>t.status!=='done').length,ready:cases.filter(c=>c.handoff_ready&&c.status!=='done').length}),[cases,tasks,updates])
+ async function addUpdate(kind:Update['kind']){if(!current||!text.trim())return;const {data:u}=await supabase.auth.getUser();if(!u.user)return;const status=kind==='question'?'waiting':'done';const {error:e}=await supabase.from('mila_case_updates').insert({user_id:u.user.id,case_id:current.id,kind,content:text.trim(),status});if(!e&&kind==='question')await supabase.from('mila_intake_cases').update({status:'waiting'}).eq('id',current.id);if(e)setError('Eintrag konnte nicht gespeichert werden.');else{setText('');setNotice(kind==='question'?'Rückfrage gespeichert – Vorgang wartet auf Antwort.':'Eintrag gespeichert.');await load()}}
+ async function followUp(){if(!current)return;const {data:u}=await supabase.auth.getUser();if(!u.user)return;const existing=currentTasks.some(t=>t.status!=='done');if(existing){setNotice('Für diesen Vorgang gibt es bereits eine offene Nachfass-Aufgabe.');return}const {error:e}=await supabase.from('mila_coordination_tasks').insert({user_id:u.user.id,case_id:current.id,title:`Nachfassen: ${current.subject}`,contact_name:current.caller_name||current.company,contact_channel:current.email||current.phone,goal:current.summary||current.subject,status:'open',next_action:'Offene Rückfrage oder nächsten Schritt nachfassen'});if(e)setError('Nachfassen konnte nicht angelegt werden.');else{setNotice('Nachfass-Aufgabe angelegt.');await load()}}
+ async function prepareHandoff(){if(!current)return;const openQuestions=currentUpdates.filter(x=>x.kind==='question'&&x.status!=='done');if(openQuestions.length){setError('Es gibt noch offene Rückfragen. Erst klären, dann übergeben.');return}const summary=handoff.trim()||`Anliegen: ${current.subject}\nAusgangslage: ${current.summary||'–'}\nKontakt: ${current.caller_name||current.company||'–'}\nDokumentation: ${currentUpdates.filter(x=>x.kind!=='handoff').map(x=>`${x.kind}: ${x.content}`).join(' | ')||'keine Ergänzungen'}\nOffene Koordination: ${currentTasks.filter(t=>t.status!=='done').map(t=>t.title).join(', ')||'keine'}`;const {error:e}=await supabase.from('mila_intake_cases').update({handoff_summary:summary,handoff_ready:true,status:'human_review'}).eq('id',current.id);if(e)setError('Übergabe konnte nicht vorbereitet werden.');else{setHandoff('');setNotice('Übergabe ist vorbereitet und wartet auf menschliche Prüfung.');await load()}}
+ async function finish(){if(!current)return;if(!current.handoff_ready){setError('Bitte zuerst eine Übergabe vorbereiten.');return}const open=currentTasks.some(t=>t.status!=='done')||currentUpdates.some(x=>x.kind==='question'&&x.status!=='done');if(open){setError('Noch nicht erledigen: Es gibt offene Rückfragen oder Nachfass-Aufgaben.');return}const {error:e}=await supabase.from('mila_intake_cases').update({status:'done',completed_at:new Date().toISOString()}).eq('id',current.id);if(e)setError('Vorgang konnte nicht abgeschlossen werden.');else{setNotice('Kreis geschlossen: Vorgang vollständig erledigt.');await load()}}
+ async function closeQuestion(q:Update){const {error:e}=await supabase.from('mila_case_updates').update({status:'done'}).eq('id',q.id);if(!e)await load()}
+ async function closeTask(t:Task){const {error:e}=await supabase.from('mila_coordination_tasks').update({status:'done'}).eq('id',t.id);if(!e)await load()}
+ return <main className="min-h-screen bg-[#fbf9ff] px-4 pb-40 pt-5 text-slate-950"><header><p className="text-[11px] font-black uppercase tracking-[.22em] text-violet-500">Mila Vorgangskreis</p><h1 className="mt-1 text-3xl font-black">Vom Eingang bis erledigt</h1><p className="mt-2 text-sm font-semibold leading-6 text-slate-500">Rückfragen, Nachfassen und Übergabe bleiben am selben Vorgang – bis wirklich nichts mehr offen ist.</p></header><section className="mt-5 grid grid-cols-2 gap-3">{[['Offene Vorgänge',stats.open],['Offene Rückfragen',stats.questions],['Nachfassen',stats.follow],['Übergabebereit',stats.ready]].map(([l,v])=><div key={String(l)} className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-2xl font-black text-violet-700">{v}</p><p className="text-xs font-black text-slate-500">{l}</p></div>)}</section>{notice&&<p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</p>}{error&&<p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}<section className="mt-6"><h2 className="text-xl font-black">Vorgänge</h2><div className="mt-3 space-y-2">{loading?<p className="rounded-2xl bg-white p-4">Lädt…</p>:cases.map(c=><button key={c.id} onClick={()=>{setSelected(c.id);setHandoff(c.handoff_summary||'');setError('')}} className={`w-full rounded-2xl border p-4 text-left shadow-sm ${selected===c.id?'border-violet-400 bg-violet-50':'border-slate-100 bg-white'}`}><div className="flex justify-between gap-2"><div><p className="text-[10px] font-black uppercase text-violet-500">{c.source} · {c.category}</p><p className="font-black">{c.subject}</p><p className="text-xs font-semibold text-slate-500">{c.caller_name||c.company||'Kontakt nicht angegeben'}</p></div><span className="h-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black">{statusLabel[c.status]}</span></div></button>)}</div></section>{current&&<section className="mt-6 rounded-3xl border border-violet-100 bg-white p-4 shadow-sm"><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">Aktiver Vorgang</p><h2 className="mt-1 text-xl font-black">{current.subject}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{current.summary||'Keine Zusammenfassung.'}</p><div className="mt-5"><h3 className="font-black">Rückfragen & Verlauf</h3><div className="mt-2 space-y-2">{currentUpdates.length===0?<p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">Noch keine Einträge.</p>:currentUpdates.map(x=><div key={x.id} className="rounded-xl bg-slate-50 p-3"><div className="flex justify-between gap-2"><span className="text-[10px] font-black uppercase text-violet-600">{x.kind}</span>{x.kind==='question'&&x.status!=='done'&&<button onClick={()=>closeQuestion(x)} className="text-xs font-black text-emerald-700">Als geklärt markieren</button>}</div><p className="mt-1 text-sm font-semibold">{x.content}</p></div>)}</div><textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Rückfrage, Antwort oder interne Notiz…" className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm"/><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={()=>addUpdate('question')} className="rounded-xl bg-amber-50 p-2 text-xs font-black text-amber-800">Rückfrage</button><button onClick={()=>addUpdate('answer')} className="rounded-xl bg-emerald-50 p-2 text-xs font-black text-emerald-800">Antwort</button><button onClick={()=>addUpdate('note')} className="rounded-xl bg-slate-100 p-2 text-xs font-black">Notiz</button></div></div><div className="mt-6"><div className="flex items-center justify-between"><h3 className="font-black">Nachfassen</h3><button onClick={followUp} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Aufgabe anlegen</button></div><div className="mt-2 space-y-2">{currentTasks.length===0?<p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">Keine Aufgabe.</p>:currentTasks.map(t=><div key={t.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3"><div><p className="text-sm font-black">{t.title}</p><p className="text-xs text-slate-500">{t.next_action}</p></div>{t.status!=='done'&&<button onClick={()=>closeTask(t)} className="text-xs font-black text-emerald-700">Erledigt</button>}</div>)}</div></div><div className="mt-6"><h3 className="font-black">Übergabe</h3><p className="mt-1 text-xs font-semibold text-slate-500">Mila bündelt den Vorgang. Fachliche Entscheidungen bleiben beim Menschen.</p><textarea value={handoff} onChange={e=>setHandoff(e.target.value)} placeholder="Optional eigene Übergabe-Zusammenfassung. Leer lassen = Mila erstellt sie aus dem Vorgang." className="mt-3 min-h-28 w-full rounded-xl border border-slate-200 p-3 text-sm"/><button onClick={prepareHandoff} className="mt-2 w-full rounded-xl bg-violet-600 py-3 text-sm font-black text-white">Übergabe vorbereiten</button>{current.handoff_ready&&current.handoff_summary&&<div className="mt-3 whitespace-pre-wrap rounded-xl bg-violet-50 p-3 text-sm font-semibold text-violet-950">{current.handoff_summary}</div>}<button onClick={finish} className="mt-3 w-full rounded-xl bg-emerald-600 py-3 text-sm font-black text-white">Vorgang vollständig erledigen</button></div></section>}</main>
