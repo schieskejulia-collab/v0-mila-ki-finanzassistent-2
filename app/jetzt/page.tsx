@@ -67,17 +67,101 @@ function inferDueAt(text: string) {
 }
 
 function inferWho(text: string) {
+  const customerMatch = text.match(/\b(?:für|bei|von)\s+(Kund(?:e|in)\s+[A-Z0-9ÄÖÜ][\wÄÖÜäöüß.-]*)/i)
+  if (customerMatch?.[1]) return customerMatch[1].trim()
+
+  const known = text.match(/\b(Jobcenter|Finanzamt|Krankenkasse|Schule|Kita|Jugendamt|Steuerkanzlei|Steuerberater(?:in)?)\b/i)
+  if (known?.[1]) return known[1].trim()
+
   const patterns = [
     /(?:vom|von der|von|bei|für)\s+([A-ZÄÖÜ][\wÄÖÜäöüß.-]*(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß.-]*){0,2})/,
-    /^(Jobcenter|Finanzamt|Krankenkasse|Schule|Kita|Kunde|Kundin)\b/i,
   ]
 
   for (const pattern of patterns) {
     const match = text.match(pattern)
     if (match?.[1]) return match[1].trim()
-    if (match?.[0] && pattern === patterns[1]) return match[0].trim()
   }
+
   return ''
+}
+
+function cleanObject(value: string) {
+  return value
+    .replace(/\b(?:heute|morgen|bis\s+\w+|dringend|noch|mal|bitte)\b/gi, '')
+    .replace(/[.!?]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function inferStructuredTask(text: string, who: string) {
+  const clean = text.trim()
+  const lower = clean.toLowerCase()
+
+  const forgotMatch = clean.match(/(?:ich\s+)?(?:hab(?:e)?\s+)?vergessen[,]?\s+(.+)/i)
+  const missingMatch = clean.match(/(?:es\s+)?fehl(?:t|en)\s+(.+)/i)
+
+  if (forgotMatch?.[1]) {
+    const forgotten = cleanObject(forgotMatch[1])
+
+    if (/mit\s*zu\s*berechnen|abzurechnen|berechnen|abrechnen/i.test(forgotten)) {
+      const object = cleanObject(
+        forgotten
+          .replace(/\b(?:mit\s*zu\s*berechnen|abzurechnen|zu\s*berechnen|berechnen|abrechnen)\b.*$/i, '')
+          .replace(new RegExp(`\\bfür\\s+${who.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'), '')
+      ) || 'fehlende Positionen'
+
+      return {
+        what: `${object} prüfen und korrekt nachtragen`,
+        missing: [object, 'betroffene Abrechnung'],
+        nextStep: `${object} öffnen → betroffene Abrechnung prüfen → fehlende Positionen nachtragen → Abschluss kontrollieren`,
+      }
+    }
+
+    return {
+      what: `${forgotten} nachholen`,
+      missing: [forgotten],
+      nextStep: `${forgotten} prüfen und als nächsten Arbeitsschritt erledigen`,
+    }
+  }
+
+  if (missingMatch?.[1]) {
+    const missing = cleanObject(missingMatch[1])
+    return {
+      what: `${missing} beschaffen und Vorgang vervollständigen`,
+      missing: [missing],
+      nextStep: `${missing} anfordern oder heraussuchen → Vorgang ergänzen → Vollständigkeit prüfen`,
+    }
+  }
+
+  if (/\bschreiben|antworten|rückmeldung|mail|e-mail\b/i.test(lower)) {
+    return {
+      what: who ? `Rückmeldung an ${who} vorbereiten und senden` : 'Rückmeldung vorbereiten und senden',
+      missing: [],
+      nextStep: 'Sachverhalt prüfen → nötige Unterlagen bereitlegen → Nachricht formulieren → vor Versand kontrollieren',
+    }
+  }
+
+  if (/\bbezahlen|zahlung|überweisen\b/i.test(lower)) {
+    return {
+      what: 'Zahlung prüfen und ausführen',
+      missing: [],
+      nextStep: 'Betrag und Empfänger prüfen → Zahlungsdaten öffnen → Zahlung ausführen → Nachweis ablegen',
+    }
+  }
+
+  if (/\bnachreichen|einreichen|hochladen|senden\b/i.test(lower)) {
+    return {
+      what: 'Unterlagen vervollständigen und übermitteln',
+      missing: [],
+      nextStep: 'Benötigte Unterlagen prüfen → fehlende Dokumente ergänzen → vollständig übermitteln → Versand bestätigen',
+    }
+  }
+
+  return {
+    what: clean,
+    missing: [],
+    nextStep: 'Vorgang kurz prüfen → konkreten nächsten Schritt festlegen → erledigen → Abschluss kontrollieren',
+  }
 }
 
 function formatDue(value: string) {
@@ -142,10 +226,14 @@ export default function JetztPage() {
     const clean = raw.trim()
     if (!clean) return
 
-    if (!what.trim()) setWhat(clean)
-    if (!who.trim()) setWho(inferWho(clean))
-    if (!dueAt) setDueAt(inferDueAt(clean))
-    if (!nextStep.trim()) setNextStep('Vorgang prüfen und nächsten konkreten Schritt erledigen')
+    const inferredWho = inferWho(clean)
+    const structured = inferStructuredTask(clean, inferredWho)
+
+    setWho(inferredWho)
+    setWhat(structured.what)
+    setDueAt(inferDueAt(clean))
+    setMissingText(structured.missing.join(', '))
+    setNextStep(structured.nextStep)
     setShowDetails(true)
   }
 
