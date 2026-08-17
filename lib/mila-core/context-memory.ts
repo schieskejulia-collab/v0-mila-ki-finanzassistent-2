@@ -11,7 +11,9 @@ function rankSuggestions(suggestions: MilaContextSuggestion[]): MilaContextSugge
   return sorted.map((suggestion, index) => ({
     ...suggestion,
     recommended: index === 0 && suggestion.score >= 70,
-    autoApply: suggestion.source.includes("confirmed_pattern") && suggestion.score >= 92,
+    autoApply:
+      (suggestion.source.includes("confirmed_pattern") && suggestion.score >= 92) ||
+      (suggestion.source.includes("input") && suggestion.source.includes("project") && suggestion.score >= 92),
   }))
 }
 
@@ -28,18 +30,40 @@ export function buildContextSuggestions(params: {
 
   if (field === "businessPurpose") {
     const looksLikeFuel = includesAny(text, ["tank", "shell", "aral", "esso", "kraftstoff", "diesel", "benzin", "beleg"])
+    const explicitlyMentionedProjects = memory.projects.filter((project) => {
+      if (!project.active) return false
+      const aliases = (project.aliases ?? []).map(normalize)
+      return includesAny(text, [normalize(project.name), ...aliases])
+    })
 
     for (const prior of memory.confirmedPatterns.filter((item) => item.field === field)) {
       const confirmations = prior.confirmations ?? 1
+      const alignsWithExplicitProject =
+        explicitlyMentionedProjects.length === 0 ||
+        explicitlyMentionedProjects.some((project) => {
+          const projectName = normalize(project.name)
+          return (
+            normalize(prior.value).includes(projectName) ||
+            (prior.evidenceLabels ?? []).some((label) => normalize(label).includes(projectName))
+          )
+        })
+
+      const learnedScore = 88 + Math.min(confirmations * 4, 12)
+      const score = alignsWithExplicitProject ? learnedScore : 45
+
       suggestions.push({
         field,
         label: prior.label,
         value: prior.value,
-        hint: confirmations > 1 ? `${confirmations}× zuvor bestätigt` : "zuvor bestätigt",
-        confidence: "high",
+        hint: alignsWithExplicitProject
+          ? confirmations > 1
+            ? `${confirmations}× zuvor bestätigt`
+            : "zuvor bestätigt"
+          : "gelerntes Muster – aktueller Text nennt ein anderes Projekt",
+        confidence: alignsWithExplicitProject ? "high" : "low",
         source: ["confirmed_pattern"],
         evidenceLabels: prior.evidenceLabels?.length ? prior.evidenceLabels : [prior.label],
-        score: 88 + Math.min(confirmations * 4, 12),
+        score,
       })
     }
 
@@ -47,22 +71,35 @@ export function buildContextSuggestions(params: {
       const vehicle = memory.vehicles.find((item) => item.active)
       for (const project of memory.projects.filter((item) => item.active).slice(0, 3)) {
         const aliases = (project.aliases ?? []).map(normalize)
-        const projectMentioned = includesAny(text, [project.name.toLowerCase(), ...aliases])
+        const projectMentioned = includesAny(text, [normalize(project.name), ...aliases])
         const contactMatch = memory.contacts.some((contact) => {
           const surname = normalize(contact.name).replace("herr ", "").replace("frau ", "")
           return surname.length > 2 && normalize(project.name).includes(surname)
         })
+
         suggestions.push({
           field,
           label: project.name,
           value: vehicle
             ? `Tankfüllung für ${vehicle.name} im Zusammenhang mit ${project.name}`
             : `Tankfüllung im Zusammenhang mit ${project.name}`,
-          hint: vehicle ? `${vehicle.name} · aktives Projekt` : "aktives Projekt",
+          hint: projectMentioned
+            ? vehicle
+              ? `${vehicle.name} · im aktuellen Text genannt`
+              : "im aktuellen Text genannt"
+            : vehicle
+              ? `${vehicle.name} · aktives Projekt`
+              : "aktives Projekt",
           confidence: projectMentioned || contactMatch ? "high" : "medium",
-          source: vehicle ? ["project", "vehicle"] : ["project"],
+          source: projectMentioned
+            ? vehicle
+              ? ["input", "project", "vehicle"]
+              : ["input", "project"]
+            : vehicle
+              ? ["project", "vehicle"]
+              : ["project"],
           evidenceLabels: vehicle ? [project.name, vehicle.name] : [project.name],
-          score: 60 + (vehicle ? 8 : 0) + (projectMentioned ? 20 : 0) + (contactMatch ? 8 : 0),
+          score: 60 + (vehicle ? 8 : 0) + (projectMentioned ? 28 : 0) + (contactMatch ? 8 : 0),
         })
       }
 
