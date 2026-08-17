@@ -23,9 +23,9 @@ type ProcessResponse = {
   }
 }
 
-type AnsweredQuestion = { question: string; answer: string }
+type AnsweredQuestion = { question: string; answer: string; automatic?: boolean }
 
-const DEMO_MEMORY: MilaMemoryContext = {
+const INITIAL_DEMO_MEMORY: MilaMemoryContext = {
   client: { id: "demo-client", name: "Musterbetrieb" },
   projects: [
     { id: "project-mueller", name: "Baustelle Müller", active: true },
@@ -35,9 +35,7 @@ const DEMO_MEMORY: MilaMemoryContext = {
     { id: "vehicle-2", name: "Transporter 2", active: true },
     { id: "vehicle-1", name: "Transporter 1", active: false },
   ],
-  contacts: [
-    { id: "contact-mueller", name: "Herr Müller", active: true },
-  ],
+  contacts: [{ id: "contact-mueller", name: "Herr Müller", active: true }],
   confirmedPatterns: [],
 }
 
@@ -53,15 +51,16 @@ export default function MilaCorePage() {
   const [message, setMessage] = useState("")
   const [demoMode, setDemoMode] = useState(false)
   const [showCustomAnswer, setShowCustomAnswer] = useState(false)
+  const [memory, setMemory] = useState<MilaMemoryContext>(INITIAL_DEMO_MEMORY)
 
-  function makeDemoPlan(currentText: string, extraFacts: Record<string, unknown>, currentCaseId?: string): ProcessResponse {
+  function makeDemoPlan(currentText: string, extraFacts: Record<string, unknown>, currentCaseId?: string, memoryOverride?: MilaMemoryContext): ProcessResponse {
     const demoCaseId = currentCaseId || `demo-${Date.now()}`
     const demoPlan = buildProcessPlan({
       caseId: demoCaseId,
       source: "manual",
       text: currentText,
       fields: extraFacts,
-      memory: DEMO_MEMORY,
+      memory: memoryOverride ?? memory,
       target: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" },
     })
     return {
@@ -72,16 +71,79 @@ export default function MilaCorePage() {
     }
   }
 
+  function learnSuggestion(question: { field: string; question: string }, suggestion?: MilaContextSuggestion) {
+    if (!suggestion || suggestion.source.includes("default_option")) return
+
+    setMemory((current) => {
+      const existing = current.confirmedPatterns.find(
+        (item) => item.field === question.field && item.value === suggestion.value,
+      )
+
+      if (existing) {
+        return {
+          ...current,
+          confirmedPatterns: current.confirmedPatterns.map((item) =>
+            item.id === existing.id
+              ? {
+                  ...item,
+                  confirmations: (item.confirmations ?? 1) + 1,
+                  confidence: "high",
+                  lastConfirmedAt: new Date().toISOString(),
+                  evidenceLabels: suggestion.evidenceLabels,
+                }
+              : item,
+          ),
+        }
+      }
+
+      return {
+        ...current,
+        confirmedPatterns: [
+          {
+            id: `learned-${Date.now()}`,
+            field: question.field,
+            label: suggestion.label,
+            value: suggestion.value,
+            confidence: "high",
+            confirmations: 1,
+            evidenceLabels: suggestion.evidenceLabels,
+            lastConfirmedAt: new Date().toISOString(),
+          },
+          ...current.confirmedPatterns,
+        ],
+      }
+    })
+  }
+
   async function runProcess(extraFacts: Record<string, unknown> = facts, textOverride?: string) {
-    setLoading(true); setMessage(""); setApproved(false); setShowCustomAnswer(false)
+    setLoading(true)
+    setMessage("")
+    setApproved(false)
+    setShowCustomAnswer(false)
     const currentText = textOverride ?? text
+
     try {
       if (demoMode) {
-        const json = makeDemoPlan(currentText, extraFacts, caseId)
+        let json = makeDemoPlan(currentText, extraFacts, caseId)
+        const question = json.data?.questions?.[0]
+        const trusted = json.data?.suggestions?.find((item) => item.autoApply)
+
+        if (question && trusted && question.field !== "processType") {
+          const nextFacts = { ...extraFacts, [question.field]: trusted.value }
+          setFacts(nextFacts)
+          setAnswered((current) => [
+            ...current,
+            { question: question.question, answer: trusted.value, automatic: true },
+          ])
+          setMessage(`Automatisch übernommen ✓ Mila kennt diese Zuordnung aus deiner bisherigen Bestätigung.`)
+          json = makeDemoPlan(currentText, nextFacts, caseId)
+        }
+
         setPlan(json)
         if (json.caseId) setCaseId(json.caseId)
         return
       }
+
       const res = await fetch("/api/mila/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,6 +155,7 @@ export default function MilaCorePage() {
           target: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" },
         }),
       })
+
       if (res.status === 401) {
         setDemoMode(true)
         const json = makeDemoPlan(currentText, extraFacts)
@@ -101,6 +164,7 @@ export default function MilaCorePage() {
         setMessage("Preview-Demomodus aktiv: Vorschläge stammen aus einem sichtbaren Demo-Kontext. Es werden keine Daten in Supabase gespeichert.")
         return
       }
+
       const json = (await res.json()) as ProcessResponse
       setPlan(json)
       if (json.caseId) setCaseId(json.caseId)
@@ -112,13 +176,16 @@ export default function MilaCorePage() {
     }
   }
 
-  async function submitAnswer(value?: string) {
+  async function submitAnswer(value?: string, suggestion?: MilaContextSuggestion) {
     const question = plan?.data?.questions?.[0]
     const cleanedAnswer = (value ?? answer).trim()
     if (!question || !cleanedAnswer) return
-    setAnswer(""); setShowCustomAnswer(false)
+
+    setAnswer("")
+    setShowCustomAnswer(false)
     setAnswered((current) => [...current, { question: question.question, answer: cleanedAnswer }])
-    setMessage("Übernommen ✓ Mila prüft den Vorgang neu …")
+    setMessage("Übernommen ✓ Mila merkt sich die bestätigte Zuordnung und prüft neu …")
+    learnSuggestion(question, suggestion)
 
     if (question.field === "processType") {
       const clarifiedText = `${text}. ${cleanedAnswer}`
@@ -126,6 +193,7 @@ export default function MilaCorePage() {
       await runProcess(facts, clarifiedText)
       return
     }
+
     const nextFacts = { ...facts, [question.field]: cleanedAnswer }
     setFacts(nextFacts)
     await runProcess(nextFacts)
@@ -133,7 +201,8 @@ export default function MilaCorePage() {
 
   async function approveHandoff() {
     if (!caseId) return
-    setLoading(true); setMessage("")
+    setLoading(true)
+    setMessage("")
     try {
       if (demoMode) {
         setApproved(true)
@@ -160,9 +229,28 @@ export default function MilaCorePage() {
   }
 
   function clearCaseState() {
-    setCaseId(undefined); setPlan(null); setFacts({}); setAnswered([]); setAnswer(""); setApproved(false); setMessage(""); setShowCustomAnswer(false)
+    setCaseId(undefined)
+    setPlan(null)
+    setFacts({})
+    setAnswered([])
+    setAnswer("")
+    setApproved(false)
+    setMessage("")
+    setShowCustomAnswer(false)
   }
-  function reset() { clearCaseState(); setText("Tankbeleg 83,42 €") }
+
+  function reset() {
+    clearCaseState()
+    setText("Tankbeleg 83,42 €")
+  }
+
+  function resetLearning() {
+    clearCaseState()
+    setMemory(INITIAL_DEMO_MEMORY)
+    setText("Tankbeleg 83,42 €")
+    setMessage("Gelerntes Demo-Muster wurde zurückgesetzt.")
+  }
+
   function handleTextChange(value: string) {
     if (caseId || plan || Object.keys(facts).length > 0) clearCaseState()
     setText(value)
@@ -171,6 +259,7 @@ export default function MilaCorePage() {
   const question = plan?.data?.questions?.[0]
   const handoffReady = Boolean(plan?.data?.handoffReady)
   const suggestions = plan?.data?.suggestions ?? []
+  const learnedCount = memory.confirmedPatterns.length
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900">
@@ -183,13 +272,17 @@ export default function MilaCorePage() {
             </div>
             {demoMode && <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">Preview-Demo</span>}
           </div>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Mila kombiniert den Eingang mit vorhandenem Kontext und zeigt, woher ein Vorschlag kommt. Du bestätigst nur noch, wenn er passt.</p>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">Mila rankt vorhandenen Kontext, merkt sich bestätigte Zuordnungen und darf ein stark gelerntes Muster beim nächsten ähnlichen Vorgang selbst übernehmen.</p>
         </header>
 
         {demoMode && (
           <section className="rounded-3xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">
             <p className="font-semibold">Demo-Kontext, den Mila wirklich kennt</p>
             <p className="mt-2">Aktive Projekte: Baustelle Müller, Auftrag Schmidt · Fahrzeug: Transporter 2 · Kontakt: Herr Müller</p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold">Gelernte Zuordnungen: {learnedCount}</span>
+              {learnedCount > 0 && <button type="button" onClick={resetLearning} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">Lernen zurücksetzen</button>}
+            </div>
           </section>
         )}
 
@@ -216,7 +309,7 @@ export default function MilaCorePage() {
         {answered.length > 0 && (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">Bereits bestätigt</p>
-            <div className="mt-3 space-y-3">{answered.map((item, i) => <div key={`${item.question}-${i}`} className="rounded-2xl bg-violet-50 p-3"><p className="text-xs text-zinc-500">{item.question}</p><p className="mt-1 font-medium">✓ {item.answer}</p></div>)}</div>
+            <div className="mt-3 space-y-3">{answered.map((item, i) => <div key={`${item.question}-${i}`} className="rounded-2xl bg-violet-50 p-3"><p className="text-xs text-zinc-500">{item.automatic ? "Automatisch aus gelerntem Muster" : item.question}</p><p className="mt-1 font-medium">✓ {item.answer}</p></div>)}</div>
           </section>
         )}
 
@@ -230,10 +323,13 @@ export default function MilaCorePage() {
               <div className="mt-4 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">Mila schlägt vor</p>
                 {suggestions.map((suggestion, index) => (
-                  <button key={`${suggestion.value}-${index}`} type="button" onClick={() => submitAnswer(suggestion.value)} disabled={loading} className="w-full rounded-2xl border border-violet-200 bg-violet-50 p-4 text-left disabled:opacity-50">
+                  <button key={`${suggestion.value}-${index}`} type="button" onClick={() => submitAnswer(suggestion.value, suggestion)} disabled={loading} className={`w-full rounded-2xl border p-4 text-left disabled:opacity-50 ${suggestion.recommended ? "border-violet-400 bg-violet-100" : "border-violet-200 bg-violet-50"}`}>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-semibold text-violet-900">{suggestion.label}</span>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">{suggestion.confidence} · Passt ✓</span>
+                      <div>
+                        {suggestion.recommended && <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-violet-700">Empfohlen</p>}
+                        <span className="font-semibold text-violet-900">{suggestion.label}</span>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">{suggestion.score} · Passt ✓</span>
                     </div>
                     {suggestion.hint && <p className="mt-1 text-xs text-zinc-600">{suggestion.hint}</p>}
                     {suggestion.evidenceLabels.length > 0 && <p className="mt-2 text-xs text-zinc-500">Quelle: {suggestion.evidenceLabels.join(" + ")}</p>}
