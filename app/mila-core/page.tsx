@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { buildProcessPlan } from "@/lib/mila-core/process-engine"
 
 type ProcessResponse = {
   success: boolean
   caseId?: string
   next?: string
   error?: string
+  demoMode?: boolean
   data?: {
     interpretation?: {
       detectedType?: string
@@ -29,12 +31,44 @@ export default function MilaCorePage() {
   const [loading, setLoading] = useState(false)
   const [approved, setApproved] = useState(false)
   const [message, setMessage] = useState("")
+  const [demoMode, setDemoMode] = useState(false)
+
+  function runLocalDemo(extraFacts: Record<string, unknown>) {
+    const localCaseId = caseId || `demo-${Date.now()}`
+    const localPlan = buildProcessPlan({
+      caseId: localCaseId,
+      source: "manual",
+      text,
+      fields: extraFacts,
+      target: {
+        connectorId: "neutral-export",
+        systemName: "Neutraler Export",
+        capability: "export-json",
+      },
+    })
+
+    setCaseId(localCaseId)
+    setDemoMode(true)
+    setPlan({
+      success: true,
+      caseId: localCaseId,
+      demoMode: true,
+      data: localPlan,
+      next: localPlan.questions[0]?.question ?? (localPlan.handoffReady ? "human_review" : "needs_interpretation"),
+    })
+    setMessage("Preview-Demomodus aktiv: Es werden keine Daten in Supabase gespeichert.")
+  }
 
   async function runProcess(extraFacts: Record<string, unknown> = facts) {
     setLoading(true)
     setMessage("")
     setApproved(false)
     try {
+      if (demoMode) {
+        runLocalDemo(extraFacts)
+        return
+      }
+
       const res = await fetch("/api/mila/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,11 +85,17 @@ export default function MilaCorePage() {
         }),
       })
       const json = (await res.json()) as ProcessResponse
+
+      if (res.status === 401) {
+        runLocalDemo(extraFacts)
+        return
+      }
+
       setPlan(json)
       if (json.caseId) setCaseId(json.caseId)
       if (!json.success) setMessage(json.error || "Verarbeitung fehlgeschlagen")
-    } catch (error: any) {
-      setMessage(error?.message || "Verarbeitung fehlgeschlagen")
+    } catch {
+      runLocalDemo(extraFacts)
     } finally {
       setLoading(false)
     }
@@ -75,6 +115,12 @@ export default function MilaCorePage() {
     setLoading(true)
     setMessage("")
     try {
+      if (demoMode) {
+        setApproved(true)
+        setMessage("Demo-Freigabe erteilt. Keine Daten wurden gespeichert oder an ein externes System gesendet.")
+        return
+      }
+
       const res = await fetch("/api/mila/process/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,6 +147,7 @@ export default function MilaCorePage() {
     setAnswer("")
     setApproved(false)
     setMessage("")
+    setDemoMode(false)
     setText("Tankbeleg 83,42 €")
   }
 
@@ -111,7 +158,12 @@ export default function MilaCorePage() {
     <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900">
       <div className="mx-auto max-w-xl space-y-4">
         <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Mila Core</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Mila Core</p>
+            {demoMode && (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Preview-Demo</span>
+            )}
+          </div>
           <h1 className="mt-2 text-2xl font-semibold">Process Bridge Test</h1>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             Ein Vorgang kommt rein, Mila erkennt den Kontext, fragt fehlende Informationen ab und bereitet eine kontrollierte Übergabe vor.
