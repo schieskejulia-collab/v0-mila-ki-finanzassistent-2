@@ -8,7 +8,6 @@ type ProcessResponse = {
   caseId?: string
   next?: string
   error?: string
-  demoMode?: boolean
   data?: {
     interpretation?: {
       detectedType?: string
@@ -33,12 +32,12 @@ export default function MilaCorePage() {
   const [message, setMessage] = useState("")
   const [demoMode, setDemoMode] = useState(false)
 
-  function runLocalDemo(extraFacts: Record<string, unknown>) {
-    const localCaseId = caseId || `demo-${Date.now()}`
-    const localPlan = buildProcessPlan({
-      caseId: localCaseId,
+  function makeDemoPlan(currentText: string, extraFacts: Record<string, unknown>, currentCaseId?: string): ProcessResponse {
+    const demoCaseId = currentCaseId || `demo-${Date.now()}`
+    const demoPlan = buildProcessPlan({
+      caseId: demoCaseId,
       source: "manual",
-      text,
+      text: currentText,
       fields: extraFacts,
       target: {
         connectorId: "neutral-export",
@@ -47,25 +46,25 @@ export default function MilaCorePage() {
       },
     })
 
-    setCaseId(localCaseId)
-    setDemoMode(true)
-    setPlan({
+    return {
       success: true,
-      caseId: localCaseId,
-      demoMode: true,
-      data: localPlan,
-      next: localPlan.questions[0]?.question ?? (localPlan.handoffReady ? "human_review" : "needs_interpretation"),
-    })
-    setMessage("Preview-Demomodus aktiv: Es werden keine Daten in Supabase gespeichert.")
+      caseId: demoCaseId,
+      next: demoPlan.questions[0]?.question ?? (demoPlan.handoffReady ? "human_review" : "needs_interpretation"),
+      data: demoPlan,
+    }
   }
 
-  async function runProcess(extraFacts: Record<string, unknown> = facts) {
+  async function runProcess(extraFacts: Record<string, unknown> = facts, textOverride?: string) {
     setLoading(true)
     setMessage("")
     setApproved(false)
+    const currentText = textOverride ?? text
+
     try {
       if (demoMode) {
-        runLocalDemo(extraFacts)
+        const json = makeDemoPlan(currentText, extraFacts, caseId)
+        setPlan(json)
+        if (json.caseId) setCaseId(json.caseId)
         return
       }
 
@@ -75,7 +74,7 @@ export default function MilaCorePage() {
         body: JSON.stringify({
           caseId,
           source: "manual",
-          text,
+          text: currentText,
           fields: extraFacts,
           target: {
             connectorId: "neutral-export",
@@ -84,18 +83,22 @@ export default function MilaCorePage() {
           },
         }),
       })
-      const json = (await res.json()) as ProcessResponse
 
       if (res.status === 401) {
-        runLocalDemo(extraFacts)
+        setDemoMode(true)
+        const json = makeDemoPlan(currentText, extraFacts)
+        setPlan(json)
+        setCaseId(json.caseId)
+        setMessage("Preview-Demomodus aktiv: Es werden keine Daten in Supabase gespeichert.")
         return
       }
 
+      const json = (await res.json()) as ProcessResponse
       setPlan(json)
       if (json.caseId) setCaseId(json.caseId)
       if (!json.success) setMessage(json.error || "Verarbeitung fehlgeschlagen")
-    } catch {
-      runLocalDemo(extraFacts)
+    } catch (error: any) {
+      setMessage(error?.message || "Verarbeitung fehlgeschlagen")
     } finally {
       setLoading(false)
     }
@@ -104,9 +107,19 @@ export default function MilaCorePage() {
   async function submitAnswer() {
     const question = plan?.data?.questions?.[0]
     if (!question || !answer.trim()) return
-    const nextFacts = { ...facts, [question.field]: answer.trim() }
-    setFacts(nextFacts)
+
+    const cleanedAnswer = answer.trim()
     setAnswer("")
+
+    if (question.field === "processType") {
+      const clarifiedText = `${text}. ${cleanedAnswer}`
+      setText(clarifiedText)
+      await runProcess(facts, clarifiedText)
+      return
+    }
+
+    const nextFacts = { ...facts, [question.field]: cleanedAnswer }
+    setFacts(nextFacts)
     await runProcess(nextFacts)
   }
 
@@ -114,6 +127,7 @@ export default function MilaCorePage() {
     if (!caseId) return
     setLoading(true)
     setMessage("")
+
     try {
       if (demoMode) {
         setApproved(true)
@@ -140,15 +154,23 @@ export default function MilaCorePage() {
     }
   }
 
-  function reset() {
+  function clearCaseState() {
     setCaseId(undefined)
     setPlan(null)
     setFacts({})
     setAnswer("")
     setApproved(false)
     setMessage("")
-    setDemoMode(false)
+  }
+
+  function reset() {
+    clearCaseState()
     setText("Tankbeleg 83,42 €")
+  }
+
+  function handleTextChange(value: string) {
+    if (caseId || plan || Object.keys(facts).length > 0) clearCaseState()
+    setText(value)
   }
 
   const question = plan?.data?.questions?.[0]
@@ -158,13 +180,13 @@ export default function MilaCorePage() {
     <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900">
       <div className="mx-auto max-w-xl space-y-4">
         <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Mila Core</p>
-            {demoMode && (
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Preview-Demo</span>
-            )}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Mila Core</p>
+              <h1 className="mt-2 text-2xl font-semibold">Process Bridge Test</h1>
+            </div>
+            {demoMode && <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">Preview-Demo</span>}
           </div>
-          <h1 className="mt-2 text-2xl font-semibold">Process Bridge Test</h1>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             Ein Vorgang kommt rein, Mila erkennt den Kontext, fragt fehlende Informationen ab und bereitet eine kontrollierte Übergabe vor.
           </p>
@@ -174,7 +196,7 @@ export default function MilaCorePage() {
           <label className="text-sm font-medium">Testvorgang</label>
           <textarea
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => handleTextChange(event.target.value)}
             className="mt-2 min-h-28 w-full rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-base outline-none focus:border-zinc-400"
             placeholder="z. B. Tankbeleg 83,42 €"
           />
