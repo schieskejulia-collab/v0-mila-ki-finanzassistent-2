@@ -13,6 +13,8 @@ interface ProcessRequestBody {
   target?: MilaTargetSystem
 }
 
+const DB_SOURCES = new Set(["phone", "email", "upload", "form", "manual"])
+
 export async function POST(req: Request) {
   try {
     const { client, user, error: authError } = await requireSupabaseUser(req)
@@ -24,10 +26,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as ProcessRequestBody
 
     if (!body.source) {
-      return NextResponse.json(
-        { success: false, error: "source fehlt" },
-        { status: 400 },
-      )
+      return NextResponse.json({ success: false, error: "source fehlt" }, { status: 400 })
     }
 
     if (!body.text && !body.subject && !body.fileName && !body.fields) {
@@ -37,11 +36,13 @@ export async function POST(req: Request) {
       )
     }
 
-    if (body.caseId) {
+    let caseId = body.caseId
+
+    if (caseId) {
       const { data: existingCase, error: caseError } = await client
         .from("mila_intake_cases")
         .select("id")
-        .eq("id", body.caseId)
+        .eq("id", caseId)
         .eq("user_id", user.id)
         .maybeSingle()
 
@@ -52,10 +53,37 @@ export async function POST(req: Request) {
       if (!existingCase) {
         return NextResponse.json({ success: false, error: "Vorgang nicht gefunden" }, { status: 404 })
       }
+    } else {
+      const storedSource = DB_SOURCES.has(body.source) ? body.source : "manual"
+      const subject = body.subject?.trim() || body.fileName?.trim() || body.text?.trim().slice(0, 120) || "Mila Core Vorgang"
+      const summary = body.text?.trim() || body.subject?.trim() || body.fileName?.trim() || ""
+
+      const { data: createdCase, error: createError } = await client
+        .from("mila_intake_cases")
+        .insert({
+          user_id: user.id,
+          source: storedSource,
+          subject,
+          summary,
+          status: "new",
+          category: "mila_core",
+          requires_human: true,
+        })
+        .select("id")
+        .single()
+
+      if (createError || !createdCase) {
+        return NextResponse.json(
+          { success: false, error: createError?.message || "Vorgang konnte nicht angelegt werden" },
+          { status: 500 },
+        )
+      }
+
+      caseId = createdCase.id
     }
 
     const plan = buildProcessPlan({
-      caseId: body.caseId,
+      caseId,
       source: body.source,
       subject: body.subject,
       text: body.text,
@@ -64,11 +92,11 @@ export async function POST(req: Request) {
       target: body.target,
     })
 
-    if (body.caseId && plan.questions.length > 0) {
+    if (plan.questions.length > 0) {
       const firstQuestion = plan.questions[0]
       const { error: updateError } = await client.from("mila_case_updates").insert({
         user_id: user.id,
-        case_id: body.caseId,
+        case_id: caseId,
         kind: "question",
         content: firstQuestion.question,
         status: "waiting",
@@ -81,11 +109,11 @@ export async function POST(req: Request) {
       await client
         .from("mila_intake_cases")
         .update({ status: "needs_info", handoff_ready: false })
-        .eq("id", body.caseId)
+        .eq("id", caseId)
         .eq("user_id", user.id)
     }
 
-    if (body.caseId && plan.handoffReady) {
+    if (plan.handoffReady) {
       const handoffSummary = JSON.stringify(
         {
           processType: plan.interpretation.processType,
@@ -104,7 +132,7 @@ export async function POST(req: Request) {
           handoff_ready: true,
           handoff_summary: handoffSummary,
         })
-        .eq("id", body.caseId)
+        .eq("id", caseId)
         .eq("user_id", user.id)
 
       if (caseUpdateError) {
@@ -113,7 +141,7 @@ export async function POST(req: Request) {
 
       const { error: handoffLogError } = await client.from("mila_case_updates").insert({
         user_id: user.id,
-        case_id: body.caseId,
+        case_id: caseId,
         kind: "handoff",
         content: handoffSummary,
         status: "open",
@@ -126,6 +154,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      caseId,
       data: plan,
       next: plan.questions[0]?.question ?? (plan.handoffReady ? "human_review" : "needs_interpretation"),
     })
