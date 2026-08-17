@@ -1,6 +1,12 @@
 -- Mila Core: persistenter Mandanten-Kontext
 -- Mandantenbezogene Projekte/Fahrzeuge/Kontakte und bestätigte Muster.
 
+alter table public.mila_intake_cases
+  add column if not exists client_id text;
+
+create index if not exists mila_intake_cases_user_client_idx
+  on public.mila_intake_cases(user_id, client_id);
+
 create table if not exists public.mila_memory_entities (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
