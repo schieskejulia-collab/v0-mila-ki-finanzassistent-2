@@ -51,6 +51,7 @@ export interface MilaMemoryEntity {
   name: string
   active: boolean
   aliases?: string[]
+  lastUsedAt?: string
 }
 
 export interface MilaConfirmedPattern {
@@ -59,6 +60,9 @@ export interface MilaConfirmedPattern {
   label: string
   value: string
   confidence: MilaConfidence
+  confirmations?: number
+  evidenceLabels?: string[]
+  lastConfirmedAt?: string
 }
 
 export interface MilaMemoryContext {
@@ -85,6 +89,9 @@ export interface MilaContextSuggestion {
   confidence: MilaConfidence
   source: MilaSuggestionSource[]
   evidenceLabels: string[]
+  score: number
+  recommended?: boolean
+  autoApply?: boolean
 }
 
 export interface MilaTargetSystem {
