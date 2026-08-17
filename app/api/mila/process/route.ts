@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 import { requireSupabaseUser } from "@/lib/supabase-server"
 import { buildProcessPlan } from "@/lib/mila-core/process-engine"
+import { loadPersistentMilaMemory } from "@/lib/mila-core/persistent-memory"
 import type { MilaInputSource, MilaTargetSystem } from "@/lib/mila-core/types"
 
 interface ProcessRequestBody {
   caseId?: string
+  clientId?: string
   source?: MilaInputSource
   subject?: string
   text?: string
@@ -55,13 +57,18 @@ export async function POST(req: Request) {
       }
     } else {
       const storedSource = DB_SOURCES.has(body.source) ? body.source : "manual"
-      const subject = body.subject?.trim() || body.fileName?.trim() || body.text?.trim().slice(0, 120) || "Mila Core Vorgang"
+      const subject =
+        body.subject?.trim() ||
+        body.fileName?.trim() ||
+        body.text?.trim().slice(0, 120) ||
+        "Mila Core Vorgang"
       const summary = body.text?.trim() || body.subject?.trim() || body.fileName?.trim() || ""
 
       const { data: createdCase, error: createError } = await client
         .from("mila_intake_cases")
         .insert({
           user_id: user.id,
+          client_id: body.clientId || null,
           source: storedSource,
           subject,
           summary,
@@ -82,6 +89,14 @@ export async function POST(req: Request) {
       caseId = createdCase.id
     }
 
+    const memory = body.clientId
+      ? await loadPersistentMilaMemory({
+          client,
+          userId: user.id,
+          clientId: body.clientId,
+        })
+      : undefined
+
     const plan = buildProcessPlan({
       caseId,
       source: body.source,
@@ -89,6 +104,7 @@ export async function POST(req: Request) {
       text: body.text,
       fileName: body.fileName,
       fields: body.fields,
+      memory,
       target: body.target,
     })
 
@@ -116,6 +132,7 @@ export async function POST(req: Request) {
     if (plan.handoffReady) {
       const handoffSummary = JSON.stringify(
         {
+          clientId: body.clientId || null,
           processType: plan.interpretation.processType,
           summary: plan.interpretation.summary,
           facts: plan.interpretation.knownFacts,
@@ -156,7 +173,18 @@ export async function POST(req: Request) {
       success: true,
       caseId,
       data: plan,
-      next: plan.questions[0]?.question ?? (plan.handoffReady ? "human_review" : "needs_interpretation"),
+      memory: memory
+        ? {
+            client: memory.client,
+            projects: memory.projects.length,
+            vehicles: memory.vehicles.length,
+            contacts: memory.contacts.length,
+            confirmedPatterns: memory.confirmedPatterns.length,
+          }
+        : null,
+      next:
+        plan.questions[0]?.question ??
+        (plan.handoffReady ? "human_review" : "needs_interpretation"),
     })
   } catch (error: any) {
     return NextResponse.json(
