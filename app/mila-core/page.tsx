@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
 import { buildProcessPlan } from "@/lib/mila-core/process-engine"
 import type { MilaContextSuggestion, MilaMemoryContext } from "@/lib/mila-core/types"
 
@@ -30,6 +31,8 @@ type AnsweredQuestion = {
   automaticLabel?: string
 }
 
+const ACTIVE_CLIENT_KEY = "mila-active-client-v1"
+
 const INITIAL_DEMO_MEMORY: MilaMemoryContext = {
   client: { id: "demo-client", name: "Musterbetrieb" },
   projects: [
@@ -54,9 +57,69 @@ export default function MilaCorePage() {
   const [loading, setLoading] = useState(false)
   const [approved, setApproved] = useState(false)
   const [message, setMessage] = useState("")
-  const [demoMode, setDemoMode] = useState(false)
+  const [demoMode, setDemoMode] = useState(true)
   const [showCustomAnswer, setShowCustomAnswer] = useState(false)
   const [memory, setMemory] = useState<MilaMemoryContext>(INITIAL_DEMO_MEMORY)
+  const [activeClientId, setActiveClientId] = useState("")
+  const [accessToken, setAccessToken] = useState("")
+  const [memoryStatus, setMemoryStatus] = useState("Kontext wird geladen …")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadMemory() {
+      const clientId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ""
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const token = session?.access_token || ""
+
+      if (cancelled) return
+      setActiveClientId(clientId)
+      setAccessToken(token)
+
+      if (!clientId || !token) {
+        setDemoMode(true)
+        setMemory(INITIAL_DEMO_MEMORY)
+        setMemoryStatus(
+          !clientId
+            ? "Kein Mandant ausgewählt – Mila nutzt den sicheren Demo-Kontext."
+            : "Nicht angemeldet – Mila nutzt den sicheren Demo-Kontext.",
+        )
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/mila/memory?clientId=${encodeURIComponent(clientId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        })
+        const data = await response.json().catch(() => null)
+
+        if (cancelled) return
+        if (!response.ok || !data?.memory) {
+          setDemoMode(true)
+          setMemory(INITIAL_DEMO_MEMORY)
+          setMemoryStatus(data?.error || "Mandanten-Kontext konnte nicht geladen werden – Demo aktiv.")
+          return
+        }
+
+        setMemory(data.memory)
+        setDemoMode(false)
+        setMemoryStatus(`Echter Mandanten-Kontext aktiv: ${data.memory.client?.name || "Mandant"}`)
+      } catch (error: any) {
+        if (cancelled) return
+        setDemoMode(true)
+        setMemory(INITIAL_DEMO_MEMORY)
+        setMemoryStatus(error?.message || "Mandanten-Kontext konnte nicht geladen werden – Demo aktiv.")
+      }
+    }
+
+    void loadMemory()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function makeDemoPlan(
     currentText: string,
@@ -87,12 +150,10 @@ export default function MilaCorePage() {
     }
   }
 
-  function learnSuggestion(
+  function updateLocalMemory(
     question: { field: string; question: string },
-    suggestion?: MilaContextSuggestion,
+    suggestion: MilaContextSuggestion,
   ) {
-    if (!suggestion || suggestion.source.includes("default_option")) return
-
     setMemory((current) => {
       const existing = current.confirmedPatterns.find(
         (item) => item.field === question.field && item.value === suggestion.value,
@@ -134,6 +195,63 @@ export default function MilaCorePage() {
     })
   }
 
+  async function learnSuggestion(
+    question: { field: string; question: string },
+    suggestion?: MilaContextSuggestion,
+  ) {
+    if (!suggestion || suggestion.source.includes("default_option")) return
+
+    if (demoMode || !accessToken || !activeClientId) {
+      updateLocalMemory(question, suggestion)
+      return
+    }
+
+    const response = await fetch("/api/mila/memory", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        clientId: activeClientId,
+        field: question.field,
+        label: suggestion.label,
+        value: suggestion.value,
+        confidence: "high",
+        evidenceLabels: suggestion.evidenceLabels,
+      }),
+    })
+
+    const data = await response.json().catch(() => null)
+    if (!response.ok || !data?.memory) {
+      throw new Error(data?.error || "Gelernte Zuordnung konnte nicht gespeichert werden.")
+    }
+
+    setMemory(data.memory)
+  }
+
+  function rememberAutomatic(question: { field: string; question: string }, trusted: MilaContextSuggestion) {
+    const fromCurrentInput = trusted.source.includes("input")
+    const automaticLabel = fromCurrentInput
+      ? "Aus aktuellem Kontext erkannt"
+      : "Automatisch aus gelerntem Muster"
+
+    setAnswered((current) => [
+      ...current,
+      {
+        question: question.question,
+        answer: trusted.value,
+        automatic: true,
+        automaticLabel,
+      },
+    ])
+    setMessage(
+      fromCurrentInput
+        ? "Automatisch übernommen ✓ Mila hat die Zuordnung eindeutig im aktuellen Vorgang erkannt."
+        : "Automatisch übernommen ✓ Mila kennt diese Zuordnung aus bisherigen Bestätigungen.",
+    )
+  }
+
   async function runProcess(
     extraFacts: Record<string, unknown> = facts,
     textOverride?: string,
@@ -152,25 +270,8 @@ export default function MilaCorePage() {
 
         if (question && trusted && question.field !== "processType") {
           const nextFacts = { ...extraFacts, [question.field]: trusted.value }
-          const fromCurrentInput = trusted.source.includes("input")
-          const automaticLabel = fromCurrentInput
-            ? "Aus aktuellem Kontext erkannt"
-            : "Automatisch aus gelerntem Muster"
           setFacts(nextFacts)
-          setAnswered((current) => [
-            ...current,
-            {
-              question: question.question,
-              answer: trusted.value,
-              automatic: true,
-              automaticLabel,
-            },
-          ])
-          setMessage(
-            fromCurrentInput
-              ? "Automatisch übernommen ✓ Mila hat die Zuordnung eindeutig im aktuellen Vorgang erkannt."
-              : "Automatisch übernommen ✓ Mila kennt diese Zuordnung aus deiner bisherigen Bestätigung.",
-          )
+          rememberAutomatic(question, trusted)
           json = makeDemoPlan(currentText, nextFacts, caseId)
         }
 
@@ -179,34 +280,54 @@ export default function MilaCorePage() {
         return
       }
 
-      const res = await fetch("/api/mila/process", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caseId,
-          source: "manual",
-          text: currentText,
-          fields: extraFacts,
-          target: {
-            connectorId: "neutral-export",
-            systemName: "Neutraler Export",
-            capability: "export-json",
+      const processRequest = async (requestFacts: Record<string, unknown>, requestCaseId?: string) => {
+        const res = await fetch("/api/mila/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
-        }),
-      })
+          body: JSON.stringify({
+            caseId: requestCaseId,
+            clientId: activeClientId,
+            source: "manual",
+            text: currentText,
+            fields: requestFacts,
+            target: {
+              connectorId: "neutral-export",
+              systemName: "Neutraler Export",
+              capability: "export-json",
+            },
+          }),
+        })
+        const json = (await res.json().catch(() => null)) as ProcessResponse | null
+        return { res, json }
+      }
+
+      let { res, json } = await processRequest(extraFacts, caseId)
 
       if (res.status === 401) {
         setDemoMode(true)
-        const json = makeDemoPlan(currentText, extraFacts)
-        setPlan(json)
-        setCaseId(json.caseId)
-        setMessage(
-          "Preview-Demomodus aktiv: Vorschläge stammen aus einem sichtbaren Demo-Kontext. Es werden keine Daten in Supabase gespeichert.",
-        )
+        setMemory(INITIAL_DEMO_MEMORY)
+        const fallback = makeDemoPlan(currentText, extraFacts)
+        setPlan(fallback)
+        setCaseId(fallback.caseId)
+        setMessage("Sitzung abgelaufen – sicherer Preview-Demomodus aktiv.")
         return
       }
 
-      const json = (await res.json()) as ProcessResponse
+      if (!json) throw new Error("Mila Core hat keine lesbare Antwort geliefert.")
+
+      const question = json.data?.questions?.[0]
+      const trusted = json.data?.suggestions?.find((item) => item.autoApply)
+      if (json.success && question && trusted && question.field !== "processType") {
+        const nextFacts = { ...extraFacts, [question.field]: trusted.value }
+        setFacts(nextFacts)
+        rememberAutomatic(question, trusted)
+        const second = await processRequest(nextFacts, json.caseId)
+        if (second.json) json = second.json
+      }
+
       setPlan(json)
       if (json.caseId) setCaseId(json.caseId)
       if (!json.success) setMessage(json.error || "Verarbeitung fehlgeschlagen")
@@ -229,7 +350,12 @@ export default function MilaCorePage() {
       { question: question.question, answer: cleanedAnswer },
     ])
     setMessage("Übernommen ✓ Mila merkt sich die bestätigte Zuordnung und prüft neu …")
-    learnSuggestion(question, suggestion)
+
+    try {
+      await learnSuggestion(question, suggestion)
+    } catch (error: any) {
+      setMessage(error?.message || "Zuordnung konnte nicht dauerhaft gelernt werden.")
+    }
 
     if (question.field === "processType") {
       const clarifiedText = `${text}. ${cleanedAnswer}`
@@ -257,7 +383,10 @@ export default function MilaCorePage() {
       }
       const res = await fetch("/api/mila/process/approve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ caseId, approved: true, approvedBy: "Julia" }),
       })
       const json = await res.json()
@@ -316,27 +445,30 @@ export default function MilaCorePage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
                 Mila Core
               </p>
-              <h1 className="mt-2 text-2xl font-semibold">Context Memory Test</h1>
+              <h1 className="mt-2 text-2xl font-semibold">Context Memory</h1>
             </div>
-            {demoMode && (
-              <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
-                Preview-Demo
-              </span>
-            )}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                demoMode ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {demoMode ? "Preview-Demo" : "Mandant aktiv"}
+            </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            Mila rankt vorhandenen Kontext, merkt sich bestätigte Zuordnungen und darf ein stark
-            gelerntes Muster beim nächsten ähnlichen Vorgang selbst übernehmen.
+            Mila nutzt den Kontext des ausgewählten Mandanten, merkt sich bestätigte Zuordnungen
+            und fragt nur bei echter Unsicherheit nach.
           </p>
         </header>
 
-        {demoMode && (
+        {demoMode ? (
           <section className="rounded-3xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">
-            <p className="font-semibold">Demo-Kontext, den Mila wirklich kennt</p>
+            <p className="font-semibold">Demo-Kontext, den Mila kennt</p>
             <p className="mt-2">
               Aktive Projekte: Baustelle Müller, Auftrag Schmidt · Fahrzeug: Transporter 2 ·
               Kontakt: Herr Müller
             </p>
+            <p className="mt-2 text-xs text-violet-700">{memoryStatus}</p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs font-semibold">Gelernte Zuordnungen: {learnedCount}</span>
               {learnedCount > 0 && (
@@ -350,10 +482,19 @@ export default function MilaCorePage() {
               )}
             </div>
           </section>
+        ) : (
+          <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+            <p className="font-semibold">Echter Mandanten-Kontext aktiv</p>
+            <p className="mt-1 text-lg font-semibold">{memory.client?.name || "Mandant"}</p>
+            <p className="mt-2">
+              {memory.projects.filter((item) => item.active).length} aktive Projekte · {memory.vehicles.filter((item) => item.active).length} Fahrzeuge · {memory.contacts.filter((item) => item.active).length} Kontakte
+            </p>
+            <p className="mt-2 text-xs text-emerald-700">Gelernte Zuordnungen: {learnedCount}</p>
+          </section>
         )}
 
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-          <label className="text-sm font-medium">Testvorgang</label>
+          <label className="text-sm font-medium">Vorgang</label>
           <textarea
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
