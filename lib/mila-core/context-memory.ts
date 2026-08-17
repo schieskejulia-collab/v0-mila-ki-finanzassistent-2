@@ -11,7 +11,7 @@ function rankSuggestions(suggestions: MilaContextSuggestion[]): MilaContextSugge
   return sorted.map((suggestion, index) => ({
     ...suggestion,
     recommended: index === 0 && suggestion.score >= 70,
-    autoApply: suggestion.source.includes("confirmed_pattern") && suggestion.score >= 95,
+    autoApply: suggestion.source.includes("confirmed_pattern") && suggestion.score >= 92,
   }))
 }
 
@@ -46,8 +46,12 @@ export function buildContextSuggestions(params: {
     if (looksLikeFuel) {
       const vehicle = memory.vehicles.find((item) => item.active)
       for (const project of memory.projects.filter((item) => item.active).slice(0, 3)) {
-        const projectMentioned = includesAny(text, [project.name.toLowerCase(), ...(project.aliases ?? []).map(normalize)])
-        const contactMatch = memory.contacts.some((contact) => normalize(project.name).includes(normalize(contact.name).replace("herr ", "").replace("frau ", "")))
+        const aliases = (project.aliases ?? []).map(normalize)
+        const projectMentioned = includesAny(text, [project.name.toLowerCase(), ...aliases])
+        const contactMatch = memory.contacts.some((contact) => {
+          const surname = normalize(contact.name).replace("herr ", "").replace("frau ", "")
+          return surname.length > 2 && normalize(project.name).includes(surname)
+        })
         suggestions.push({
           field,
           label: project.name,
