@@ -46,6 +46,47 @@ export interface MilaContextQuestion {
   required: boolean
 }
 
+export interface MilaMemoryEntity {
+  id: string
+  name: string
+  active: boolean
+  aliases?: string[]
+}
+
+export interface MilaConfirmedPattern {
+  id: string
+  field: string
+  label: string
+  value: string
+  confidence: MilaConfidence
+}
+
+export interface MilaMemoryContext {
+  client?: { id: string; name: string }
+  projects: MilaMemoryEntity[]
+  vehicles: MilaMemoryEntity[]
+  contacts: MilaMemoryEntity[]
+  confirmedPatterns: MilaConfirmedPattern[]
+}
+
+export type MilaSuggestionSource =
+  | "input"
+  | "project"
+  | "vehicle"
+  | "contact"
+  | "confirmed_pattern"
+  | "default_option"
+
+export interface MilaContextSuggestion {
+  field: string
+  label: string
+  value: string
+  hint?: string
+  confidence: MilaConfidence
+  source: MilaSuggestionSource[]
+  evidenceLabels: string[]
+}
+
 export interface MilaTargetSystem {
   connectorId: string
   systemName: string
@@ -67,6 +108,7 @@ export interface MilaProposedAction {
 export interface MilaProcessPlan {
   interpretation: MilaInterpretation
   questions: MilaContextQuestion[]
+  suggestions: MilaContextSuggestion[]
   actions: MilaProposedAction[]
   handoffReady: boolean
 }
