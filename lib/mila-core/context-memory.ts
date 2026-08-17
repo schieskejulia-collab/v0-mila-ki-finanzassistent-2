@@ -6,6 +6,15 @@ function includesAny(value: string, terms: string[]) {
   return terms.some((term) => value.includes(term))
 }
 
+function rankSuggestions(suggestions: MilaContextSuggestion[]): MilaContextSuggestion[] {
+  const sorted = [...suggestions].sort((a, b) => b.score - a.score)
+  return sorted.map((suggestion, index) => ({
+    ...suggestion,
+    recommended: index === 0 && suggestion.score >= 70,
+    autoApply: suggestion.source.includes("confirmed_pattern") && suggestion.score >= 95,
+  }))
+}
+
 export function buildContextSuggestions(params: {
   text?: string
   field?: string
@@ -20,9 +29,25 @@ export function buildContextSuggestions(params: {
   if (field === "businessPurpose") {
     const looksLikeFuel = includesAny(text, ["tank", "shell", "aral", "esso", "kraftstoff", "diesel", "benzin", "beleg"])
 
+    for (const prior of memory.confirmedPatterns.filter((item) => item.field === field)) {
+      const confirmations = prior.confirmations ?? 1
+      suggestions.push({
+        field,
+        label: prior.label,
+        value: prior.value,
+        hint: confirmations > 1 ? `${confirmations}× zuvor bestätigt` : "zuvor bestätigt",
+        confidence: "high",
+        source: ["confirmed_pattern"],
+        evidenceLabels: prior.evidenceLabels?.length ? prior.evidenceLabels : [prior.label],
+        score: 88 + Math.min(confirmations * 4, 12),
+      })
+    }
+
     if (looksLikeFuel) {
+      const vehicle = memory.vehicles.find((item) => item.active)
       for (const project of memory.projects.filter((item) => item.active).slice(0, 3)) {
-        const vehicle = memory.vehicles.find((item) => item.active)
+        const projectMentioned = includesAny(text, [project.name.toLowerCase(), ...(project.aliases ?? []).map(normalize)])
+        const contactMatch = memory.contacts.some((contact) => normalize(project.name).includes(normalize(contact.name).replace("herr ", "").replace("frau ", "")))
         suggestions.push({
           field,
           label: project.name,
@@ -30,35 +55,25 @@ export function buildContextSuggestions(params: {
             ? `Tankfüllung für ${vehicle.name} im Zusammenhang mit ${project.name}`
             : `Tankfüllung im Zusammenhang mit ${project.name}`,
           hint: vehicle ? `${vehicle.name} · aktives Projekt` : "aktives Projekt",
-          confidence: vehicle ? "high" : "medium",
+          confidence: projectMentioned || contactMatch ? "high" : "medium",
           source: vehicle ? ["project", "vehicle"] : ["project"],
           evidenceLabels: vehicle ? [project.name, vehicle.name] : [project.name],
+          score: 60 + (vehicle ? 8 : 0) + (projectMentioned ? 20 : 0) + (contactMatch ? 8 : 0),
         })
       }
 
-      for (const vehicle of memory.vehicles.filter((item) => item.active).slice(0, 2)) {
+      for (const activeVehicle of memory.vehicles.filter((item) => item.active).slice(0, 2)) {
         suggestions.push({
           field,
-          label: `${vehicle.name} / Betrieb`,
-          value: `Tankfüllung für ${vehicle.name} im betrieblichen Zusammenhang`,
+          label: `${activeVehicle.name} / Betrieb`,
+          value: `Tankfüllung für ${activeVehicle.name} im betrieblichen Zusammenhang`,
           hint: "ohne Projektzuordnung",
           confidence: "medium",
           source: ["vehicle"],
-          evidenceLabels: [vehicle.name],
+          evidenceLabels: [activeVehicle.name],
+          score: 52,
         })
       }
-    }
-
-    for (const prior of memory.confirmedPatterns.filter((item) => item.field === field).slice(0, 2)) {
-      suggestions.push({
-        field,
-        label: prior.label,
-        value: prior.value,
-        hint: "aus früher bestätigter Zuordnung",
-        confidence: prior.confidence,
-        source: ["confirmed_pattern"],
-        evidenceLabels: [prior.label],
-      })
     }
   }
 
@@ -72,6 +87,7 @@ export function buildContextSuggestions(params: {
         confidence: "high",
         source: ["input"],
         evidenceLabels: ["Beleg-/Rechnungsbezug im Eingang"],
+        score: 86,
       })
     }
 
@@ -84,6 +100,7 @@ export function buildContextSuggestions(params: {
         confidence: "medium",
         source: ["input"],
         evidenceLabels: ["Rückmeldebezug im Eingang"],
+        score: 72,
       })
     }
   }
@@ -97,14 +114,16 @@ export function buildContextSuggestions(params: {
         confidence: "low",
         source: ["default_option"],
         evidenceLabels: [],
+        score: 25,
       })
     }
   }
 
   const deduped = new Map<string, MilaContextSuggestion>()
   for (const suggestion of suggestions) {
-    if (!deduped.has(suggestion.value)) deduped.set(suggestion.value, suggestion)
+    const existing = deduped.get(suggestion.value)
+    if (!existing || suggestion.score > existing.score) deduped.set(suggestion.value, suggestion)
   }
 
-  return [...deduped.values()].slice(0, 4)
+  return rankSuggestions([...deduped.values()]).slice(0, 4)
 }
