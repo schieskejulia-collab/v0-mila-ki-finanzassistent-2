@@ -23,7 +23,12 @@ type ProcessResponse = {
   }
 }
 
-type AnsweredQuestion = { question: string; answer: string; automatic?: boolean }
+type AnsweredQuestion = {
+  question: string
+  answer: string
+  automatic?: boolean
+  automaticLabel?: string
+}
 
 const INITIAL_DEMO_MEMORY: MilaMemoryContext = {
   client: { id: "demo-client", name: "Musterbetrieb" },
@@ -53,7 +58,12 @@ export default function MilaCorePage() {
   const [showCustomAnswer, setShowCustomAnswer] = useState(false)
   const [memory, setMemory] = useState<MilaMemoryContext>(INITIAL_DEMO_MEMORY)
 
-  function makeDemoPlan(currentText: string, extraFacts: Record<string, unknown>, currentCaseId?: string, memoryOverride?: MilaMemoryContext): ProcessResponse {
+  function makeDemoPlan(
+    currentText: string,
+    extraFacts: Record<string, unknown>,
+    currentCaseId?: string,
+    memoryOverride?: MilaMemoryContext,
+  ): ProcessResponse {
     const demoCaseId = currentCaseId || `demo-${Date.now()}`
     const demoPlan = buildProcessPlan({
       caseId: demoCaseId,
@@ -61,17 +71,26 @@ export default function MilaCorePage() {
       text: currentText,
       fields: extraFacts,
       memory: memoryOverride ?? memory,
-      target: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" },
+      target: {
+        connectorId: "neutral-export",
+        systemName: "Neutraler Export",
+        capability: "export-json",
+      },
     })
     return {
       success: true,
       caseId: demoCaseId,
-      next: demoPlan.questions[0]?.question ?? (demoPlan.handoffReady ? "human_review" : "needs_interpretation"),
+      next:
+        demoPlan.questions[0]?.question ??
+        (demoPlan.handoffReady ? "human_review" : "needs_interpretation"),
       data: demoPlan,
     }
   }
 
-  function learnSuggestion(question: { field: string; question: string }, suggestion?: MilaContextSuggestion) {
+  function learnSuggestion(
+    question: { field: string; question: string },
+    suggestion?: MilaContextSuggestion,
+  ) {
     if (!suggestion || suggestion.source.includes("default_option")) return
 
     setMemory((current) => {
@@ -115,7 +134,10 @@ export default function MilaCorePage() {
     })
   }
 
-  async function runProcess(extraFacts: Record<string, unknown> = facts, textOverride?: string) {
+  async function runProcess(
+    extraFacts: Record<string, unknown> = facts,
+    textOverride?: string,
+  ) {
     setLoading(true)
     setMessage("")
     setApproved(false)
@@ -130,12 +152,25 @@ export default function MilaCorePage() {
 
         if (question && trusted && question.field !== "processType") {
           const nextFacts = { ...extraFacts, [question.field]: trusted.value }
+          const fromCurrentInput = trusted.source.includes("input")
+          const automaticLabel = fromCurrentInput
+            ? "Aus aktuellem Kontext erkannt"
+            : "Automatisch aus gelerntem Muster"
           setFacts(nextFacts)
           setAnswered((current) => [
             ...current,
-            { question: question.question, answer: trusted.value, automatic: true },
+            {
+              question: question.question,
+              answer: trusted.value,
+              automatic: true,
+              automaticLabel,
+            },
           ])
-          setMessage(`Automatisch übernommen ✓ Mila kennt diese Zuordnung aus deiner bisherigen Bestätigung.`)
+          setMessage(
+            fromCurrentInput
+              ? "Automatisch übernommen ✓ Mila hat die Zuordnung eindeutig im aktuellen Vorgang erkannt."
+              : "Automatisch übernommen ✓ Mila kennt diese Zuordnung aus deiner bisherigen Bestätigung.",
+          )
           json = makeDemoPlan(currentText, nextFacts, caseId)
         }
 
@@ -152,7 +187,11 @@ export default function MilaCorePage() {
           source: "manual",
           text: currentText,
           fields: extraFacts,
-          target: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" },
+          target: {
+            connectorId: "neutral-export",
+            systemName: "Neutraler Export",
+            capability: "export-json",
+          },
         }),
       })
 
@@ -161,7 +200,9 @@ export default function MilaCorePage() {
         const json = makeDemoPlan(currentText, extraFacts)
         setPlan(json)
         setCaseId(json.caseId)
-        setMessage("Preview-Demomodus aktiv: Vorschläge stammen aus einem sichtbaren Demo-Kontext. Es werden keine Daten in Supabase gespeichert.")
+        setMessage(
+          "Preview-Demomodus aktiv: Vorschläge stammen aus einem sichtbaren Demo-Kontext. Es werden keine Daten in Supabase gespeichert.",
+        )
         return
       }
 
@@ -183,7 +224,10 @@ export default function MilaCorePage() {
 
     setAnswer("")
     setShowCustomAnswer(false)
-    setAnswered((current) => [...current, { question: question.question, answer: cleanedAnswer }])
+    setAnswered((current) => [
+      ...current,
+      { question: question.question, answer: cleanedAnswer },
+    ])
     setMessage("Übernommen ✓ Mila merkt sich die bestätigte Zuordnung und prüft neu …")
     learnSuggestion(question, suggestion)
 
@@ -206,7 +250,9 @@ export default function MilaCorePage() {
     try {
       if (demoMode) {
         setApproved(true)
-        setMessage("Demo-Freigabe erteilt. Keine Daten wurden gespeichert oder an ein externes System gesendet.")
+        setMessage(
+          "Demo-Freigabe erteilt. Keine Daten wurden gespeichert oder an ein externes System gesendet.",
+        )
         return
       }
       const res = await fetch("/api/mila/process/approve", {
@@ -267,83 +313,205 @@ export default function MilaCorePage() {
         <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Mila Core</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Mila Core
+              </p>
               <h1 className="mt-2 text-2xl font-semibold">Context Memory Test</h1>
             </div>
-            {demoMode && <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">Preview-Demo</span>}
+            {demoMode && (
+              <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                Preview-Demo
+              </span>
+            )}
           </div>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Mila rankt vorhandenen Kontext, merkt sich bestätigte Zuordnungen und darf ein stark gelerntes Muster beim nächsten ähnlichen Vorgang selbst übernehmen.</p>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            Mila rankt vorhandenen Kontext, merkt sich bestätigte Zuordnungen und darf ein stark
+            gelerntes Muster beim nächsten ähnlichen Vorgang selbst übernehmen.
+          </p>
         </header>
 
         {demoMode && (
           <section className="rounded-3xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">
             <p className="font-semibold">Demo-Kontext, den Mila wirklich kennt</p>
-            <p className="mt-2">Aktive Projekte: Baustelle Müller, Auftrag Schmidt · Fahrzeug: Transporter 2 · Kontakt: Herr Müller</p>
+            <p className="mt-2">
+              Aktive Projekte: Baustelle Müller, Auftrag Schmidt · Fahrzeug: Transporter 2 ·
+              Kontakt: Herr Müller
+            </p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs font-semibold">Gelernte Zuordnungen: {learnedCount}</span>
-              {learnedCount > 0 && <button type="button" onClick={resetLearning} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">Lernen zurücksetzen</button>}
+              {learnedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={resetLearning}
+                  className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700"
+                >
+                  Lernen zurücksetzen
+                </button>
+              )}
             </div>
           </section>
         )}
 
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
           <label className="text-sm font-medium">Testvorgang</label>
-          <textarea value={text} onChange={(e) => handleTextChange(e.target.value)} className="mt-2 min-h-28 w-full rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-base outline-none focus:border-zinc-400" placeholder="z. B. Tankbeleg 83,42 €" />
+          <textarea
+            value={text}
+            onChange={(e) => handleTextChange(e.target.value)}
+            className="mt-2 min-h-28 w-full rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-base outline-none focus:border-zinc-400"
+            placeholder="z. B. Tankbeleg 83,42 €"
+          />
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={() => runProcess()} disabled={loading || !text.trim()} className="flex-1 rounded-2xl bg-zinc-900 px-4 py-3 font-medium text-white disabled:opacity-50">{loading ? "Mila arbeitet …" : caseId ? "Neu auswerten" : "Vorgang starten"}</button>
-            <button type="button" onClick={reset} className="rounded-2xl border border-zinc-200 px-4 py-3 font-medium">Reset</button>
+            <button
+              type="button"
+              onClick={() => runProcess()}
+              disabled={loading || !text.trim()}
+              className="flex-1 rounded-2xl bg-zinc-900 px-4 py-3 font-medium text-white disabled:opacity-50"
+            >
+              {loading ? "Mila arbeitet …" : caseId ? "Neu auswerten" : "Vorgang starten"}
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-2xl border border-zinc-200 px-4 py-3 font-medium"
+            >
+              Reset
+            </button>
           </div>
         </section>
 
         {plan?.success && (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-            <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Mila hat erkannt</h2><span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium">{plan.data?.interpretation?.confidence || "–"}</span></div>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Mila hat erkannt</h2>
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium">
+                {plan.data?.interpretation?.confidence || "–"}
+              </span>
+            </div>
             <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Typ</dt><dd className="text-right font-medium">{plan.data?.interpretation?.detectedType || "–"}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Prozess</dt><dd className="text-right font-medium">{plan.data?.interpretation?.processType || "noch offen"}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-zinc-500">Case</dt><dd className="max-w-[65%] truncate text-right font-mono text-xs">{caseId || "–"}</dd></div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Typ</dt>
+                <dd className="text-right font-medium">
+                  {plan.data?.interpretation?.detectedType || "–"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Prozess</dt>
+                <dd className="text-right font-medium">
+                  {plan.data?.interpretation?.processType || "noch offen"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Case</dt>
+                <dd className="max-w-[65%] truncate text-right font-mono text-xs">
+                  {caseId || "–"}
+                </dd>
+              </div>
             </dl>
           </section>
         )}
 
         {answered.length > 0 && (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">Bereits bestätigt</p>
-            <div className="mt-3 space-y-3">{answered.map((item, i) => <div key={`${item.question}-${i}`} className="rounded-2xl bg-violet-50 p-3"><p className="text-xs text-zinc-500">{item.automatic ? "Automatisch aus gelerntem Muster" : item.question}</p><p className="mt-1 font-medium">✓ {item.answer}</p></div>)}</div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">
+              Bereits bestätigt
+            </p>
+            <div className="mt-3 space-y-3">
+              {answered.map((item, i) => (
+                <div
+                  key={`${item.question}-${i}`}
+                  className="rounded-2xl bg-violet-50 p-3"
+                >
+                  <p className="text-xs text-zinc-500">
+                    {item.automatic
+                      ? item.automaticLabel ?? "Automatisch aus gelerntem Muster"
+                      : item.question}
+                  </p>
+                  <p className="mt-1 font-medium">✓ {item.answer}</p>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
         {question && (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Mila braucht Bestätigung</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Mila braucht Bestätigung
+            </p>
             <h2 className="mt-2 text-lg font-semibold">{question.question}</h2>
             <p className="mt-2 text-sm text-zinc-600">{question.reason}</p>
 
             {suggestions.length > 0 && (
               <div className="mt-4 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">Mila schlägt vor</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  Mila schlägt vor
+                </p>
                 {suggestions.map((suggestion, index) => (
-                  <button key={`${suggestion.value}-${index}`} type="button" onClick={() => submitAnswer(suggestion.value, suggestion)} disabled={loading} className={`w-full rounded-2xl border p-4 text-left disabled:opacity-50 ${suggestion.recommended ? "border-violet-400 bg-violet-100" : "border-violet-200 bg-violet-50"}`}>
+                  <button
+                    key={`${suggestion.value}-${index}`}
+                    type="button"
+                    onClick={() => submitAnswer(suggestion.value, suggestion)}
+                    disabled={loading}
+                    className={`w-full rounded-2xl border p-4 text-left disabled:opacity-50 ${
+                      suggestion.recommended
+                        ? "border-violet-400 bg-violet-100"
+                        : "border-violet-200 bg-violet-50"
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        {suggestion.recommended && <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-violet-700">Empfohlen</p>}
+                        {suggestion.recommended && (
+                          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-violet-700">
+                            Empfohlen
+                          </p>
+                        )}
                         <span className="font-semibold text-violet-900">{suggestion.label}</span>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">{suggestion.score} · Passt ✓</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">
+                        {suggestion.score} · Passt ✓
+                      </span>
                     </div>
-                    {suggestion.hint && <p className="mt-1 text-xs text-zinc-600">{suggestion.hint}</p>}
-                    {suggestion.evidenceLabels.length > 0 && <p className="mt-2 text-xs text-zinc-500">Quelle: {suggestion.evidenceLabels.join(" + ")}</p>}
+                    {suggestion.hint && (
+                      <p className="mt-1 text-xs text-zinc-600">{suggestion.hint}</p>
+                    )}
+                    {suggestion.evidenceLabels.length > 0 && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Quelle: {suggestion.evidenceLabels.join(" + ")}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>
             )}
 
             {!showCustomAnswer ? (
-              <button type="button" onClick={() => setShowCustomAnswer(true)} className="mt-3 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium">Andere Zuordnung</button>
+              <button
+                type="button"
+                onClick={() => setShowCustomAnswer(true)}
+                className="mt-3 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium"
+              >
+                Andere Zuordnung
+              </button>
             ) : (
               <div className="mt-3 flex gap-2">
-                <input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submitAnswer() }} className="min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-base outline-none focus:border-zinc-400" placeholder="Kurz korrigieren …" />
-                <button type="button" onClick={() => submitAnswer()} disabled={loading || !answer.trim()} className="rounded-2xl bg-zinc-900 px-4 py-3 font-medium text-white disabled:opacity-50">Senden</button>
+                <input
+                  autoFocus
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitAnswer()
+                  }}
+                  className="min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-base outline-none focus:border-zinc-400"
+                  placeholder="Kurz korrigieren …"
+                />
+                <button
+                  type="button"
+                  onClick={() => submitAnswer()}
+                  disabled={loading || !answer.trim()}
+                  className="rounded-2xl bg-zinc-900 px-4 py-3 font-medium text-white disabled:opacity-50"
+                >
+                  Senden
+                </button>
               </div>
             )}
           </section>
@@ -351,15 +519,36 @@ export default function MilaCorePage() {
 
         {handoffReady && (
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Übergabebereit</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Übergabebereit
+            </p>
             <h2 className="mt-2 text-lg font-semibold">Der Vorgang ist vollständig genug.</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">Mila hat das Übergabepaket vorbereitet. Es wird noch nichts an ein externes System gesendet.</p>
-            <div className="mt-4 rounded-2xl bg-zinc-50 p-3 text-sm"><p className="font-medium">Gesammelter Kontext</p><pre className="mt-2 whitespace-pre-wrap break-words text-xs text-zinc-600">{JSON.stringify(facts, null, 2)}</pre></div>
-            <button type="button" onClick={approveHandoff} disabled={loading || approved} className="mt-4 w-full rounded-2xl bg-emerald-700 px-4 py-3 font-medium text-white disabled:opacity-50">{approved ? "Freigegeben ✓" : "Übergabe menschlich freigeben"}</button>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              Mila hat das Übergabepaket vorbereitet. Es wird noch nichts an ein externes System
+              gesendet.
+            </p>
+            <div className="mt-4 rounded-2xl bg-zinc-50 p-3 text-sm">
+              <p className="font-medium">Gesammelter Kontext</p>
+              <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-zinc-600">
+                {JSON.stringify(facts, null, 2)}
+              </pre>
+            </div>
+            <button
+              type="button"
+              onClick={approveHandoff}
+              disabled={loading || approved}
+              className="mt-4 w-full rounded-2xl bg-emerald-700 px-4 py-3 font-medium text-white disabled:opacity-50"
+            >
+              {approved ? "Freigegeben ✓" : "Übergabe menschlich freigeben"}
+            </button>
           </section>
         )}
 
-        {message && <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700">{message}</section>}
+        {message && (
+          <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700">
+            {message}
+          </section>
+        )}
       </div>
     </main>
   )
