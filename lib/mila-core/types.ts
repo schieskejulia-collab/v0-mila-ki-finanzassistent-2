@@ -46,6 +46,20 @@ export interface MilaEvidenceRef {
   label?: string
 }
 
+export type MilaProvenanceSource = "input" | "memory" | "human" | "connector" | "system"
+
+export interface MilaProvenanceRecord {
+  field: string
+  originalValue: unknown
+  value: unknown
+  source: MilaProvenanceSource
+  sourceLabel: string
+  transformation: "none" | "interpreted" | "normalized" | "confirmed" | "overridden"
+  confidence: MilaConfidence
+  evidence: MilaEvidenceRef[]
+  humanConfirmed: boolean
+}
+
 export interface MilaInterpretation {
   source: MilaInputSource
   caseId?: string
@@ -141,6 +155,7 @@ export interface MilaProcessPlan {
   actions: MilaProposedAction[]
   handoffReady: boolean
   decision: MilaDecision
+  provenance: MilaProvenanceRecord[]
 }
 
 export interface MilaConnectorCapability {
