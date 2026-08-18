@@ -127,14 +127,14 @@ function parseCsvLine(line: string, delimiter: string) {
   return cells
 }
 
-function parseCsv(content: string) {
+function parseCsv(content: string): Record<string, unknown>[] {
   const lines = content.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim())
   if (!lines.length) return []
   const delimiter = detectDelimiter(lines[0])
   const headers = parseCsvLine(lines[0], delimiter).map((header, index) => header || `Spalte ${index + 1}`)
   return lines.slice(1).map((line) => {
     const cells = parseCsvLine(line, delimiter)
-    return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]))
+    return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""])) as Record<string, unknown>
   })
 }
 
@@ -147,7 +147,7 @@ function parseJson(content: string): Record<string, unknown>[] {
   return [{ value: parsed }]
 }
 
-function parseText(content: string) {
+function parseText(content: string): Record<string, unknown>[] {
   return content
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -159,7 +159,11 @@ export function ingestLegacyContent(input: { content: string; format: LegacyForm
   const content = input.content.trim()
   if (!content) throw new Error("Die Legacy-Datei ist leer.")
 
-  const rows = input.format === "csv" ? parseCsv(content) : input.format === "json" ? parseJson(content) : parseText(content)
+  const rows: Record<string, unknown>[] = input.format === "csv"
+    ? parseCsv(content)
+    : input.format === "json"
+      ? parseJson(content)
+      : parseText(content)
   const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
   const warnings: string[] = []
 
