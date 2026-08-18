@@ -1,45 +1,66 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Zap } from 'lucide-react'
-
-import { PilotStartSection } from './pilot-start-section'
-import { HandoffRhythmSection } from './handoff-rhythm-section'
-import { HandoffPackageSection } from './handoff-package-section'
-import { RecurringPatternsSection } from './recurring-patterns-section'
-import { AuditTrailSection } from './audit-trail-section'
+import { ArrowRight, CheckCircle2, FileText, Inbox, Plus, Users } from 'lucide-react'
 
 export function DashboardContent({ model }: { model: any }) {
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-32 pt-6">
-      <Link
-        href="/jetzt"
-        className="group flex items-center justify-between gap-4 rounded-[2rem] bg-violet-600 p-5 text-white shadow-lg shadow-violet-200"
-      >
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <Zap className="h-6 w-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100">
-              Mila JETZT
-            </p>
-            <p className="mt-1 text-lg font-black leading-tight">
-              Etwas muss schnell erledigt werden?
-            </p>
-            <p className="mt-1 text-xs font-semibold text-violet-100">
-              Reinwerfen → ordnen → erledigen.
-            </p>
-          </div>
-        </div>
-        <ArrowRight className="h-5 w-5 shrink-0 transition group-hover:translate-x-1" />
-      </Link>
+  const openItems = Number(model?.openObligations ?? model?.obligations?.open ?? 0)
+  const documents = Number(model?.documents?.length ?? model?.documentCount ?? 0)
 
-      <PilotStartSection model={model} />
-      <HandoffRhythmSection />
-      <HandoffPackageSection />
-      <RecurringPatternsSection />
-      <AuditTrailSection />
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-32 pt-6">
+      <section className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Heute</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Was steht an?</h1>
+        <p className="mt-2 text-sm font-medium text-slate-500">
+          {openItems > 0 ? `${openItems} offene Punkte warten auf dich.` : 'Aktuell ist nichts Dringendes offen.'}
+        </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link href="/verpflichtungen" className="rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-100">
+            <p className="text-3xl font-black text-slate-950">{openItems}</p>
+            <p className="mt-1 text-sm font-bold text-slate-700">Offen</p>
+          </Link>
+          <Link href="/dokumente" className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+            <p className="text-3xl font-black text-slate-950">{documents}</p>
+            <p className="mt-1 text-sm font-bold text-slate-700">Dokumente</p>
+          </Link>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Arbeitsplatz</p>
+            <h2 className="mt-1 text-xl font-black text-slate-950">Direkt loslegen</h2>
+          </div>
+          <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <WorkLink href="/dokumente" icon={FileText} title="Dokumente" />
+          <WorkLink href="/crm" icon={Users} title="Mandanten" />
+          <WorkLink href="/neue-buchungen" icon={Plus} title="Erfassen" />
+          <WorkLink href="/jetzt" icon={Inbox} title="Eingang" />
+        </div>
+      </section>
+
+      <Link href="/jetzt" className="flex items-center justify-between rounded-[2rem] bg-slate-950 p-5 text-white">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">Mila</p>
+          <p className="mt-1 text-lg font-black">Neuen Vorgang bearbeiten</p>
+        </div>
+        <ArrowRight className="h-5 w-5" />
+      </Link>
     </main>
+  )
+}
+
+function WorkLink({ href, icon: Icon, title }: { href: string; icon: any; title: string }) {
+  return (
+    <Link href={href} className="flex min-h-28 flex-col justify-between rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+      <Icon className="h-6 w-6 text-violet-600" />
+      <span className="text-base font-black text-slate-900">{title}</span>
+    </Link>
   )
 }
