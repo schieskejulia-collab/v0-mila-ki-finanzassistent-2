@@ -48,17 +48,48 @@ function normalizeHeader(value: string) {
 
 function inferTargetField(column: string): { field?: string; confidence: MilaConfidence } {
   const normalized = normalizeHeader(column)
-  for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
-    const exact = aliases.some((alias) => normalizeHeader(alias) === normalized)
-    if (exact) return { field, confidence: "high" }
-    const partial = aliases.some((alias) => normalized.includes(normalizeHeader(alias)) || normalizeHeader(alias).includes(normalized))
-    if (partial && normalized.length >= 3) return { field, confidence: "medium" }
-  }
+  const exactMatches = Object.entries(FIELD_ALIASES)
+    .filter(([, aliases]) => aliases.some((alias) => normalizeHeader(alias) === normalized))
+    .map(([field]) => field)
+
+  if (exactMatches.length === 1) return { field: exactMatches[0], confidence: "high" }
+  if (exactMatches.length > 1) return { confidence: "low" }
+
+  const partialMatches = Object.entries(FIELD_ALIASES)
+    .filter(([, aliases]) => aliases.some((alias) => {
+      const normalizedAlias = normalizeHeader(alias)
+      return normalized.length >= 3 && (normalized.includes(normalizedAlias) || normalizedAlias.includes(normalized))
+    }))
+    .map(([field]) => field)
+
+  if (partialMatches.length === 1) return { field: partialMatches[0], confidence: "medium" }
+
+  // Mehrdeutige oder unbekannte Spalten werden absichtlich nicht geraten.
+  // Dadurch landen sie im Human-Confirmation-Schritt statt still falsch gemappt zu werden.
   return { confidence: "low" }
 }
 
 function isBlank(value: unknown) {
   return value === undefined || value === null || String(value).trim() === ""
+}
+
+function looksLikeDate(raw: string) {
+  return (
+    /^\d{4}-\d{1,2}-\d{1,2}$/.test(raw) ||
+    /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(raw)
+  )
+}
+
+function looksLikeNumber(raw: string) {
+  if (!raw || looksLikeDate(raw) || /[A-Za-zÄÖÜäöü]/.test(raw)) return false
+
+  const compact = raw
+    .replace(/\s/g, "")
+    .replace(/(?<=\d)[.](?=\d{3}(?:\D|$))/g, "")
+    .replace(",", ".")
+    .replace(/[^\d.+-]/g, "")
+
+  return compact !== "" && Number.isFinite(Number(compact)) && /\d/.test(compact)
 }
 
 function inferValueType(values: unknown[]): LegacyColumnProfile["inferredType"] {
@@ -75,16 +106,21 @@ function inferValueType(values: unknown[]): LegacyColumnProfile["inferredType"] 
       booleans += 1
       continue
     }
+
     const raw = String(value).trim()
-    const numberCandidate = Number(raw.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, ""))
-    if (raw && Number.isFinite(numberCandidate) && /\d/.test(raw) && !/[A-Za-zÄÖÜäöü]/.test(raw)) {
-      numbers += 1
-      continue
-    }
-    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(raw) || /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(raw)) {
+
+    // Datum MUSS vor Zahl geprüft werden. Sonst würde z. B. 18.08.2026
+    // nach Entfernen der Punkte fälschlich als Zahl erkannt.
+    if (looksLikeDate(raw)) {
       dates += 1
       continue
     }
+
+    if (looksLikeNumber(raw)) {
+      numbers += 1
+      continue
+    }
+
     strings += 1
   }
 
@@ -181,6 +217,11 @@ export function ingestLegacyContent(input: { content: string; format: LegacyForm
       examples: values.filter((value) => !isBlank(value)).slice(0, 3),
     }
   })
+
+  const unresolvedSchema = schema.filter((column) => !column.targetField || column.confidence === "low")
+  if (unresolvedSchema.length) {
+    warnings.push(`${unresolvedSchema.length} Spalte(n) sind unbekannt oder mehrdeutig und müssen vor dem Handoff bestätigt werden.`)
+  }
 
   const sourceLabel = input.sourceLabel || `Legacy-${input.format.toUpperCase()}-Import`
   const provenance: MilaProvenanceRecord[] = schema
