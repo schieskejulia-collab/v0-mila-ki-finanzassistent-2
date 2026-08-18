@@ -149,6 +149,13 @@ function paymentIsProven(scan: any, documentType: unknown) {
   )
 }
 
+async function fileHash(file: File) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export default function StapelPage() {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [items, setItems] = useState<ScanState[]>([])
@@ -158,6 +165,7 @@ export default function StapelPage() {
   const [finalizing, setFinalizing] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
   const [financialCount, setFinancialCount] = useState(0)
+  const [duplicateCount, setDuplicateCount] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState('')
 
@@ -195,6 +203,7 @@ export default function StapelPage() {
     setAnswers({})
     setSavedCount(0)
     setFinancialCount(0)
+    setDuplicateCount(0)
     setCompleted(false)
 
     const initial: ScanState[] = files.map((file, index) => ({
@@ -302,10 +311,26 @@ export default function StapelPage() {
       const sourceById = new Map(items.map((item) => [item.id, item]))
       let saved = 0
       let financialSaved = 0
+      let duplicates = 0
 
       for (const document of batch.documents) {
         const source = sourceById.get(document.id)
         if (!source || source.status !== 'done' || !source.file) continue
+
+        const contentHash = await fileHash(source.file)
+        const { data: existingDocument, error: existingDocumentError } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('content_hash', contentHash)
+          .maybeSingle()
+
+        if (existingDocumentError) throw existingDocumentError
+
+        if (existingDocument?.id) {
+          duplicates += 1
+          setDuplicateCount(duplicates)
+          continue
+        }
 
         const documentId = crypto.randomUUID()
         const extension =
@@ -378,6 +403,7 @@ export default function StapelPage() {
           due_date: dueDate,
           file_name: source.file.name,
           file_url: storagePath,
+          content_hash: contentHash,
           note: noteParts.join(' · '),
         })
 
@@ -563,7 +589,7 @@ export default function StapelPage() {
         setFinancialCount(financialSaved)
       }
 
-      if (saved === 0) {
+      if (saved === 0 && duplicates === 0) {
         throw new Error('Es gab kein erfolgreich gelesenes Dokument zum Speichern.')
       }
 
@@ -586,6 +612,7 @@ export default function StapelPage() {
       }
       setSavedCount(0)
       setFinancialCount(0)
+      setDuplicateCount(0)
       setError(saveError?.message || 'Mila konnte den Stapel nicht vollständig speichern.')
     } finally {
       setFinalizing(false)
@@ -657,8 +684,13 @@ export default function StapelPage() {
           <div className="text-4xl">✅</div>
           <h2 className="mt-3 text-2xl font-black text-emerald-900">Stapel sauber abgelegt.</h2>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-800">
-            {savedCount} Dokument{savedCount === 1 ? '' : 'e'} liegen jetzt in der ausgewählten Mandantenmappe. {financialCount > 0 ? `${financialCount} sicher belegte Finanz-/Fristvorgänge wurden zusätzlich übernommen.` : 'Es wurde kein unbelegter Geldvorgang erzeugt.'}
+            {savedCount > 0 ? `${savedCount} Dokument${savedCount === 1 ? '' : 'e'} liegen jetzt in der ausgewählten Mandantenmappe.` : 'Es musste kein neues Dokument angelegt werden.'} {financialCount > 0 ? `${financialCount} sicher belegte Finanz-/Fristvorgänge wurden zusätzlich übernommen.` : 'Es wurde kein unbelegter Geldvorgang erzeugt.'}
           </p>
+          {duplicateCount > 0 && (
+            <p className="mt-2 rounded-2xl bg-white/70 p-3 text-xs font-black text-emerald-800">
+              {duplicateCount} bereits vorhandene{duplicateCount === 1 ? 's Dokument wurde' : ' Dokumente wurden'} als Duplikat erkannt und nicht doppelt gespeichert.
+            </p>
+          )}
           <p className="mt-2 text-xs font-semibold leading-relaxed text-emerald-700">
             Bestätigte Rückfragen sind als Kontext gespeichert. Steuerliche Einordnungen bleiben ausdrücklich ungeprüft, solange sie nicht fachlich bestätigt wurden.
           </p>
@@ -767,7 +799,7 @@ export default function StapelPage() {
             onClick={() => void finalizeBatch()}
             className="w-full rounded-2xl bg-violet-600 py-4 font-black text-white shadow-md disabled:opacity-40"
           >
-            {finalizing ? `Mila legt ab … ${savedCount}/${batch.summary.received}` : batch.reviewQueue.length > 0 && !allAnswered ? `Noch ${batch.reviewQueue.length - answeredCount} Frage(n) offen` : 'Sortierung übernehmen & ablegen'}
+            {finalizing ? `Mila legt ab … ${savedCount + duplicateCount}/${batch.summary.received}` : batch.reviewQueue.length > 0 && !allAnswered ? `Noch ${batch.reviewQueue.length - answeredCount} Frage(n) offen` : 'Sortierung übernehmen & ablegen'}
           </button>
 
           <p className="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
