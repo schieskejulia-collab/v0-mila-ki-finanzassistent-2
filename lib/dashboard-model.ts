@@ -18,6 +18,25 @@ import {
   getSoftwareExpenses,
 } from '@/lib/dashboard-helpers'
 
+function isSafelyDeductibleExpense(expense: any) {
+  const category = String(expense?.category || '').trim().toLowerCase()
+  if (!category) return false
+
+  const unresolvedOrPrivateMarkers = [
+    'privat',
+    'nicht absetzbar',
+    'ungeprüft',
+    'ungeprueft',
+    'unklar',
+    'gemischt',
+    'sonstiges',
+    'prüfen',
+    'pruefen',
+  ]
+
+  return !unresolvedOrPrivateMarkers.some((marker) => category.includes(marker))
+}
+
 export function buildDashboardModel(data: any) {
   const {
     summary,
@@ -71,15 +90,11 @@ export function buildDashboardModel(data: any) {
     assemblyWork,
   })
 
+  // Nur fachlich bereits eindeutig zugeordnete Kategorien fließen in Milas
+  // grobe Rücklagenrechnung ein. Unklare, gemischte oder private Ausgaben
+  // bleiben Cashflow, werden aber nicht automatisch als steuerlich abziehbar behandelt.
   const deductibleExpenses = expenses
-    .filter((expense: any) => {
-      const category = String(expense?.category || '').toLowerCase()
-      return ![
-        'privat',
-        'privat / nicht absetzbar',
-        'nicht absetzbar',
-      ].includes(category)
-    })
+    .filter(isSafelyDeductibleExpense)
     .reduce(
       (sum: number, expense: any) => sum + Number(expense?.amount || 0),
       0
@@ -349,13 +364,13 @@ function getMood(input: any) {
 
   if (Number(balance || 0) > 0 && availableAfterObligations >= 0 && financeScore >= 70) {
     return {
-  label: 'Heute entspannt',
-  message:
-    '🌸 Heute besteht kein akuter Handlungsbedarf. Deine Finanzen wirken aktuell stabil.',
-  color: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  dot: 'bg-emerald-500',
-  emoji: '🟢',
-}
+      label: 'Heute entspannt',
+      message:
+        '🌸 Heute besteht kein akuter Handlungsbedarf. Deine Finanzen wirken aktuell stabil.',
+      color: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+      dot: 'bg-emerald-500',
+      emoji: '🟢',
+    }
   }
 
   if (Number(balance || 0) < 0 || availableAfterObligations < 0) {
@@ -408,13 +423,13 @@ function getTodayTask(input: any) {
     const dueText = days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`
 
     return {
-  title: 'Nächste Zahlung',
-  message: `Rate über ${formatEuro(
-    Number(item.amount || 0)
-  )} wird ${dueText} fällig.`,
-  href: '/verpflichtungen',
-  tone: 'warning' as const,
-}
+      title: 'Nächste Zahlung',
+      message: `Rate über ${formatEuro(
+        Number(item.amount || 0)
+      )} wird ${dueText} fällig.`,
+      href: '/verpflichtungen',
+      tone: 'warning' as const,
+    }
   }
 
   if (openCount > 0) {
@@ -428,13 +443,13 @@ function getTodayTask(input: any) {
 
   if (taxReserve > 0) {
     return {
-  title: 'Heute etwas zurücklegen',
-  message: `Lege heute ${formatEuro(
-    taxReserve
-  )} für deine Steuer zurück.`,
-  href: '/buchungen',
-  tone: 'good' as const,
-}
+      title: 'Heute etwas zurücklegen',
+      message: `Lege heute ${formatEuro(
+        taxReserve
+      )} für deine Steuer zurück.`,
+      href: '/buchungen',
+      tone: 'good' as const,
+    }
   }
 
   return null
