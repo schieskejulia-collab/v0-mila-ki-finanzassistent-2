@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2, FileText, Inbox, Plus, Users } from 'lucide-react'
+import { MorningBriefing } from '@/components/ui/morning-briefing'
 
 export function DashboardContent({ model }: { model: any }) {
   const openItems = Number(model?.openObligations ?? model?.obligations?.open ?? 0)
@@ -9,9 +10,15 @@ export function DashboardContent({ model }: { model: any }) {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-32 pt-6">
+      <MorningBriefing
+        taxReserve={Number(model?.taxReserve ?? 0)}
+        financeScore={Number(model?.financeScore ?? 0)}
+        availableAfterObligations={model?.availableAfterObligations}
+      />
+
       <section className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Heute</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Was steht an?</h1>
+        <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Was steht an?</h2>
         <p className="mt-2 text-sm font-medium text-slate-500">
           {openItems > 0 ? `${openItems} offene Punkte warten auf dich.` : 'Aktuell ist nichts Dringendes offen.'}
         </p>
