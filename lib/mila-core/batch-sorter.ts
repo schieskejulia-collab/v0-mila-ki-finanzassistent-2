@@ -263,6 +263,7 @@ export function sortDocumentBatch(
     const title = text(scan.title) || text(coreInput.subject) || `Dokument ${index + 1}`
     const vendor = text(scan.vendor ?? scan.partner)
     const amount = numberValue(scan.amount)
+    const documentDate = text(scan.documentDate)
     const documentType = inferDocumentType(scan)
     const direction = inferDirection(scan)
     const scope = inferScope(scan)
@@ -277,6 +278,26 @@ export function sortDocumentBatch(
         'vendor',
         `Wer hat „${title}“ ausgestellt?`,
         'Mila braucht den Absender für eine verlässliche Ablage und Zuordnung.',
+      ))
+    }
+
+    if ((direction === 'expense' || direction === 'income') && amount === undefined) {
+      reasons.push('Der Geldbetrag ist nicht sicher erkannt.')
+      questions.push(makeQuestion(
+        id,
+        'amount',
+        `Welcher Gesamtbetrag gehört zu „${title}“?`,
+        'Mila legt keinen Geldvorgang mit geratenem Betrag an.',
+      ))
+    }
+
+    if ((direction === 'expense' || direction === 'income') && !documentDate) {
+      reasons.push('Das Beleg- oder Zahlungsdatum ist nicht sicher erkannt.')
+      questions.push(makeQuestion(
+        id,
+        'documentDate',
+        `Welches Datum gehört zu „${title}“?`,
+        'Für einen Finanzvorgang braucht Mila ein belegtes Datum und setzt nicht automatisch das heutige Datum ein.',
       ))
     }
 
@@ -322,7 +343,7 @@ export function sortDocumentBatch(
     }
 
     const group = storageGroup(direction, scope, documentType)
-    const period = monthKey(scan.documentDate)
+    const period = monthKey(documentDate)
     const status = questions.length > 0 || reasons.length > 0 ? 'needs_review' : 'auto_sorted'
 
     return {
@@ -331,7 +352,7 @@ export function sortDocumentBatch(
       vendor,
       amount,
       documentType,
-      documentDate: text(scan.documentDate) || undefined,
+      documentDate: documentDate || undefined,
       financialDirection: direction,
       scope,
       storageGroup: group,
