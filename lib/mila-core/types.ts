@@ -18,6 +18,28 @@ export type MilaApprovalStatus =
 
 export type MilaConfidence = "low" | "medium" | "high"
 
+export type MilaProcessState =
+  | "received"
+  | "needs_context"
+  | "needs_human_review"
+  | "ready"
+  | "awaiting_approval"
+  | "completed"
+
+export type MilaNextStep =
+  | "ask_context"
+  | "human_review"
+  | "prepare_handoff"
+  | "request_approval"
+  | "complete"
+
+export interface MilaDecision {
+  state: MilaProcessState
+  nextStep: MilaNextStep
+  reason: string
+  priority: "normal" | "high"
+}
+
 export interface MilaEvidenceRef {
   type: "document" | "message" | "field" | "case_update" | "external"
   id?: string
@@ -118,6 +140,7 @@ export interface MilaProcessPlan {
   suggestions: MilaContextSuggestion[]
   actions: MilaProposedAction[]
   handoffReady: boolean
+  decision: MilaDecision
 }
 
 export interface MilaConnectorCapability {
