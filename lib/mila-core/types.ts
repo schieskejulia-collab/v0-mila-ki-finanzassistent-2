@@ -33,11 +33,33 @@ export type MilaNextStep =
   | "request_approval"
   | "complete"
 
+export type MilaEscalationReason =
+  | "ambiguous_context"
+  | "low_confidence"
+  | "connector_unavailable"
+  | "sensitive_case"
+  | "urgent_case"
+  | "stalled_case"
+
+export type MilaFallbackAction =
+  | "ask_human"
+  | "ask_context"
+  | "neutral_export"
+  | "hold_safely"
+
+export interface MilaEscalation {
+  required: boolean
+  reason?: MilaEscalationReason
+  message?: string
+  fallback?: MilaFallbackAction
+}
+
 export interface MilaDecision {
   state: MilaProcessState
   nextStep: MilaNextStep
   reason: string
   priority: "normal" | "high"
+  escalation: MilaEscalation
 }
 
 export interface MilaEvidenceRef {
