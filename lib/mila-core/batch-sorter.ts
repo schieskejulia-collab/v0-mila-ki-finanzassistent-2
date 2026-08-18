@@ -155,8 +155,6 @@ function inferDirection(scan: MilaBatchScan): MilaFinancialDirection {
   if (/ausgangsrechnung|zahlungseingang|honorar erhalten|einnahme/.test(combined)) return 'income'
   if (/kassenbon|quittung|eingangsrechnung|beleg/.test(type) || /bezahlt|kartenzahlung|barzahlung/.test(combined)) return 'expense'
 
-  // A mere invoice or contract is not treated as an actual income/expense stock
-  // unless the scan explicitly proves payment/receipt.
   if (type === 'rechnung') {
     if (scan.paymentConfirmed === true || scan.paid === true) return 'expense'
     if (scan.received === true) return 'income'
@@ -174,8 +172,6 @@ function inferScope(scan: MilaBatchScan): MilaDocumentScope {
   if (type === 'versicherung') return 'insurance'
   if (type === 'lohnabrechnung') return 'employee'
 
-  // Vendor/category words may suggest a document family, but never prove
-  // business relevance. Keep ambiguous purchases unresolved.
   const combined = `${text(scan.title)} ${text(scan.vendor ?? scan.partner)} ${text(scan.note)}`.toLowerCase()
   if (/apotheke|rezept|medikament|arzt|zahnarzt|heilmittel/.test(combined)) return 'health'
   if (/versicherung|police|beitrag/.test(combined)) return 'insurance'
@@ -264,7 +260,7 @@ export function sortDocumentBatch(
       memory: context.memory,
     })
 
-    const title = text(scan.title) || coreInput.subject
+    const title = text(scan.title) || text(coreInput.subject) || `Dokument ${index + 1}`
     const vendor = text(scan.vendor ?? scan.partner)
     const amount = numberValue(scan.amount)
     const documentType = inferDocumentType(scan)
