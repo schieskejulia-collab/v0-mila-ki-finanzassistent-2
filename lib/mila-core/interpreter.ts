@@ -11,6 +11,23 @@ export interface MilaInterpretInput {
 
 const includesAny = (value: string, terms: string[]) => terms.some((term) => value.includes(term))
 
+const DOCUMENT_TYPES = new Set([
+  "beleg",
+  "rechnung",
+  "gutschrift",
+  "mahnung",
+  "inkasso",
+  "forderung",
+  "vertrag",
+  "bescheid",
+  "lohnabrechnung",
+  "versicherung",
+  "steuer",
+  "quittung",
+  "kassenbon",
+  "sonstiges",
+])
+
 function cleanCapturedValue(value?: string) {
   return value?.trim().replace(/[.,;:!?]+$/g, "").trim()
 }
@@ -43,6 +60,11 @@ function extractBusinessContext(rawText: string) {
   return { facts, evidence }
 }
 
+function structuredDocumentType(fields?: Record<string, unknown>) {
+  const value = String(fields?.documentType ?? fields?.type ?? "").trim().toLowerCase()
+  return DOCUMENT_TYPES.has(value) ? value : undefined
+}
+
 export function interpretInput(input: MilaInterpretInput): MilaInterpretation {
   const rawText = [input.subject, input.text, input.fileName]
     .filter(Boolean)
@@ -60,10 +82,29 @@ export function interpretInput(input: MilaInterpretInput): MilaInterpretation {
   const missingContext: string[] = []
   const ambiguities: string[] = []
   const evidence: MilaEvidenceRef[] = [...extracted.evidence]
+  const documentType = structuredDocumentType(input.fields)
 
-  if (includesAny(text, ["rechnung", "invoice", "beleg"])) {
+  if (
+    documentType ||
+    includesAny(text, [
+      "rechnung",
+      "invoice",
+      "beleg",
+      "gutschrift",
+      "mahnung",
+      "inkasso",
+      "forderung",
+      "vertrag",
+      "bescheid",
+      "lohnabrechnung",
+      "versicherung",
+      "quittung",
+      "kassenbon",
+    ])
+  ) {
     detectedType = "accounting_document"
     processType = "document_handoff"
+    if (documentType) knownFacts.documentType = documentType
     if (!knownFacts.businessPurpose) missingContext.push("businessPurpose")
   } else if (includesAny(text, ["termin", "appointment", "meeting"])) {
     detectedType = "appointment_request"
