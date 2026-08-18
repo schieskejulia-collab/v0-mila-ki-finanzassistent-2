@@ -28,8 +28,8 @@ const navItems = [
     icon: Inbox,
   },
   {
-    href: '/neue-buchungen',
-    label: 'Erfassen',
+    href: '/stapel',
+    label: 'Neu',
     icon: PlusCircle,
   },
   {
