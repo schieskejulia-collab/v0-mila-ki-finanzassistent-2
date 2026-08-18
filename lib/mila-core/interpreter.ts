@@ -84,7 +84,12 @@ export function interpretInput(input: MilaInterpretInput): MilaInterpretation {
   const evidence: MilaEvidenceRef[] = [...extracted.evidence]
   const documentType = structuredDocumentType(input.fields)
 
-  if (
+  if (knownFacts.legacyDataset === true) {
+    detectedType = "legacy_dataset"
+    processType = "legacy_data_handoff"
+    evidence.push({ type: "external", label: `Legacy-Datensatz mit ${Number(knownFacts.rowCount ?? 0)} Zeilen` })
+    if (knownFacts.mappingConfirmed !== true) missingContext.push("mappingConfirmation")
+  } else if (
     documentType ||
     includesAny(text, [
       "rechnung",
