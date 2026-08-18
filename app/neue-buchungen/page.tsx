@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { createDocument } from '@/lib/mila-documents'
@@ -39,8 +38,11 @@ function isMissingReceipt(expense: any) {
   return expense?.hasReceipt === false || expense?.has_receipt === false
 }
 
+function formatEuro(value: number) {
+  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+}
+
 export default function NeueBuchungPage() {
-  const router = useRouter()
   const { addExpense, addIncome, addObligation, incomes, expenses, obligations, addDocument } = useFinance()
 
   const [type, setType] = useState<'expense' | 'income'>('expense')
@@ -57,9 +59,19 @@ export default function NeueBuchungPage() {
   const [receiptMatch, setReceiptMatch] = useState<any | null>(null)
   const [receiptMismatch, setReceiptMismatch] = useState('')
   const [allowSeparateSave, setAllowSeparateSave] = useState(false)
+  const [targetExpenseId, setTargetExpenseId] = useState('')
 
   const numericAmount = numberValue(amount)
   const openMissingExpenses = useMemo(() => (expenses || []).filter(isMissingReceipt), [expenses])
+  const targetExpense = useMemo(
+    () => (targetExpenseId ? openMissingExpenses.find((expense: any) => String(expense?.id || '') === targetExpenseId) || null : null),
+    [openMissingExpenses, targetExpenseId]
+  )
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setTargetExpenseId(params.get('expenseId') || '')
+  }, [])
 
   function resetForm() {
     setTitle('')
@@ -86,7 +98,21 @@ export default function NeueBuchungPage() {
     setReceiptMismatch('')
     setAllowSeparateSave(false)
 
-    if (openMissingExpenses.length === 0 || scannedAmount <= 0) return
+    if (scannedAmount <= 0) return
+
+    if (targetExpense) {
+      const targetAmount = numberValue(targetExpense.amount)
+      if (Math.abs(targetAmount - scannedAmount) < 0.01) {
+        setReceiptMatch(targetExpense)
+      } else {
+        setReceiptMismatch(
+          `Du wolltest einen Beleg für ${expenseTitle(targetExpense)} · ${formatEuro(targetAmount)} zuordnen. Der hochgeladene Beleg hat ${formatEuro(scannedAmount)}. Das passt nicht.`
+        )
+      }
+      return
+    }
+
+    if (openMissingExpenses.length === 0) return
 
     const exactMatches = openMissingExpenses.filter(
       (expense: any) => Math.abs(numberValue(expense?.amount) - scannedAmount) < 0.01
@@ -99,18 +125,18 @@ export default function NeueBuchungPage() {
 
     if (exactMatches.length > 1) {
       setReceiptMismatch(
-        `Der Betrag ${scannedAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} passt zu mehreren offenen Zahlungen. Bitte erst eindeutig zuordnen.`
+        `Der Betrag ${formatEuro(scannedAmount)} passt zu mehreren offenen Zahlungen. Bitte starte die Zuordnung direkt bei der richtigen Zahlung in der Mappe.`
       )
       return
     }
 
     const openAmounts = openMissingExpenses
       .slice(0, 4)
-      .map((expense: any) => `${expenseTitle(expense)} · ${numberValue(expense?.amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`)
+      .map((expense: any) => `${expenseTitle(expense)} · ${formatEuro(numberValue(expense?.amount))}`)
       .join(' | ')
 
     setReceiptMismatch(
-      `Dieser Beleg passt vom Betrag zu keiner offenen Zahlung. Erkannter Beleg: ${scannedAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}. Offen sind z. B.: ${openAmounts}`
+      `Dieser Beleg passt vom Betrag zu keiner offenen Zahlung. Erkannter Beleg: ${formatEuro(scannedAmount)}. Offen sind z. B.: ${openAmounts}`
     )
   }
 
@@ -241,6 +267,7 @@ export default function NeueBuchungPage() {
         payload.tax_reserve = 0
       }
 
+      const separateDocumentOnly = Boolean(scannedFile && receiptMismatch && allowSeparateSave)
       const existingItems = type === 'expense' ? expenses : incomes
       const duplicate = existingItems.find((item: any) => {
         const normalize = (value: unknown) => String(value || '').trim().toLowerCase()
@@ -250,7 +277,7 @@ export default function NeueBuchungPage() {
           && String(item.date || '').slice(0, 10) === String(payload.date || '').slice(0, 10)
       })
 
-      if (duplicate && !receiptMatch) {
+      if (duplicate && !receiptMatch && !separateDocumentOnly) {
         const proceed = window.confirm('Eine sehr ähnliche Buchung existiert bereits. Trotzdem speichern?')
         if (!proceed) return
       }
@@ -282,10 +309,10 @@ export default function NeueBuchungPage() {
       if (type === 'expense') {
         if (scannedFile && receiptMatch) {
           await markMatchedExpenseAsHavingReceipt(receiptMatch, user.id)
-        } else {
+        } else if (!separateDocumentOnly) {
           await addExpense(payload)
         }
-      } else {
+      } else if (!separateDocumentOnly) {
         await addIncome(payload)
       }
 
@@ -302,8 +329,10 @@ export default function NeueBuchungPage() {
             fileName: scannedFile.name,
             fileUrl: uploadedPath,
             note: receiptMatch
-              ? `${note.trim()}${note.trim() ? ' · ' : ''}Beleg organisatorisch zu Zahlung ${expenseTitle(receiptMatch)} (${numberValue(receiptMatch.amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}) zugeordnet.`
-              : note.trim(),
+              ? `${note.trim()}${note.trim() ? ' · ' : ''}Beleg organisatorisch zu Zahlung ${expenseTitle(receiptMatch)} (${formatEuro(numberValue(receiptMatch.amount))}) zugeordnet.`
+              : separateDocumentOnly
+                ? `${note.trim()}${note.trim() ? ' · ' : ''}Bewusst separat abgelegt; keiner offenen Zahlung zugeordnet.`
+                : note.trim(),
           }))
         } catch (documentError) {
           await supabase.storage.from('mila-dokumente').remove([uploadedPath])
@@ -314,10 +343,12 @@ export default function NeueBuchungPage() {
       resetForm()
       alert(
         receiptMatch
-          ? 'Beleg wurde geprüft, der passenden offenen Zahlung zugeordnet und in der Mandantenmappe gespeichert.'
-          : scannedFile
-            ? 'Unterlage wurde gespeichert und der Mandantenmappe hinzugefügt.'
-            : 'Eintrag wurde gespeichert.'
+          ? 'Beleg wurde geprüft, der gewählten offenen Zahlung zugeordnet und in der Mandantenmappe gespeichert.'
+          : separateDocumentOnly
+            ? 'Unterlage wurde separat gespeichert. Es wurde keine neue Zahlung erzeugt.'
+            : scannedFile
+              ? 'Unterlage wurde gespeichert und der Mandantenmappe hinzugefügt.'
+              : 'Eintrag wurde gespeichert.'
       )
 
       window.location.href = '/dokumente'
@@ -339,6 +370,14 @@ export default function NeueBuchungPage() {
         </p>
       </header>
 
+      {targetExpense && (
+        <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Beleg zuordnen für</p>
+          <p className="mt-2 text-lg font-black">{expenseTitle(targetExpense)} · {formatEuro(numberValue(targetExpense.amount))}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-600">Mila prüft den hochgeladenen Beleg genau gegen diese Zahlung.</p>
+        </section>
+      )}
+
       <ReceiptUpload onScanSuccess={handleScanSuccess} />
 
       {scanMessage && (
@@ -350,7 +389,7 @@ export default function NeueBuchungPage() {
       {receiptMatch && scannedFile && (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">✓ Passende offene Zahlung gefunden</p>
-          <p className="mt-2 text-lg font-black">{expenseTitle(receiptMatch)} · {numberValue(receiptMatch.amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+          <p className="mt-2 text-lg font-black">{expenseTitle(receiptMatch)} · {formatEuro(numberValue(receiptMatch.amount))}</p>
           <p className="mt-2 text-sm font-semibold text-slate-600">Beim Speichern wird kein neuer Zahlungs-Eintrag erzeugt. Der Beleg wird dieser offenen Zahlung zugeordnet.</p>
         </section>
       )}
@@ -365,7 +404,7 @@ export default function NeueBuchungPage() {
               <button type="button" onClick={() => setAllowSeparateSave(true)} className="rounded-2xl bg-amber-600 px-3 py-3 text-xs font-black text-white">Separat ablegen</button>
             </div>
           ) : (
-            <p className="mt-4 rounded-2xl bg-white p-3 text-xs font-black text-amber-800">Bewusst als separates Dokument bestätigt.</p>
+            <p className="mt-4 rounded-2xl bg-white p-3 text-xs font-black text-amber-800">Bewusst als separates Dokument bestätigt. Die offene Zahlung bleibt unverändert.</p>
           )}
         </section>
       )}
@@ -410,7 +449,7 @@ export default function NeueBuchungPage() {
       )}
 
       <button type="button" onClick={speichern} disabled={isSaving || Boolean(receiptMismatch && scannedFile && !allowSeparateSave)} className="w-full rounded-2xl bg-violet-600 py-4 font-black text-white shadow-md disabled:opacity-40">
-        {isSaving ? 'Speichere ...' : receiptMatch ? 'Beleg zuordnen & zur Mappe' : 'Speichern & zur Mappe'}
+        {isSaving ? 'Speichere ...' : receiptMatch ? 'Beleg zuordnen & zur Mappe' : allowSeparateSave ? 'Nur Dokument separat ablegen' : 'Speichern & zur Mappe'}
       </button>
 
       <section className="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
