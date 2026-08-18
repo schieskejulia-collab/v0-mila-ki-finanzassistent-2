@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { requireSupabaseUser } from "@/lib/supabase-server"
 import { buildProcessPlan } from "@/lib/mila-core/process-engine"
 import { loadPersistentMilaMemory } from "@/lib/mila-core/persistent-memory"
-import type { MilaInputSource, MilaTargetSystem } from "@/lib/mila-core/types"
+import type { MilaInputSource, MilaProcessState, MilaTargetSystem } from "@/lib/mila-core/types"
 
 interface ProcessRequestBody {
   caseId?: string
@@ -16,6 +16,22 @@ interface ProcessRequestBody {
 }
 
 const DB_SOURCES = new Set(["phone", "email", "upload", "form", "manual"])
+
+function mapProcessStateToCaseStatus(state: MilaProcessState) {
+  switch (state) {
+    case "needs_context":
+      return "needs_info"
+    case "needs_human_review":
+    case "awaiting_approval":
+      return "human_review"
+    case "ready":
+      return "standard"
+    case "completed":
+      return "done"
+    default:
+      return "new"
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -108,9 +124,44 @@ export async function POST(req: Request) {
       target: body.target,
     })
 
+    const caseStatus = mapProcessStateToCaseStatus(plan.decision.state)
+    const decisionAudit = JSON.stringify({
+      event: "orchestration_decision",
+      state: plan.decision.state,
+      nextStep: plan.decision.nextStep,
+      priority: plan.decision.priority,
+      reason: plan.decision.reason,
+      confidence: plan.interpretation.confidence,
+      detectedType: plan.interpretation.detectedType,
+      processType: plan.interpretation.processType ?? null,
+      provenance: plan.provenance,
+    })
+
+    const { error: decisionLogError } = await client.from("mila_case_updates").insert({
+      user_id: user.id,
+      case_id: caseId,
+      kind: "note",
+      content: decisionAudit,
+      status: plan.decision.state === "completed" ? "done" : "open",
+    })
+
+    if (decisionLogError) {
+      return NextResponse.json({ success: false, error: decisionLogError.message }, { status: 500 })
+    }
+
+    const { error: statusUpdateError } = await client
+      .from("mila_intake_cases")
+      .update({ status: caseStatus, handoff_ready: plan.handoffReady })
+      .eq("id", caseId)
+      .eq("user_id", user.id)
+
+    if (statusUpdateError) {
+      return NextResponse.json({ success: false, error: statusUpdateError.message }, { status: 500 })
+    }
+
     if (plan.questions.length > 0) {
       const firstQuestion = plan.questions[0]
-      const { error: updateError } = await client.from("mila_case_updates").insert({
+      const { error: questionLogError } = await client.from("mila_case_updates").insert({
         user_id: user.id,
         case_id: caseId,
         kind: "question",
@@ -118,15 +169,9 @@ export async function POST(req: Request) {
         status: "waiting",
       })
 
-      if (updateError) {
-        return NextResponse.json({ success: false, error: updateError.message }, { status: 500 })
+      if (questionLogError) {
+        return NextResponse.json({ success: false, error: questionLogError.message }, { status: 500 })
       }
-
-      await client
-        .from("mila_intake_cases")
-        .update({ status: "needs_info", handoff_ready: false })
-        .eq("id", caseId)
-        .eq("user_id", user.id)
     }
 
     if (plan.handoffReady) {
@@ -136,6 +181,8 @@ export async function POST(req: Request) {
           processType: plan.interpretation.processType,
           summary: plan.interpretation.summary,
           facts: plan.interpretation.knownFacts,
+          provenance: plan.provenance,
+          decision: plan.decision,
           target: body.target ?? null,
         },
         null,
@@ -144,11 +191,7 @@ export async function POST(req: Request) {
 
       const { error: caseUpdateError } = await client
         .from("mila_intake_cases")
-        .update({
-          status: "human_review",
-          handoff_ready: true,
-          handoff_summary: handoffSummary,
-        })
+        .update({ handoff_summary: handoffSummary })
         .eq("id", caseId)
         .eq("user_id", user.id)
 
@@ -182,9 +225,7 @@ export async function POST(req: Request) {
             confirmedPatterns: memory.confirmedPatterns.length,
           }
         : null,
-      next:
-        plan.questions[0]?.question ??
-        (plan.handoffReady ? "human_review" : "needs_interpretation"),
+      next: plan.questions[0]?.question ?? plan.decision.nextStep,
     })
   } catch (error: any) {
     return NextResponse.json(
