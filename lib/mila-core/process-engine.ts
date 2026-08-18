@@ -2,6 +2,7 @@ import { buildContextQuestions } from "./context-engine"
 import { buildContextSuggestions } from "./context-memory"
 import { getConnector, proposeHandoffAction } from "./connectors"
 import { interpretInput, type MilaInterpretInput } from "./interpreter"
+import { buildInputProvenance } from "./provenance"
 import type { MilaDecision, MilaMemoryContext, MilaProcessPlan, MilaTargetSystem } from "./types"
 
 export interface MilaPlanInput extends MilaInterpretInput {
@@ -80,14 +81,16 @@ export function buildProcessPlan(input: MilaPlanInput): MilaProcessPlan {
 
   const decision = decideNextStep(interpretation, questions.length, input.target)
   const handoffReady = decision.state === "ready" || decision.state === "awaiting_approval"
+  const provenance = buildInputProvenance(interpretation)
 
   const actions = handoffReady && input.target
     ? [proposeHandoffAction(input.caseId, input.target, {
         processType: interpretation.processType,
         summary: interpretation.summary,
         facts: interpretation.knownFacts,
+        provenance,
       })]
     : []
 
-  return { interpretation, questions, suggestions, actions, handoffReady, decision }
+  return { interpretation, questions, suggestions, actions, handoffReady, decision, provenance }
 }
