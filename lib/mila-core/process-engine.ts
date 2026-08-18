@@ -167,7 +167,7 @@ export function buildProcessPlan(input: MilaPlanInput): MilaProcessPlan {
   const provenance = buildInputProvenance(interpretation)
 
   const fallbackTarget = decision.escalation.fallback === "neutral_export"
-    ? { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export_package" }
+    ? { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" }
     : undefined
   const effectiveTarget = fallbackTarget ?? input.target
 
