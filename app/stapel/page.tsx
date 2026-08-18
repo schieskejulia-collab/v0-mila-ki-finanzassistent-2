@@ -46,13 +46,30 @@ function safeDate(value: unknown) {
   const raw = String(value || '').trim()
   if (!raw) return null
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+
+  const german = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+  if (german) {
+    return `${german[3]}-${german[2].padStart(2, '0')}-${german[1].padStart(2, '0')}`
+  }
+
   const date = new Date(raw)
   if (Number.isNaN(date.getTime())) return null
   return date.toISOString().slice(0, 10)
 }
 
 function numberValue(value: unknown) {
-  const parsed = Number(String(value ?? '').replace(',', '.'))
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+
+  const normalized = raw
+    .replace(/\s/g, '')
+    .replace(/€/g, '')
+    .replace(/\.(?=\d{3}(?:\D|$))/g, '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '')
+
+  const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }
 
@@ -60,6 +77,76 @@ function directionLabel(value: unknown) {
   if (value === 'income') return 'Einnahme erkannt'
   if (value === 'expense') return 'Ausgabe erkannt'
   return 'Nachweis / noch kein bestätigter Geldfluss'
+}
+
+function normalizeScope(value: unknown) {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (['business', 'betrieblich', 'betrieb'].includes(normalized)) return 'business'
+  if (['employee', 'beruflich', 'arbeitnehmer'].includes(normalized)) return 'employee'
+  if (['private', 'privat'].includes(normalized)) return 'private'
+  if (['mixed', 'gemischt'].includes(normalized)) return 'mixed'
+  if (['health', 'gesundheit'].includes(normalized)) return 'health'
+  if (['insurance', 'versicherung'].includes(normalized)) return 'insurance'
+  if (['vehicle', 'fahrzeug'].includes(normalized)) return 'vehicle'
+  if (['household', 'haushalt'].includes(normalized)) return 'household'
+  return 'unknown'
+}
+
+function categoryForCashflow(scope: string) {
+  if (scope === 'private') return 'Privat / Nicht absetzbar'
+  if (scope === 'mixed') return 'Gemischt / prüfen'
+  if (scope === 'business') return 'Betrieblich bestätigt / steuerlich ungeprüft'
+  if (scope === 'employee') return 'Beruflich bestätigt / steuerlich ungeprüft'
+  if (scope === 'health') return 'Gesundheit / steuerlich ungeprüft'
+  if (scope === 'insurance') return 'Versicherung / steuerlich ungeprüft'
+  if (scope === 'vehicle') return 'Fahrzeug / steuerlich ungeprüft'
+  if (scope === 'household') return 'Haushalt / steuerlich ungeprüft'
+  return 'Ungeprüft'
+}
+
+function answerFor(
+  questions: ReviewQuestion[],
+  answers: Record<string, string>,
+  field: string,
+) {
+  const question = questions.find((item) => item.field === field)
+  return question ? String(answers[question.id] || '').trim() : ''
+}
+
+function resolveScope(
+  document: any,
+  questions: ReviewQuestion[],
+  answers: Record<string, string>,
+) {
+  const explicitAnswer = answerFor(questions, answers, 'scope')
+  if (explicitAnswer) return normalizeScope(explicitAnswer)
+
+  const lineAnswers = questions
+    .filter((question) => question.field.startsWith('lineItem:'))
+    .map((question) => String(answers[question.id] || '').trim().toLowerCase())
+    .filter(Boolean)
+
+  if (lineAnswers.length > 0) {
+    const hasRelevant = lineAnswers.some((answer) => answer === 'relevant')
+    const hasPrivate = lineAnswers.some((answer) => answer === 'privat')
+    const hasUnknown = lineAnswers.some((answer) => answer === 'nicht sicher')
+
+    if (hasUnknown) return 'unknown'
+    if (hasRelevant && hasPrivate) return 'mixed'
+    if (hasPrivate && !hasRelevant) return 'private'
+  }
+
+  return normalizeScope(document?.scope)
+}
+
+function paymentIsProven(scan: any, documentType: unknown) {
+  const rawType = String(scan?.documentType || scan?.type || documentType || '').trim().toLowerCase()
+  return (
+    scan?.paymentConfirmed === true ||
+    scan?.paid === true ||
+    rawType === 'kassenbon' ||
+    rawType === 'quittung'
+  )
 }
 
 export default function StapelPage() {
@@ -70,6 +157,7 @@ export default function StapelPage() {
   const [running, setRunning] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
+  const [financialCount, setFinancialCount] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState('')
 
@@ -106,6 +194,7 @@ export default function StapelPage() {
     setBatch(null)
     setAnswers({})
     setSavedCount(0)
+    setFinancialCount(0)
     setCompleted(false)
 
     const initial: ScanState[] = files.map((file, index) => ({
@@ -196,6 +285,9 @@ export default function StapelPage() {
     setFinalizing(true)
     const uploadedPaths: string[] = []
     const createdDocumentIds: string[] = []
+    const createdExpenseIds: string[] = []
+    const createdIncomeIds: Array<string | number> = []
+    const createdObligationIds: string[] = []
 
     try {
       const {
@@ -209,6 +301,7 @@ export default function StapelPage() {
 
       const sourceById = new Map(items.map((item) => [item.id, item]))
       let saved = 0
+      let financialSaved = 0
 
       for (const document of batch.documents) {
         const source = sourceById.get(document.id)
@@ -241,22 +334,43 @@ export default function StapelPage() {
           })
           .filter(Boolean)
 
+        const knownFacts = document?.plan?.interpretation?.knownFacts || {}
+        const title = String(document.title || scan.title || source.name || 'Dokument').trim()
+        const vendor = String(
+          answerFor(documentQuestions, answers, 'vendor') ||
+          document.vendor ||
+          scan.vendor ||
+          scan.partner ||
+          '',
+        ).trim()
+        const amount = numberValue(
+          answerFor(documentQuestions, answers, 'amount') ||
+          document.amount ||
+          scan.amount,
+        )
+        const documentDate = safeDate(
+          answerFor(documentQuestions, answers, 'documentDate') ||
+          document.documentDate ||
+          scan.documentDate ||
+          knownFacts.documentDate,
+        )
+        const dueDate = safeDate(scan.dueDate ?? scan.due_date ?? knownFacts.dueDate)
+        const resolvedScope = resolveScope(document, documentQuestions, answers)
+
         const noteParts = [
           `Mila Stapel · ${document.storageGroup || 'Nachweise'}`,
           directionLabel(document.financialDirection),
-          answerLines.length > 0 ? `Bestätigter Kontext: ${answerLines.join(' | ')}` : 'Ohne Rückfrage organisatorisch vorsortiert.',
+          `Kontextbereich: ${resolvedScope}`,
+          answerLines.length > 0
+            ? `Bestätigter Kontext: ${answerLines.join(' | ')}`
+            : 'Ohne Rückfrage organisatorisch vorsortiert.',
         ]
-
-        const knownFacts = document?.plan?.interpretation?.knownFacts || {}
-        const amount = numberValue(document.amount ?? scan.amount)
-        const documentDate = safeDate(document.documentDate ?? scan.documentDate ?? knownFacts.documentDate)
-        const dueDate = safeDate(scan.dueDate ?? scan.due_date ?? knownFacts.dueDate)
 
         const { error: documentError } = await supabase.from('documents').insert({
           id: documentId,
           user_id: user.id,
-          title: String(document.title || scan.title || source.name || 'Dokument').trim(),
-          partner: String(document.vendor || scan.vendor || scan.partner || '').trim() || null,
+          title,
+          partner: vendor || null,
           amount,
           type: normalizedDocumentType(document.documentType ?? scan.documentType ?? scan.type),
           status: 'geprueft',
@@ -289,8 +403,164 @@ export default function StapelPage() {
           if (questionError) throw questionError
         }
 
+        let linkedExpenseId = ''
+        const direction = String(document.financialDirection || '').toLowerCase()
+        const canCreateCashflow = amount !== null && amount > 0 && Boolean(documentDate)
+
+        if (
+          direction === 'expense' &&
+          canCreateCashflow &&
+          paymentIsProven(scan, document.documentType)
+        ) {
+          const { data: existingExpense, error: duplicateError } = await supabase
+            .from('expenses')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('title', title)
+            .eq('vendor', vendor)
+            .eq('amount', amount)
+            .eq('date', documentDate as string)
+            .maybeSingle()
+
+          if (duplicateError) throw duplicateError
+
+          if (existingExpense?.id) {
+            linkedExpenseId = String(existingExpense.id)
+          } else {
+            const expenseId = crypto.randomUUID()
+            const { data: newExpense, error: expenseError } = await supabase
+              .from('expenses')
+              .insert({
+                id: expenseId,
+                user_id: user.id,
+                title,
+                vendor,
+                amount,
+                category: categoryForCashflow(resolvedScope),
+                date: documentDate,
+                note: `Aus Mila Stapel · Originalbeleg ${source.file.name} · steuerliche Einordnung nicht automatisch vorgenommen.`,
+                status: 'bezahlt',
+                paid_at: new Date().toISOString(),
+                hasReceipt: true,
+                source: 'mila_stapel',
+                vat: 0,
+              })
+              .select('id')
+              .single()
+
+            if (expenseError || !newExpense?.id) {
+              throw expenseError || new Error('Ausgabe konnte nicht angelegt werden.')
+            }
+
+            linkedExpenseId = String(newExpense.id)
+            createdExpenseIds.push(linkedExpenseId)
+            financialSaved += 1
+          }
+
+          if (linkedExpenseId) {
+            const { error: linkError } = await supabase
+              .from('documents')
+              .update({ related_booking_id: linkedExpenseId })
+              .eq('id', documentId)
+
+            if (linkError) throw linkError
+          }
+        }
+
+        if (direction === 'income' && canCreateCashflow) {
+          const { data: existingIncome, error: duplicateIncomeError } = await supabase
+            .from('incomes')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('title', title)
+            .eq('client', vendor)
+            .eq('amount', amount)
+            .eq('date', documentDate as string)
+            .maybeSingle()
+
+          if (duplicateIncomeError) throw duplicateIncomeError
+
+          if (!existingIncome?.id) {
+            const { data: newIncome, error: incomeError } = await supabase
+              .from('incomes')
+              .insert({
+                user_id: user.id,
+                title,
+                client: vendor,
+                amount,
+                date: documentDate,
+                note: `Aus Mila Stapel · tatsächlicher Zahlungseingang laut Dokument · ${source.file.name}.`,
+                status: 'bezahlt',
+                paid_at: new Date().toISOString(),
+                source: 'mila_stapel',
+                vat: 0,
+                tax_reserve: 0,
+              })
+              .select('id')
+              .single()
+
+            if (incomeError || !newIncome?.id) {
+              throw incomeError || new Error('Einnahme konnte nicht angelegt werden.')
+            }
+
+            createdIncomeIds.push(newIncome.id)
+            financialSaved += 1
+          }
+        }
+
+        const obligationFlag = Boolean(scan.isObligation ?? knownFacts.isObligation)
+        if (
+          obligationFlag &&
+          amount !== null &&
+          amount > 0 &&
+          dueDate &&
+          direction !== 'expense'
+        ) {
+          const { data: existingObligation, error: obligationDuplicateError } = await supabase
+            .from('obligations')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('title', title)
+            .eq('amount', amount)
+            .eq('due_date', dueDate)
+            .maybeSingle()
+
+          if (obligationDuplicateError) throw obligationDuplicateError
+
+          if (!existingObligation?.id) {
+            const obligationId = crypto.randomUUID()
+            const { data: newObligation, error: obligationError } = await supabase
+              .from('obligations')
+              .insert({
+                id: obligationId,
+                user_id: user.id,
+                title,
+                amount,
+                creditor: vendor || null,
+                partner: vendor || null,
+                status: 'offen',
+                due_date: dueDate,
+                reminder_days: 3,
+                note: `Aus Mila Stapel · Zahlungs-/Fristhinweis aus ${source.file.name}.`,
+                area: resolvedScope,
+                priority: 'normal',
+                type: normalizedDocumentType(document.documentType ?? scan.documentType ?? scan.type),
+              })
+              .select('id')
+              .single()
+
+            if (obligationError || !newObligation?.id) {
+              throw obligationError || new Error('Offener Punkt konnte nicht angelegt werden.')
+            }
+
+            createdObligationIds.push(String(newObligation.id))
+            financialSaved += 1
+          }
+        }
+
         saved += 1
         setSavedCount(saved)
+        setFinancialCount(financialSaved)
       }
 
       if (saved === 0) {
@@ -299,6 +569,15 @@ export default function StapelPage() {
 
       setCompleted(true)
     } catch (saveError: any) {
+      if (createdExpenseIds.length > 0) {
+        await supabase.from('expenses').delete().in('id', createdExpenseIds)
+      }
+      if (createdIncomeIds.length > 0) {
+        await supabase.from('incomes').delete().in('id', createdIncomeIds)
+      }
+      if (createdObligationIds.length > 0) {
+        await supabase.from('obligations').delete().in('id', createdObligationIds)
+      }
       if (createdDocumentIds.length > 0) {
         await supabase.from('documents').delete().in('id', createdDocumentIds)
       }
@@ -306,6 +585,7 @@ export default function StapelPage() {
         await supabase.storage.from('mila-dokumente').remove(uploadedPaths)
       }
       setSavedCount(0)
+      setFinancialCount(0)
       setError(saveError?.message || 'Mila konnte den Stapel nicht vollständig speichern.')
     } finally {
       setFinalizing(false)
@@ -377,7 +657,10 @@ export default function StapelPage() {
           <div className="text-4xl">✅</div>
           <h2 className="mt-3 text-2xl font-black text-emerald-900">Stapel sauber abgelegt.</h2>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-800">
-            {savedCount} Dokument{savedCount === 1 ? '' : 'e'} liegen jetzt in der ausgewählten Mandantenmappe. Bestätigte Rückfragen wurden als nachvollziehbarer Kontext mitgespeichert.
+            {savedCount} Dokument{savedCount === 1 ? '' : 'e'} liegen jetzt in der ausgewählten Mandantenmappe. {financialCount > 0 ? `${financialCount} sicher belegte Finanz-/Fristvorgänge wurden zusätzlich übernommen.` : 'Es wurde kein unbelegter Geldvorgang erzeugt.'}
+          </p>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-emerald-700">
+            Bestätigte Rückfragen sind als Kontext gespeichert. Steuerliche Einordnungen bleiben ausdrücklich ungeprüft, solange sie nicht fachlich bestätigt wurden.
           </p>
           <Link href="/dokumente" className="mt-5 inline-flex rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-black text-white">
             Mandantenmappe öffnen
@@ -488,7 +771,7 @@ export default function StapelPage() {
           </button>
 
           <p className="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
-            Mila speichert erst nach diesem Schritt. Automatische Vorsortierung und deine Antworten bleiben so nachvollziehbar getrennt. Steuerliche oder rechtliche Entscheidungen trifft Mila dabei nicht.
+            Mila speichert erst nach diesem Schritt. Nur belegte Geldflüsse werden zusätzlich als Einnahme/Ausgabe übernommen; unklare steuerliche Einordnungen bleiben ungeprüft. Automatische Vorsortierung und deine Antworten bleiben nachvollziehbar getrennt.
           </p>
         </>
       )}
