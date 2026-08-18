@@ -1,27 +1,13 @@
-import type { MilaConfidence, MilaEvidenceRef, MilaInterpretation } from "./types"
-
-export type MilaProvenanceSource = "input" | "memory" | "human" | "connector" | "system"
-
-export interface MilaProvenanceRecord {
-  field: string
-  originalValue: unknown
-  value: unknown
-  source: MilaProvenanceSource
-  sourceLabel: string
-  transformation: "none" | "interpreted" | "normalized" | "confirmed" | "overridden"
-  confidence: MilaConfidence
-  evidence: MilaEvidenceRef[]
-  humanConfirmed: boolean
-}
+import type { MilaInterpretation, MilaProvenanceRecord } from "./types"
 
 export function buildInputProvenance(interpretation: MilaInterpretation): MilaProvenanceRecord[] {
   return Object.entries(interpretation.knownFacts).map(([field, value]) => ({
     field,
     originalValue: value,
     value,
-    source: "input" as const,
+    source: "input",
     sourceLabel: interpretation.source,
-    transformation: "interpreted" as const,
+    transformation: "interpreted",
     confidence: interpretation.confidence,
     evidence: interpretation.evidence,
     humanConfirmed: false,
