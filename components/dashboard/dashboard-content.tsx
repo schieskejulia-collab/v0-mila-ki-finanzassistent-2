@@ -5,8 +5,13 @@ import { ArrowRight, CheckCircle2, FileText, Inbox, Plus, Users } from 'lucide-r
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 
 export function DashboardContent({ model }: { model: any }) {
-  const openItems = Number(model?.openObligations ?? model?.obligations?.open ?? 0)
-  const documents = Number(model?.documents?.length ?? model?.documentCount ?? 0)
+  const openItems = Array.isArray(model?.openObligations)
+    ? model.openObligations.length
+    : Number(model?.openObligations ?? model?.obligations?.open ?? 0) || 0
+
+  const documents = Array.isArray(model?.documents)
+    ? model.documents.length
+    : Number(model?.documentCount ?? 0) || 0
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-32 pt-6">
@@ -47,7 +52,7 @@ export function DashboardContent({ model }: { model: any }) {
         <div className="grid grid-cols-2 gap-3">
           <WorkLink href="/dokumente" icon={FileText} title="Dokumente" />
           <WorkLink href="/crm" icon={Users} title="Mandanten" />
-          <WorkLink href="/neue-buchungen" icon={Plus} title="Erfassen" />
+          <WorkLink href="/stapel" icon={Plus} title="Belege rein" />
           <WorkLink href="/jetzt" icon={Inbox} title="Eingang" />
         </div>
       </section>
