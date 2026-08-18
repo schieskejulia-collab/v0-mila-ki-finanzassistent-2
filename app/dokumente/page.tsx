@@ -73,6 +73,12 @@ function expenseAmount(expense: any) {
   return Number.isFinite(value) ? value : 0
 }
 
+function receiptHref(expense: any) {
+  if (!expense?.id) return '/neue-buchungen'
+  const params = new URLSearchParams({ expenseId: String(expense.id) })
+  return `/neue-buchungen?${params.toString()}`
+}
+
 function legacyFingerprint(expense: any) {
   return [expenseTitle(expense), expenseAmount(expense), String(expense?.merchant || expense?.partner || ''), String(expense?.createdAt || expense?.created_at || expense?.date || '')].join('|')
 }
@@ -145,7 +151,6 @@ export default function DokumentePage() {
     attentionIds.has(String(doc.id)) || !checkDocumentQuality(doc).ok
 
   const clarificationCount = documents.filter(documentNeedsClarification).length
-  const qualityIssueCount = documents.filter((doc: any) => !checkDocumentQuality(doc).ok).length
   const receiptsPresentCount = Math.max(0, expenses.length - missingReceipts.length)
   const completenessPercent = expenses.length > 0
     ? Math.round((receiptsPresentCount / expenses.length) * 100)
@@ -170,10 +175,7 @@ export default function DokumentePage() {
       sonstiges: 0,
     }
 
-    for (const doc of documents) {
-      counts[baseCategoryForDocument(doc)] += 1
-    }
-
+    for (const doc of documents) counts[baseCategoryForDocument(doc)] += 1
     return counts
   }, [documents, clarificationCount])
 
@@ -312,19 +314,11 @@ export default function DokumentePage() {
         </div>
 
         {expenses.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
-            Noch keine Zahlungen für den Abgleich erfasst.
-          </p>
+          <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Noch keine Zahlungen für den Abgleich erfasst.</p>
         ) : missingReceipts.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-black text-emerald-700">
-            ✓ Für alle aktuell erfassten Zahlungen ist ein Beleg hinterlegt.
-          </p>
+          <p className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-black text-emerald-700">✓ Für alle aktuell erfassten Zahlungen ist ein Beleg hinterlegt.</p>
         ) : (
-          <button
-            type="button"
-            onClick={() => setFilter('missing')}
-            className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-4 text-left text-sm font-black text-amber-800 ring-1 ring-amber-100"
-          >
+          <button type="button" onClick={() => setFilter('missing')} className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-4 text-left text-sm font-black text-amber-800 ring-1 ring-amber-100">
             {missingReceipts.length} Zahlungen ohne Beleg prüfen →
           </button>
         )}
@@ -340,17 +334,10 @@ export default function DokumentePage() {
             <button type="button" onClick={() => setCategory('all')} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Zurücksetzen</button>
           )}
         </div>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Die Kategorie beschreibt, was ein Dokument ist. „Klärung nötig“ bleibt davon getrennt als Arbeitsstatus.
-        </p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">Die Kategorie beschreibt, was ein Dokument ist. „Klärung nötig“ bleibt davon getrennt als Arbeitsstatus.</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(['klaerung','einnahmen','ausgaben','bank-kasse','vertraege','steuer','sonstiges'] as CategoryKey[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setCategory(key)}
-              className={`rounded-2xl p-3 text-left ${category === key ? 'bg-violet-600 text-white' : key === 'klaerung' ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-violet-50 text-slate-800'}`}
-            >
+            <button key={key} type="button" onClick={() => setCategory(key)} className={`rounded-2xl p-3 text-left ${category === key ? 'bg-violet-600 text-white' : key === 'klaerung' ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-violet-50 text-slate-800'}`}>
               <p className="text-lg font-black">{categoryCounts[key]}</p>
               <p className="mt-1 text-[10px] font-black uppercase tracking-wider">{CATEGORY_LABELS[key]}</p>
             </button>
@@ -362,9 +349,7 @@ export default function DokumentePage() {
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Aufmerksamkeit zuerst</p>
           <h2 className="mt-2 text-xl font-black">Was noch offen ist</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-600">
-            {missingReceipts.length} Zahlungen ohne Beleg · {clarificationCount} Dokumente in Klärung
-          </p>
+          <p className="mt-2 text-sm font-semibold text-slate-600">{missingReceipts.length} Zahlungen ohne Beleg · {clarificationCount} Dokumente in Klärung</p>
 
           {missingReceipts.length > 0 && (
             <div className="mt-4 space-y-3">
@@ -376,7 +361,7 @@ export default function DokumentePage() {
                   </div>
                   <p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Link href="/neue-buchungen" className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white">Beleg erfassen</Link>
+                    <Link href={receiptHref(expense)} className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white">Beleg erfassen</Link>
                     <button type="button" onClick={() => void removeMissingReceipt(expense)} className="rounded-xl bg-white px-3 py-3 text-xs font-black text-red-500 ring-1 ring-red-100">Löschen</button>
                   </div>
                 </div>
@@ -415,6 +400,7 @@ export default function DokumentePage() {
                 <span className="font-black">{formatEuro(expenseAmount(expense))}</span>
               </div>
               <p className="mt-2 text-xs font-bold text-amber-700">Kein Beleg zugeordnet</p>
+              <Link href={receiptHref(expense)} className="mt-3 inline-flex rounded-xl bg-violet-600 px-3 py-3 text-xs font-black text-white">Beleg erfassen</Link>
             </div>
           ))}
         </section>
@@ -454,11 +440,7 @@ export default function DokumentePage() {
                               <p className="truncate font-black">{doc.title}</p>
                               {doc.partner && <p className="truncate text-xs font-semibold text-slate-500">{doc.partner}</p>}
                             </div>
-                            {Number(doc.amount || 0) > 0 ? (
-                              <span className="shrink-0 text-sm font-black">{formatEuro(Number(doc.amount))}</span>
-                            ) : (
-                              <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-slate-400">Betrag offen</span>
-                            )}
+                            {Number(doc.amount || 0) > 0 ? <span className="shrink-0 text-sm font-black">{formatEuro(Number(doc.amount))}</span> : <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-slate-400">Betrag offen</span>}
                           </div>
 
                           <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-slate-100">
