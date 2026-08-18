@@ -8,19 +8,59 @@ import type { MilaDecision, MilaMemoryContext, MilaProcessPlan, MilaTargetSystem
 export interface MilaPlanInput extends MilaInterpretInput {
   target?: MilaTargetSystem
   memory?: MilaMemoryContext
+  urgent?: boolean
+  sensitive?: boolean
 }
 
 function decideNextStep(
   interpretation: ReturnType<typeof interpretInput>,
   questionCount: number,
   target?: MilaTargetSystem,
+  urgent = false,
+  sensitive = false,
 ): MilaDecision {
-  if (interpretation.confidence === "low" || interpretation.ambiguities.length > 0) {
+  if (sensitive) {
     return {
       state: "needs_human_review",
       nextStep: "human_review",
-      reason: "Der Zielprozess oder Kontext ist nicht eindeutig. Mila stoppt vor einer automatischen Aktion.",
+      reason: "Der Vorgang enthält sensible Inhalte und wird vor einer weiteren Aktion menschlich geprüft.",
       priority: "high",
+      escalation: {
+        required: true,
+        reason: "sensitive_case",
+        message: "Sensibler Vorgang: keine automatische externe Aktion.",
+        fallback: "hold_safely",
+      },
+    }
+  }
+
+  if (interpretation.ambiguities.length > 0) {
+    return {
+      state: "needs_human_review",
+      nextStep: "human_review",
+      reason: "Der aktuelle Kontext ist widersprüchlich oder mehrdeutig. Mila stoppt vor einer automatischen Aktion.",
+      priority: "high",
+      escalation: {
+        required: true,
+        reason: "ambiguous_context",
+        message: "Widersprüchlicher Kontext muss durch einen Menschen aufgelöst werden.",
+        fallback: "ask_human",
+      },
+    }
+  }
+
+  if (interpretation.confidence === "low") {
+    return {
+      state: "needs_human_review",
+      nextStep: "human_review",
+      reason: "Mila ist sich bei der Interpretation nicht sicher genug für einen automatischen nächsten Schritt.",
+      priority: "high",
+      escalation: {
+        required: true,
+        reason: "low_confidence",
+        message: "Niedrige Confidence: menschliche Prüfung erforderlich.",
+        fallback: "ask_human",
+      },
     }
   }
 
@@ -29,7 +69,15 @@ function decideNextStep(
       state: "needs_context",
       nextStep: "ask_context",
       reason: "Für den nächsten sicheren Prozessschritt fehlen noch erforderliche Angaben.",
-      priority: "normal",
+      priority: urgent ? "high" : "normal",
+      escalation: urgent
+        ? {
+            required: true,
+            reason: "urgent_case",
+            message: "Dringender Vorgang mit fehlendem Kontext: Rückfrage priorisieren.",
+            fallback: "ask_context",
+          }
+        : { required: false },
     }
   }
 
@@ -38,7 +86,15 @@ function decideNextStep(
       state: "ready",
       nextStep: "prepare_handoff",
       reason: "Der Vorgang ist ausreichend geklärt. Ein Zielsystem kann ausgewählt werden.",
-      priority: "normal",
+      priority: urgent ? "high" : "normal",
+      escalation: urgent
+        ? {
+            required: true,
+            reason: "urgent_case",
+            message: "Dringender Vorgang ist fachlich bereit und sollte bevorzugt weitergegeben werden.",
+            fallback: "hold_safely",
+          }
+        : { required: false },
     }
   }
 
@@ -46,11 +102,22 @@ function decideNextStep(
   const capability = connector?.capabilities.find((item) => item.id === target.capability)
 
   if (!connector?.enabled || !capability) {
+    const neutralExport = getConnector("neutral-export")
+    const neutralExportAvailable = Boolean(neutralExport?.enabled)
+
     return {
-      state: "needs_human_review",
-      nextStep: "human_review",
-      reason: "Das gewünschte Ziel oder die benötigte Connector-Fähigkeit ist nicht aktiv verfügbar.",
+      state: neutralExportAvailable ? "ready" : "needs_human_review",
+      nextStep: neutralExportAvailable ? "prepare_handoff" : "human_review",
+      reason: neutralExportAvailable
+        ? "Das gewünschte Ziel ist nicht verfügbar. Mila fällt sicher auf den neutralen Export zurück."
+        : "Das gewünschte Ziel ist nicht verfügbar und es steht kein sicherer automatischer Fallback bereit.",
       priority: "high",
+      escalation: {
+        required: true,
+        reason: "connector_unavailable",
+        message: `Connector ${target.connectorId} oder Fähigkeit ${target.capability} ist nicht aktiv verfügbar.`,
+        fallback: neutralExportAvailable ? "neutral_export" : "hold_safely",
+      },
     }
   }
 
@@ -59,7 +126,15 @@ function decideNextStep(
       state: "awaiting_approval",
       nextStep: "request_approval",
       reason: "Der Vorgang ist bereit, aber die externe oder schreibende Aktion benötigt menschliche Freigabe.",
-      priority: "normal",
+      priority: urgent ? "high" : "normal",
+      escalation: urgent
+        ? {
+            required: true,
+            reason: "urgent_case",
+            message: "Dringender Vorgang wartet auf menschliche Freigabe.",
+            fallback: "hold_safely",
+          }
+        : { required: false },
     }
   }
 
@@ -67,7 +142,15 @@ function decideNextStep(
     state: "ready",
     nextStep: "prepare_handoff",
     reason: "Der Vorgang ist vollständig und kann für den nächsten Prozessschritt vorbereitet werden.",
-    priority: "normal",
+    priority: urgent ? "high" : "normal",
+    escalation: urgent
+      ? {
+          required: true,
+          reason: "urgent_case",
+          message: "Dringender Vorgang ist bereit und sollte bevorzugt verarbeitet werden.",
+          fallback: "hold_safely",
+        }
+      : { required: false },
   }
 }
 
@@ -79,16 +162,22 @@ export function buildProcessPlan(input: MilaPlanInput): MilaProcessPlan {
     ? buildContextSuggestions({ text: input.text ?? input.subject ?? input.fileName, field: firstQuestion.field, memory: input.memory })
     : []
 
-  const decision = decideNextStep(interpretation, questions.length, input.target)
+  const decision = decideNextStep(interpretation, questions.length, input.target, input.urgent, input.sensitive)
   const handoffReady = decision.state === "ready" || decision.state === "awaiting_approval"
   const provenance = buildInputProvenance(interpretation)
 
-  const actions = handoffReady && input.target
-    ? [proposeHandoffAction(input.caseId, input.target, {
+  const fallbackTarget = decision.escalation.fallback === "neutral_export"
+    ? { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export_package" }
+    : undefined
+  const effectiveTarget = fallbackTarget ?? input.target
+
+  const actions = handoffReady && effectiveTarget
+    ? [proposeHandoffAction(input.caseId, effectiveTarget, {
         processType: interpretation.processType,
         summary: interpretation.summary,
         facts: interpretation.knownFacts,
         provenance,
+        escalation: decision.escalation,
       })]
     : []
 
