@@ -31,23 +31,6 @@ function getGreeting() {
   return 'Guten Abend'
 }
 
-function getProfileLabel(userStatus: string) {
-  if (userStatus === 'freiberufler') return 'Freiberufler'
-  if (userStatus === 'kleinunternehmer') return 'Kleinunternehmer'
-  if (userStatus === 'selbststaendig_gewerbe') return 'Selbstständig'
-  if (userStatus === 'angestellt') return 'Angestellt'
-  if (userStatus === 'minijob') return 'Minijob'
-  if (userStatus === 'montagearbeiter') return 'Montage'
-  return 'Profil'
-}
-
-function getVatLabel(vatStatus: string) {
-  if (vatStatus === 'kleinunternehmer') return 'Kleinunternehmer'
-  if (vatStatus === 'regelbesteuerung_19') return 'Regelbest.'
-  if (vatStatus === 'ermaessigt_7') return '7 % USt.'
-  return 'USt. unklar'
-}
-
 function getDueDate(item: any) {
   return String(item?.dueDate || item?.due_date || '')
 }
@@ -83,9 +66,6 @@ export function MorningBriefing({
 }: MorningBriefingProps) {
   const {
     userName,
-    userStatus,
-    industry,
-    vatStatus,
     summary,
     incomes = [],
     expenses = [],
@@ -248,10 +228,6 @@ export function MorningBriefing({
         <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950">
           {greeting}{name ? `, ${name}` : ''} 🌸
         </h1>
-
-        <p className="mt-3 text-sm font-bold text-slate-500">
-          Status: {getProfileLabel(userStatus)}{industry ? ` (${industry})` : ''} · {getVatLabel(vatStatus)}
-        </p>
       </div>
 
       <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-pink-50 via-white to-violet-50 p-5">
