@@ -103,7 +103,8 @@ function decideNextStep(
 
   if (!connector?.enabled || !capability) {
     const neutralExport = getConnector("neutral-export")
-    const neutralExportAvailable = Boolean(neutralExport?.enabled)
+    const neutralExportCapability = neutralExport?.capabilities.find((item) => item.id === "export-json")
+    const neutralExportAvailable = Boolean(neutralExport?.enabled && neutralExportCapability)
 
     return {
       state: neutralExportAvailable ? "ready" : "needs_human_review",
