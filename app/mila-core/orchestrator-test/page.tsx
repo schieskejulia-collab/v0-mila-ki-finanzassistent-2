@@ -6,7 +6,7 @@ import type { MilaTargetSystem } from "@/lib/mila-core/types"
 
 const targets: Record<string, MilaTargetSystem | undefined> = {
   none: undefined,
-  neutral: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export_package" },
+  neutral: { connectorId: "neutral-export", systemName: "Neutraler Export", capability: "export-json" },
   datev: { connectorId: "datev", systemName: "DATEV", capability: "export_package" },
 }
 
