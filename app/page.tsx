@@ -33,7 +33,11 @@ export default function DashboardPage() {
     return <DashboardLoading />
   }
 
-  const model = buildDashboardModel(finance)
+  const model = {
+    ...buildDashboardModel(finance),
+    documents: finance.documents,
+    documentCount: finance.documents.length,
+  }
 
   return <DashboardContent model={model} />
 }
