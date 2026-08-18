@@ -51,12 +51,20 @@ export async function POST(req: Request) {
     }
 
     const approvedBy = body.approvedBy?.trim() || user.email || user.id
+    const approvalAudit = JSON.stringify({
+      event: "human_approval",
+      approved: true,
+      approvedBy,
+      previousStatus: milaCase.status,
+      execution: "not_executed",
+      reason: "Externe Connector-Ausführung ist im MVP bewusst noch deaktiviert.",
+    })
 
     const { error: logError } = await client.from("mila_case_updates").insert({
       user_id: user.id,
       case_id: body.caseId,
       kind: "note",
-      content: `Menschliche Freigabe erteilt durch ${approvedBy}.`,
+      content: approvalAudit,
       status: "done",
     })
 
