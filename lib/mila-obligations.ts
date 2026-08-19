@@ -10,6 +10,7 @@ export type ObligationType =
 export type ObligationArea =
   | 'privat'
   | 'business'
+  | 'unklar'
 
 export type ObligationStatus =
   | 'offen'
