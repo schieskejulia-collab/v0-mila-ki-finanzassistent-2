@@ -51,12 +51,14 @@ export default function RootLayout({
           forcedTheme="light"
         >
           <FinanceProvider>
-            <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
-              <ClientSwitcher />
-              <NotificationBell />
-              <div className="relative z-10 flex-1 pb-6">{children}</div>
-              <LegalFooter />
+            <div className="min-h-[100dvh] bg-[#fbf9ff] text-slate-950 lg:pl-[220px]">
               <BottomNav />
+              <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1440px] flex-col">
+                <ClientSwitcher />
+                <NotificationBell />
+                <div className="relative z-10 flex-1 pb-6">{children}</div>
+                <LegalFooter />
+              </div>
             </div>
           </FinanceProvider>
         </ThemeProvider>
