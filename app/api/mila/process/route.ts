@@ -27,6 +27,22 @@ function boolField(fields: Record<string, unknown> | undefined, key: string) {
   return fields?.[key] === true
 }
 
+function cookieValue(req: Request, key: string) {
+  const raw = req.headers.get("cookie") || ""
+  const match = raw
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${key}=`))
+
+  if (!match) return null
+
+  try {
+    return decodeURIComponent(match.slice(key.length + 1)) || null
+  } catch {
+    return match.slice(key.length + 1) || null
+  }
+}
+
 async function insertUpdateOnce({
   client,
   userId,
@@ -87,6 +103,7 @@ export async function POST(req: Request) {
     }
 
     const fields = body.fields || {}
+    const activeClientId = body.clientId || cookieValue(req, "mila_active_client") || undefined
     const callerName = textField(fields, "caller_name")
     const company = textField(fields, "company")
     const phone = textField(fields, "phone")
@@ -106,7 +123,7 @@ export async function POST(req: Request) {
     if (caseId) {
       const { data: existingCase, error: caseError } = await client
         .from("mila_intake_cases")
-        .select("id")
+        .select("id,client_id")
         .eq("id", caseId)
         .eq("user_id", user.id)
         .maybeSingle()
@@ -117,6 +134,10 @@ export async function POST(req: Request) {
 
       if (!existingCase) {
         return NextResponse.json({ success: false, error: "Vorgang nicht gefunden" }, { status: 404 })
+      }
+
+      if (activeClientId && existingCase.client_id && existingCase.client_id !== activeClientId) {
+        return NextResponse.json({ success: false, error: "Vorgang gehört nicht zur aktiven Akte" }, { status: 409 })
       }
     } else {
       const storedSource = DB_SOURCES.has(body.source) ? body.source : "manual"
@@ -131,7 +152,7 @@ export async function POST(req: Request) {
         .from("mila_intake_cases")
         .insert({
           user_id: user.id,
-          client_id: body.clientId || null,
+          client_id: activeClientId || null,
           source: storedSource,
           caller_name: callerName,
           company,
@@ -161,11 +182,11 @@ export async function POST(req: Request) {
       caseId = createdCase.id
     }
 
-    const memory = body.clientId
+    const memory = activeClientId
       ? await loadPersistentMilaMemory({
           client,
           userId: user.id,
-          clientId: body.clientId,
+          clientId: activeClientId,
         })
       : undefined
 
@@ -192,6 +213,7 @@ export async function POST(req: Request) {
       requires_human: requiresHuman || plan.interpretation.confidence === "low",
     }
 
+    if (activeClientId) baseCaseUpdate.client_id = activeClientId
     if (category) baseCaseUpdate.category = category
 
     if (plan.questions.length > 0) {
@@ -213,7 +235,7 @@ export async function POST(req: Request) {
     } else if (plan.handoffReady) {
       const handoffSummary = JSON.stringify(
         {
-          clientId: body.clientId || null,
+          clientId: activeClientId || null,
           processType: plan.interpretation.processType,
           summary: plan.interpretation.summary,
           facts: plan.interpretation.knownFacts,
@@ -292,6 +314,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       caseId,
+      clientId: activeClientId || null,
       data: plan,
       workspace: {
         status:
