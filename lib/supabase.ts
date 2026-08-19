@@ -22,6 +22,7 @@ const CLIENT_SCOPED_TABLES = new Set([
   'obligations',
   'documents',
   'client_questions',
+  'mila_intake_cases',
 ])
 
 export function getActiveClientId() {
