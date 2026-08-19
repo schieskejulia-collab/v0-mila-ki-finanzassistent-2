@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Clock3, FileQuestion, Plus, Trash2 } from 'lucide-react'
+import { CheckCircle2, FileQuestion, Plus, Trash2 } from 'lucide-react'
 import { useFinance } from '@/lib/store'
 import { checkDocumentQuality } from '@/lib/document-workflow'
 
@@ -29,7 +29,7 @@ function inferDueAt(text: string) {
 }
 
 function formatDue(value: string) {
-  if (!value) return 'ohne feste Frist'
+  if (!value) return ''
   const date = new Date(value)
   return date.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
@@ -64,6 +64,7 @@ export default function VorgaengePage() {
 
   const openItems = useMemo(() => items.filter((item) => item.status === 'offen'), [items])
   const documentIssues = documents.filter((doc: any) => !checkDocumentQuality(doc).ok)
+  const totalOpen = openItems.length + documentIssues.length
 
   function add(event: FormEvent) {
     event.preventDefault()
@@ -82,71 +83,61 @@ export default function VorgaengePage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-5 px-4 pb-32 pt-5 text-slate-950">
+    <main className="mx-auto min-h-screen max-w-md space-y-4 px-4 pb-32 pt-4 text-slate-950">
       <header className="px-1">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Vorgänge</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight">Nur was offen bleibt.</h1>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-          Alles, was Mila selbst sortieren kann, bleibt hier draußen. Hier landen nur Entscheidungen, Nachfassen und Dinge mit Frist.
-        </p>
+        <div className="mt-1 flex items-end justify-between gap-4">
+          <h1 className="text-4xl font-black tracking-tight">{totalOpen} offen</h1>
+          {totalOpen === 0 && <span className="pb-1 text-sm font-black text-emerald-700">alles ruhig ✓</span>}
+        </div>
       </header>
 
       {documentIssues.length > 0 && (
         <Link href="/dokumente?ansicht=klaerung" className="flex items-center justify-between rounded-[2rem] bg-amber-50 p-5 ring-1 ring-amber-100">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Aus Unterlagen</p>
-            <p className="mt-1 text-lg font-black">{documentIssues.length} Dokumente brauchen dich</p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">Mila zeigt dort nur die fehlende Information.</p>
+            <p className="text-lg font-black">{documentIssues.length} {documentIssues.length === 1 ? 'Unterlage braucht' : 'Unterlagen brauchen'} eine Angabe</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">Jetzt klären</p>
           </div>
           <FileQuestion className="h-7 w-7 text-amber-700" />
         </Link>
       )}
 
-      <form onSubmit={add} className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <label className="text-sm font-black">Etwas darf nicht verloren gehen?</label>
+      {openItems.length > 0 && (
+        <section className="space-y-3">
+          {openItems.map((item) => (
+            <article key={item.id} className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+              <p className="text-sm font-black leading-6">{item.text}</p>
+              {item.dueAt && <p className="mt-1 text-xs font-semibold text-slate-500">{formatDue(item.dueAt)}</p>}
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => complete(item.id)} className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-emerald-100 px-3 py-2.5 text-xs font-black text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" /> Erledigt
+                </button>
+                <button type="button" onClick={() => remove(item.id)} className="rounded-xl bg-white px-3 py-2.5 text-rose-500 ring-1 ring-rose-100">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      {totalOpen === 0 && (
+        <div className="rounded-[2rem] bg-emerald-50 p-5 text-sm font-bold text-emerald-800">
+          Nichts offen.
+        </div>
+      )}
+
+      <form onSubmit={add} className="rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="z. B. Jobcenter bis morgen antworten wegen Schulmaterial"
-          className="mt-3 min-h-28 w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 p-4 text-base font-semibold outline-none focus:border-violet-400"
+          placeholder="Etwas festhalten …"
+          className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-base font-semibold outline-none focus:border-violet-400"
         />
-        <button type="submit" className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-4 font-black text-white">
-          <Plus className="h-5 w-5" /> Vorgang festhalten
+        <button type="submit" className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3.5 font-black text-white">
+          <Plus className="h-5 w-5" /> Vorgang hinzufügen
         </button>
       </form>
-
-      <section className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Offen</p>
-            <h2 className="mt-1 text-xl font-black">{openItems.length} Vorgänge</h2>
-          </div>
-          <Clock3 className="h-6 w-6 text-violet-600" />
-        </div>
-
-        {openItems.length === 0 ? (
-          <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
-            Gerade nichts offen. Genau so soll es aussehen.
-          </div>
-        ) : (
-          <div className="mt-5 space-y-3">
-            {openItems.map((item) => (
-              <article key={item.id} className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm font-black leading-6">{item.text}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">{formatDue(item.dueAt)}</p>
-                <div className="mt-3 flex gap-2">
-                  <button type="button" onClick={() => complete(item.id)} className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-emerald-100 px-3 py-2.5 text-xs font-black text-emerald-800">
-                    <CheckCircle2 className="h-4 w-4" /> Erledigt
-                  </button>
-                  <button type="button" onClick={() => remove(item.id)} className="rounded-xl bg-white px-3 py-2.5 text-rose-500 ring-1 ring-rose-100">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
     </main>
   )
 }
