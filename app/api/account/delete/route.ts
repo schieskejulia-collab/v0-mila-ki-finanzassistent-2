@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireSupabaseUser } from '@/lib/supabase-server'
+import { deleteUserStoredFiles } from '@/lib/user-storage-cleanup'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
@@ -48,18 +49,16 @@ export async function DELETE(req: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  const { data: folders } = await admin.storage.from('client-uploads').list(user.id, { limit: 1000 })
-  const uploadPaths: string[] = []
-  for (const folder of folders || []) {
-    const { data: files } = await admin.storage
-      .from('client-uploads')
-      .list(`${user.id}/${folder.name}`, { limit: 1000 })
-    for (const file of files || []) {
-      if (file.name) uploadPaths.push(`${user.id}/${folder.name}/${file.name}`)
-    }
-  }
-  if (uploadPaths.length > 0) {
-    await admin.storage.from('client-uploads').remove(uploadPaths)
+  const storageCleanup = await deleteUserStoredFiles(admin, user.id)
+  if (storageCleanup.failures.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Private Dokumentdateien konnten nicht vollständig gelöscht werden. Das Auth-Konto wurde deshalb nicht entfernt.',
+        storageFailures: storageCleanup.failures,
+      },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    )
   }
 
   const failures: Array<{ table: string; error: string }> = []
@@ -88,7 +87,7 @@ export async function DELETE(req: Request) {
   }
 
   return NextResponse.json(
-    { success: true },
+    { success: true, removedFiles: storageCleanup.removed },
     { headers: { 'Cache-Control': 'no-store, max-age=0', Pragma: 'no-cache' } }
   )
 }
