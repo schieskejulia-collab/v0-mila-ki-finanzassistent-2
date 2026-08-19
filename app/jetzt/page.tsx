@@ -1,474 +1,52 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  Plus,
-  Sparkles,
-  Trash2,
-  Zap,
-} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { AlertTriangle, CheckCircle2, Clock3, FileCheck2, Inbox, Loader2, MessageCircleQuestion, RefreshCw, Search, UserCheck, Zap } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
-type JetztStatus = 'offen' | 'erledigt'
+type CaseStatus = 'new'|'needs_info'|'standard'|'human_review'|'in_progress'|'waiting'|'done'
+type Urgency = 'low'|'normal'|'high'|'critical'
+type CaseItem = { id:string; source:string; caller_name:string|null; company:string|null; phone:string|null; email:string|null; subject:string; summary:string; urgency:Urgency; category:string; status:CaseStatus; assigned_to:string|null; due_at:string|null; handoff_summary:string|null; handoff_ready:boolean; created_at:string; completed_at:string|null }
+type Task = { id:string; case_id:string|null; title:string; status:'open'|'waiting'|'blocked'|'done'; due_at:string|null; next_action:string|null }
+type Update = { id:string; case_id:string; kind:'question'|'answer'|'note'|'handoff'; content:string; status:'open'|'waiting'|'done'; created_at:string }
+type Filter = 'all'|'today'|'waiting'|'review'|'ready'|'done'
 
-type JetztItem = {
-  id: string
-  raw: string
-  who: string
-  what: string
-  dueAt: string
-  missing: string[]
-  nextStep: string
-  status: JetztStatus
-  createdAt: string
-  completedAt?: string
+const STATUS_LABEL:Record<CaseStatus,string>={new:'Neu',needs_info:'Info fehlt',standard:'Standard',human_review:'Mensch prüfen',in_progress:'In Bearbeitung',waiting:'Wartet',done:'Erledigt'}
+function dueLevel(value:string|null){if(!value)return'normal';const diff=new Date(value).getTime()-Date.now();if(diff<0)return'overdue';if(diff<86400000)return'today';return'normal'}
+function formatDate(value:string|null){if(!value)return'Keine Frist';return new Date(value).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+function personLabel(item:CaseItem){return item.caller_name||item.company||'Kontakt noch offen'}
+
+export default function JetztPage(){
+ const [cases,setCases]=useState<CaseItem[]>([]),[tasks,setTasks]=useState<Task[]>([]),[updates,setUpdates]=useState<Update[]>([])
+ const [selectedId,setSelectedId]=useState<string|null>(null),[filter,setFilter]=useState<Filter>('all'),[query,setQuery]=useState('')
+ const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
+ useEffect(()=>{void load()},[])
+ async function load(){setLoading(true);setError('');const{data:auth}=await supabase.auth.getUser();if(!auth.user){setError('Bitte zuerst anmelden.');setLoading(false);return}const[c,t,u]=await Promise.all([supabase.from('mila_intake_cases').select('*').order('created_at',{ascending:false}).limit(200),supabase.from('mila_coordination_tasks').select('*').order('created_at',{ascending:false}).limit(400),supabase.from('mila_case_updates').select('*').order('created_at',{ascending:true}).limit(800)]);if(c.error||t.error||u.error)setError('Mila konnte die Vorgänge nicht vollständig laden.');setCases((c.data||[])as CaseItem[]);setTasks((t.data||[])as Task[]);setUpdates((u.data||[])as Update[]);setSelectedId(x=>x||((c.data||[])[0]?.id??null));setLoading(false)}
+ const current=cases.find(x=>x.id===selectedId)||null,currentTasks=tasks.filter(x=>x.case_id===selectedId),currentUpdates=updates.filter(x=>x.case_id===selectedId)
+ const openQuestions=(id:string)=>updates.filter(u=>u.case_id===id&&u.kind==='question'&&u.status!=='done').length
+ const openTasks=(id:string)=>tasks.filter(t=>t.case_id===id&&t.status!=='done').length
+ const isTodayFirst=(item:CaseItem)=>item.status!=='done'&&(item.urgency==='critical'||item.urgency==='high'||dueLevel(item.due_at)==='today'||dueLevel(item.due_at)==='overdue'||openQuestions(item.id)>0)
+ const stats=useMemo(()=>({open:cases.filter(c=>c.status!=='done').length,today:cases.filter(isTodayFirst).length,waiting:cases.filter(c=>c.status==='waiting'||openQuestions(c.id)>0).length,ready:cases.filter(c=>c.handoff_ready&&c.status!=='done').length}),[cases,updates])
+ const visible=useMemo(()=>{const q=query.trim().toLowerCase();return cases.filter(item=>{const text=`${item.subject} ${item.summary} ${item.caller_name||''} ${item.company||''} ${item.category}`.toLowerCase();if(q&&!text.includes(q))return false;if(filter==='today')return isTodayFirst(item);if(filter==='waiting')return item.status==='waiting'||openQuestions(item.id)>0;if(filter==='review')return item.status==='human_review';if(filter==='ready')return item.handoff_ready&&item.status!=='done';if(filter==='done')return item.status==='done';return item.status!=='done'})},[cases,tasks,updates,query,filter])
+ async function setStatus(status:CaseStatus){if(!current)return;setSaving(true);const{error:e}=await supabase.from('mila_intake_cases').update({status}).eq('id',current.id);if(e)setError('Status konnte nicht aktualisiert werden.');else setNotice(`Vorgang ist jetzt „${STATUS_LABEL[status]}“.`);setSaving(false);await load()}
+ async function closeTask(task:Task){setSaving(true);await supabase.from('mila_coordination_tasks').update({status:'done'}).eq('id',task.id);setSaving(false);await load()}
+ async function closeQuestion(update:Update){setSaving(true);await supabase.from('mila_case_updates').update({status:'done'}).eq('id',update.id);setSaving(false);await load()}
+ async function prepareHandoff(){if(!current)return;const questions=currentUpdates.filter(u=>u.kind==='question'&&u.status!=='done');if(questions.length){setError('Übergabe noch nicht möglich: Es sind Rückfragen offen.');return}const summary=[`Anliegen: ${current.subject}`,`Kontakt: ${personLabel(current)}`,current.phone?`Telefon: ${current.phone}`:null,current.email?`E-Mail: ${current.email}`:null,`Zusammenfassung: ${current.summary}`,`Zuständig: ${current.assigned_to||'noch offen'}`].filter(Boolean).join('\n');setSaving(true);const{error:e}=await supabase.from('mila_intake_cases').update({handoff_summary:summary,handoff_ready:true,status:'human_review'}).eq('id',current.id);if(e)setError('Übergabe konnte nicht vorbereitet werden.');else setNotice('Übergabe ist vorbereitet und wartet auf menschliche Prüfung.');setSaving(false);await load()}
+ async function finishCase(){if(!current)return;const t=currentTasks.filter(x=>x.status!=='done'),q=currentUpdates.filter(x=>x.kind==='question'&&x.status!=='done');if(!current.handoff_ready||t.length||q.length){setError('Noch nicht abschließen: Übergabe, Aufgaben oder Rückfragen sind noch offen.');return}setSaving(true);const{error:e}=await supabase.from('mila_intake_cases').update({status:'done',completed_at:new Date().toISOString()}).eq('id',current.id);if(e)setError('Vorgang konnte nicht abgeschlossen werden.');else setNotice('Vorgang vollständig abgeschlossen.');setSaving(false);await load()}
+ return <main className="min-h-screen bg-[#faf9fc] pb-28 lg:pb-8"><div className="mx-auto w-full max-w-[1220px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+  <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-[10px] font-black uppercase tracking-[.16em] text-violet-700"><Zap className="h-3.5 w-3.5"/>Vorgänge</div><h1 className="mt-3 text-3xl font-black tracking-tight lg:text-4xl">Was muss wirklich weiter?</h1><p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">Mila hält jeden Eingang offen, bis Rückfragen, Aufgaben und Übergabe geklärt sind. Kein Vorgang verschwindet zwischen Anruf, Mail und Kanzlei.</p></div><div className="flex gap-2"><button onClick={()=>void load()} className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-xs font-black"><RefreshCw className="h-4 w-4"/>Aktualisieren</button><Link href="/eingang" className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-black text-white"><Inbox className="h-4 w-4"/>Neuer Eingang</Link></div></header>
+  <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4"><Kpi label="Offen" value={stats.open} icon={<Zap className="h-4 w-4"/>} tone="violet"/><Kpi label="Heute zuerst" value={stats.today} icon={<AlertTriangle className="h-4 w-4"/>} tone="rose"/><Kpi label="Wartet" value={stats.waiting} icon={<Clock3 className="h-4 w-4"/>} tone="amber"/><Kpi label="Übergabebereit" value={stats.ready} icon={<FileCheck2 className="h-4 w-4"/>} tone="green"/></section>
+  {notice&&<p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{notice}</p>}{error&&<p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
+  <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.35fr)]"><div className="rounded-2xl border bg-white p-3 shadow-sm lg:p-4"><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Vorgänge durchsuchen…" className="w-full rounded-xl border bg-slate-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none"/></div><div className="mt-3 flex flex-wrap gap-2">{([['all','Offen'],['today','Heute zuerst'],['waiting','Wartet'],['review','Mensch prüfen'],['ready','Übergabebereit'],['done','Erledigt']]as[Filter,string][]).map(([v,l])=><button key={v} onClick={()=>setFilter(v)} className={filter===v?'rounded-lg bg-violet-600 px-3 py-1.5 text-[10px] font-black text-white':'rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-600'}>{l}</button>)}</div><div className="mt-4 space-y-2">{loading?<div className="flex items-center justify-center gap-2 py-12 text-sm font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin"/>Vorgänge werden geladen…</div>:visible.length===0?<div className="rounded-xl border border-dashed p-6 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-emerald-500"/><p className="mt-2 text-sm font-black">Hier ist gerade nichts offen.</p></div>:visible.map(item=><CaseRow key={item.id} item={item} selected={item.id===selectedId} questions={openQuestions(item.id)} tasks={openTasks(item.id)} onClick={()=>setSelectedId(item.id)}/>)}</div></div>
+   <div className="min-w-0">{!current?<div className="rounded-2xl border border-dashed bg-white p-10 text-center shadow-sm"><Zap className="mx-auto h-8 w-8 text-violet-500"/><p className="mt-3 font-black">Wähle links einen Vorgang.</p></div>:<div className="space-y-4"><section className="rounded-2xl border bg-white p-4 shadow-sm lg:p-5"><div className="flex justify-between gap-3"><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-500">Aktiver Vorgang</p><h2 className="mt-1 text-2xl font-black">{current.subject}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{current.summary}</p></div><StatusBadge status={current.status}/></div><div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4"><Info label="Kontakt" value={personLabel(current)}/><Info label="Zuständig" value={current.assigned_to||'Noch offen'}/><Info label="Frist" value={formatDate(current.due_at)}/><Info label="Priorität" value={current.urgency}/></div><div className="mt-4 flex flex-wrap gap-2"><button onClick={()=>void setStatus('in_progress')} disabled={saving} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white">In Bearbeitung</button><button onClick={()=>void setStatus('waiting')} disabled={saving} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">Wartet auf Antwort</button><button onClick={()=>void setStatus('human_review')} disabled={saving} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black">Mensch prüfen</button></div></section>
+   <section className="grid gap-4 md:grid-cols-2"><WorkCard title="Aufgaben / Übernahme" icon={<UserCheck className="h-4 w-4"/>}>{currentTasks.length===0?<EmptyLine text="Keine Aufgaben angelegt."/>:currentTasks.map(task=><div key={task.id} className="rounded-xl border p-3"><div className="flex justify-between gap-3"><div><p className="text-sm font-black">{task.title}</p>{task.next_action&&<p className="mt-1 text-xs leading-5 text-slate-500">{task.next_action}</p>}<p className="mt-1 text-[10px] font-bold text-slate-400">{formatDate(task.due_at)}</p></div>{task.status!=='done'?<button onClick={()=>void closeTask(task)} className="h-fit rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">Erledigt</button>:<CheckCircle2 className="h-4 w-4 text-emerald-500"/>}</div></div>)}</WorkCard><WorkCard title="Rückfragen & Verlauf" icon={<MessageCircleQuestion className="h-4 w-4"/>}>{currentUpdates.length===0?<EmptyLine text="Noch keine Rückfragen oder Notizen."/>:currentUpdates.map(update=><div key={update.id} className="rounded-xl border p-3"><p className="text-[9px] font-black uppercase tracking-[.12em] text-violet-500">{update.kind}</p><p className="mt-1 text-xs font-semibold leading-5 text-slate-700">{update.content}</p>{update.kind==='question'&&update.status!=='done'&&<button onClick={()=>void closeQuestion(update)} className="mt-2 text-[10px] font-black text-emerald-700">Als geklärt markieren</button>}</div>)}</WorkCard></section>
+   <section className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm lg:p-5"><div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-500">Übergabe</p><h3 className="mt-1 text-lg font-black">{current.handoff_ready?'Bereit für die fachliche Prüfung':'Noch nicht übergabebereit'}</h3></div>{current.handoff_ready?<FileCheck2 className="h-6 w-6 text-emerald-500"/>:<Clock3 className="h-6 w-6 text-amber-500"/>}</div>{current.handoff_summary&&<pre className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs font-semibold leading-5 text-slate-600">{current.handoff_summary}</pre>}<div className="mt-4 flex flex-col gap-2 sm:flex-row">{!current.handoff_ready&&<button onClick={()=>void prepareHandoff()} disabled={saving} className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-xs font-black text-white">Übergabe vorbereiten</button>}<button onClick={()=>void finishCase()} disabled={saving||current.status==='done'} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white disabled:opacity-40">Vorgang vollständig abschließen</button></div></section></div>}</div></section>
+ </div></main>
 }
-
-const STORAGE_KEY = 'mila-jetzt-v1'
-
-function toLocalDateTimeInput(date: Date) {
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60_000)
-  return local.toISOString().slice(0, 16)
-}
-
-function inferDueAt(text: string) {
-  const lower = text.toLowerCase()
-  const now = new Date()
-
-  if (lower.includes('heute')) {
-    const result = new Date(now)
-    result.setHours(18, 0, 0, 0)
-    return toLocalDateTimeInput(result)
-  }
-
-  if (lower.includes('morgen')) {
-    const result = new Date(now)
-    result.setDate(result.getDate() + 1)
-    result.setHours(12, 0, 0, 0)
-    return toLocalDateTimeInput(result)
-  }
-
-  const dateMatch = text.match(/\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\b/)
-  if (dateMatch) {
-    const day = Number(dateMatch[1])
-    const month = Number(dateMatch[2]) - 1
-    const yearRaw = dateMatch[3]
-    const year = yearRaw
-      ? Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw)
-      : now.getFullYear()
-    const result = new Date(year, month, day, 12, 0, 0, 0)
-    if (!Number.isNaN(result.getTime())) return toLocalDateTimeInput(result)
-  }
-
-  return ''
-}
-
-function inferWho(text: string) {
-  const customerMatch = text.match(/\b(?:für|bei|von)\s+(Kund(?:e|in)\s+[A-Z0-9ÄÖÜ][\wÄÖÜäöüß.-]*)/i)
-  if (customerMatch?.[1]) return customerMatch[1].trim()
-
-  const known = text.match(/\b(Jobcenter|Finanzamt|Krankenkasse|Schule|Kita|Jugendamt|Steuerkanzlei|Steuerberater(?:in)?)\b/i)
-  if (known?.[1]) return known[1].trim()
-
-  const patterns = [
-    /(?:vom|von der|von|bei|für)\s+([A-ZÄÖÜ][\wÄÖÜäöüß.-]*(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß.-]*){0,2})/,
-  ]
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (match?.[1]) return match[1].trim()
-  }
-
-  return ''
-}
-
-function cleanObject(value: string) {
-  return value
-    .replace(/\b(?:heute|morgen|bis\s+\w+|dringend|noch|mal|bitte)\b/gi, '')
-    .replace(/[.!?]+$/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-}
-
-function inferStructuredTask(text: string, who: string) {
-  const clean = text.trim()
-  const lower = clean.toLowerCase()
-
-  const forgotMatch = clean.match(/(?:ich\s+)?(?:hab(?:e)?\s+)?vergessen[,]?\s+(.+)/i)
-  const missingMatch = clean.match(/(?:es\s+)?fehl(?:t|en)\s+(.+)/i)
-
-  if (forgotMatch?.[1]) {
-    const forgotten = cleanObject(forgotMatch[1])
-
-    if (/mit\s*zu\s*berechnen|abzurechnen|berechnen|abrechnen/i.test(forgotten)) {
-      const object = cleanObject(
-        forgotten
-          .replace(/\b(?:mit\s*zu\s*berechnen|abzurechnen|zu\s*berechnen|berechnen|abrechnen)\b.*$/i, '')
-          .replace(new RegExp(`\\bfür\\s+${who.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'), '')
-      ) || 'fehlende Positionen'
-
-      return {
-        what: `${object} prüfen und korrekt nachtragen`,
-        missing: [object, 'betroffene Abrechnung'],
-        nextStep: `${object} öffnen → betroffene Abrechnung prüfen → fehlende Positionen nachtragen → Abschluss kontrollieren`,
-      }
-    }
-
-    return {
-      what: `${forgotten} nachholen`,
-      missing: [forgotten],
-      nextStep: `${forgotten} prüfen und als nächsten Arbeitsschritt erledigen`,
-    }
-  }
-
-  if (missingMatch?.[1]) {
-    const missing = cleanObject(missingMatch[1])
-    return {
-      what: `${missing} beschaffen und Vorgang vervollständigen`,
-      missing: [missing],
-      nextStep: `${missing} anfordern oder heraussuchen → Vorgang ergänzen → Vollständigkeit prüfen`,
-    }
-  }
-
-  if (/\bschreiben|antworten|rückmeldung|mail|e-mail\b/i.test(lower)) {
-    return {
-      what: who ? `Rückmeldung an ${who} vorbereiten und senden` : 'Rückmeldung vorbereiten und senden',
-      missing: [],
-      nextStep: 'Sachverhalt prüfen → nötige Unterlagen bereitlegen → Nachricht formulieren → vor Versand kontrollieren',
-    }
-  }
-
-  if (/\bbezahlen|zahlung|überweisen\b/i.test(lower)) {
-    return {
-      what: 'Zahlung prüfen und ausführen',
-      missing: [],
-      nextStep: 'Betrag und Empfänger prüfen → Zahlungsdaten öffnen → Zahlung ausführen → Nachweis ablegen',
-    }
-  }
-
-  if (/\bnachreichen|einreichen|hochladen|senden\b/i.test(lower)) {
-    return {
-      what: 'Unterlagen vervollständigen und übermitteln',
-      missing: [],
-      nextStep: 'Benötigte Unterlagen prüfen → fehlende Dokumente ergänzen → vollständig übermitteln → Versand bestätigen',
-    }
-  }
-
-  return {
-    what: clean,
-    missing: [],
-    nextStep: 'Vorgang kurz prüfen → konkreten nächsten Schritt festlegen → erledigen → Abschluss kontrollieren',
-  }
-}
-
-function formatDue(value: string) {
-  if (!value) return 'Keine Frist gesetzt'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function urgency(value: string) {
-  if (!value) return 'normal'
-  const due = new Date(value).getTime()
-  const hours = (due - Date.now()) / 3_600_000
-  if (hours <= 0) return 'overdue'
-  if (hours <= 24) return 'urgent'
-  return 'normal'
-}
-
-export default function JetztPage() {
-  const [items, setItems] = useState<JetztItem[]>([])
-  const [raw, setRaw] = useState('')
-  const [who, setWho] = useState('')
-  const [what, setWhat] = useState('')
-  const [dueAt, setDueAt] = useState('')
-  const [missingText, setMissingText] = useState('')
-  const [nextStep, setNextStep] = useState('')
-  const [showDetails, setShowDetails] = useState(false)
-
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (stored) setItems(JSON.parse(stored))
-    } catch {
-      // Mila bleibt auch nutzbar, wenn Browser-Speicher blockiert ist.
-    }
-  }, [])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-    } catch {
-      // Kein harter Fehler: Vorgänge bleiben für die laufende Sitzung verfügbar.
-    }
-  }, [items])
-
-  const openItems = useMemo(
-    () => items.filter((item) => item.status === 'offen'),
-    [items]
-  )
-
-  const doneItems = useMemo(
-    () => items.filter((item) => item.status === 'erledigt'),
-    [items]
-  )
-
-  function milaOrdnen() {
-    const clean = raw.trim()
-    if (!clean) return
-
-    const inferredWho = inferWho(clean)
-    const structured = inferStructuredTask(clean, inferredWho)
-
-    setWho(inferredWho)
-    setWhat(structured.what)
-    setDueAt(inferDueAt(clean))
-    setMissingText(structured.missing.join(', '))
-    setNextStep(structured.nextStep)
-    setShowDetails(true)
-  }
-
-  function reset() {
-    setRaw('')
-    setWho('')
-    setWhat('')
-    setDueAt('')
-    setMissingText('')
-    setNextStep('')
-    setShowDetails(false)
-  }
-
-  function save(event: FormEvent) {
-    event.preventDefault()
-    const task = what.trim() || raw.trim()
-    if (!task) {
-      alert('Sag Mila kurz, was erledigt werden muss.')
-      return
-    }
-
-    const item: JetztItem = {
-      id: crypto.randomUUID(),
-      raw: raw.trim(),
-      who: who.trim(),
-      what: task,
-      dueAt,
-      missing: missingText
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean),
-      nextStep: nextStep.trim(),
-      status: 'offen',
-      createdAt: new Date().toISOString(),
-    }
-
-    setItems((current) => [item, ...current])
-    reset()
-  }
-
-  function complete(id: string) {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? { ...item, status: 'erledigt', completedAt: new Date().toISOString() }
-          : item
-      )
-    )
-  }
-
-  function remove(id: string) {
-    setItems((current) => current.filter((item) => item.id !== id))
-  }
-
-  return (
-    <main className="mx-auto min-h-screen max-w-md space-y-5 px-5 pb-32 pt-8">
-      <header className="space-y-2">
-        <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-violet-700">
-          <Zap className="h-4 w-4" /> Mila JETZT
-        </div>
-        <h1 className="text-4xl font-black tracking-tight text-slate-950">
-          Was muss jetzt erledigt werden?
-        </h1>
-        <p className="text-sm font-semibold leading-6 text-slate-500">
-          Reinwerfen. Ordnen. Erledigen. Mila hält den Vorgang fest, bis er wirklich zu ist.
-        </p>
-      </header>
-
-      <form onSubmit={save} className="space-y-3 rounded-[2rem] border border-violet-100 bg-white p-5 shadow-sm">
-        <label className="block text-sm font-black text-slate-800">
-          Sag es einfach so, wie es dir einfällt
-        </label>
-        <textarea
-          value={raw}
-          onChange={(event) => setRaw(event.target.value)}
-          placeholder="z. B. Jobcenter hat das Schulmaterial vergessen – ich muss denen bis morgen schreiben."
-          className="min-h-32 w-full resize-none rounded-3xl border border-slate-200 bg-slate-50 p-4 text-base font-semibold outline-none transition focus:border-violet-400 focus:bg-white"
-        />
-
-        <button
-          type="button"
-          onClick={milaOrdnen}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-100 py-3 font-black text-violet-700"
-        >
-          <Sparkles className="h-5 w-5" /> Mila, ordne das
-        </button>
-
-        {showDetails && (
-          <div className="space-y-3 border-t border-slate-100 pt-4">
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                value={who}
-                onChange={(event) => setWho(event.target.value)}
-                placeholder="Wer will was?"
-                className="min-w-0 rounded-2xl border p-3 text-sm font-semibold"
-              />
-              <input
-                type="datetime-local"
-                value={dueAt}
-                onChange={(event) => setDueAt(event.target.value)}
-                className="min-w-0 rounded-2xl border p-3 text-sm font-semibold"
-              />
-            </div>
-            <textarea
-              value={what}
-              onChange={(event) => setWhat(event.target.value)}
-              placeholder="Was muss getan werden?"
-              className="min-h-20 w-full rounded-2xl border p-3 text-sm font-semibold"
-            />
-            <input
-              value={missingText}
-              onChange={(event) => setMissingText(event.target.value)}
-              placeholder="Was fehlt? Kommagetrennt, z. B. Bescheid, Rechnung"
-              className="w-full rounded-2xl border p-3 text-sm font-semibold"
-            />
-            <input
-              value={nextStep}
-              onChange={(event) => setNextStep(event.target.value)}
-              placeholder="Was muss als Nächstes passieren?"
-              className="w-full rounded-2xl border p-3 text-sm font-semibold"
-            />
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-4 font-black text-white shadow-lg shadow-violet-200"
-        >
-          <Plus className="h-5 w-5" /> JETZT festhalten
-        </button>
-      </form>
-
-      <section className="space-y-3">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-violet-600">Offen</p>
-            <h2 className="text-2xl font-black">{openItems.length} Vorgang{openItems.length === 1 ? '' : 'e'}</h2>
-          </div>
-          {openItems.length > 0 && (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">
-              Mila passt auf
-            </span>
-          )}
-        </div>
-
-        {openItems.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50 p-6 text-center">
-            <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-violet-500" />
-            <p className="font-black text-slate-800">Gerade nichts Dringendes offen.</p>
-            <p className="mt-1 text-sm font-semibold text-slate-500">Genieß den seltenen Moment. 😄</p>
-          </div>
-        ) : (
-          openItems.map((item) => {
-            const level = urgency(item.dueAt)
-            return (
-              <article
-                key={item.id}
-                className={
-                  level === 'overdue'
-                    ? 'rounded-[2rem] border-2 border-rose-300 bg-white p-5 shadow-sm'
-                    : level === 'urgent'
-                      ? 'rounded-[2rem] border-2 border-amber-300 bg-white p-5 shadow-sm'
-                      : 'rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm'
-                }
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    {item.who && (
-                      <p className="mb-1 text-xs font-black uppercase tracking-[0.12em] text-violet-600">
-                        {item.who}
-                      </p>
-                    )}
-                    <h3 className="break-words text-lg font-black text-slate-950">{item.what}</h3>
-                  </div>
-                  {level !== 'normal' && <AlertTriangle className="h-6 w-6 shrink-0 text-amber-500" />}
-                </div>
-
-                <div className="mt-3 flex items-center gap-2 text-sm font-black text-slate-600">
-                  <Clock3 className="h-4 w-4" /> {formatDue(item.dueAt)}
-                </div>
-
-                {item.missing.length > 0 && (
-                  <div className="mt-4 rounded-2xl bg-amber-50 p-3">
-                    <p className="text-xs font-black uppercase tracking-wide text-amber-800">Fehlt noch</p>
-                    <p className="mt-1 text-sm font-bold text-amber-950">{item.missing.join(' · ')}</p>
-                  </div>
-                )}
-
-                {item.nextStep && (
-                  <div className="mt-3 rounded-2xl bg-violet-50 p-3">
-                    <p className="text-xs font-black uppercase tracking-wide text-violet-700">Nächster Schritt</p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">{item.nextStep}</p>
-                  </div>
-                )}
-
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => complete(item.id)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white"
-                  >
-                    <CheckCircle2 className="h-4 w-4" /> Erledigt
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Vorgang löschen"
-                    onClick={() => remove(item.id)}
-                    className="rounded-2xl bg-slate-100 px-4 text-slate-500"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </article>
-            )
-          })
-        )}
-      </section>
-
-      {doneItems.length > 0 && (
-        <details className="rounded-3xl bg-white p-4 shadow-sm">
-          <summary className="cursor-pointer font-black text-slate-600">
-            Erledigt ({doneItems.length})
-          </summary>
-          <div className="mt-3 space-y-2">
-            {doneItems.slice(0, 10).map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 p-3">
-                <p className="min-w-0 truncate text-sm font-bold text-emerald-900">✅ {item.what}</p>
-                <button type="button" onClick={() => remove(item.id)} className="shrink-0 text-emerald-700" aria-label="Erledigten Vorgang löschen">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-    </main>
-  )
-}
+function Kpi({label,value,icon,tone}:{label:string;value:number;icon:React.ReactNode;tone:'violet'|'rose'|'amber'|'green'}){const c={violet:'bg-violet-50 text-violet-700',rose:'bg-rose-50 text-rose-600',amber:'bg-amber-50 text-amber-700',green:'bg-emerald-50 text-emerald-700'};return <div className="rounded-2xl border bg-white p-4 shadow-sm"><div className={`inline-flex h-8 w-8 items-center justify-center rounded-xl ${c[tone]}`}>{icon}</div><p className="mt-3 text-2xl font-black">{value}</p><p className="text-xs font-bold text-slate-500">{label}</p></div>}
+function CaseRow({item,selected,questions,tasks,onClick}:{item:CaseItem;selected:boolean;questions:number;tasks:number;onClick:()=>void}){const level=dueLevel(item.due_at);return <button onClick={onClick} className={selected?'w-full rounded-xl border border-violet-300 bg-violet-50 p-3 text-left':'w-full rounded-xl border bg-white p-3 text-left hover:bg-slate-50'}><div className="flex justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black">{item.subject}</p><p className="mt-.5 truncate text-[11px] font-semibold text-slate-500">{personLabel(item)} · {item.category}</p></div>{item.handoff_ready&&<FileCheck2 className="h-4 w-4 text-emerald-500"/>}</div><div className="mt-2 flex flex-wrap gap-1.5"><span className={`rounded-md px-2 py-1 text-[9px] font-black ${level==='overdue'?'bg-rose-50 text-rose-600':level==='today'?'bg-amber-50 text-amber-700':'bg-slate-100 text-slate-500'}`}>{formatDate(item.due_at)}</span>{questions>0&&<span className="rounded-md bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">{questions} Rückfrage{questions===1?'':'n'}</span>}{tasks>0&&<span className="rounded-md bg-violet-50 px-2 py-1 text-[9px] font-black text-violet-700">{tasks} Aufgabe{tasks===1?'':'n'}</span>}</div></button>}
+function StatusBadge({status}:{status:CaseStatus}){return <span className="h-fit shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">{STATUS_LABEL[status]}</span>}
+function Info({label,value}:{label:string;value:string}){return <div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">{label}</p><p className="mt-1 truncate text-xs font-black">{value}</p></div>}
+function WorkCard({title,icon,children}:{title:string;icon:React.ReactNode;children:React.ReactNode}){return <section className="rounded-2xl border bg-white p-4 shadow-sm"><div className="flex items-center gap-2 text-violet-700">{icon}<h3 className="text-sm font-black text-slate-950">{title}</h3></div><div className="mt-3 space-y-2">{children}</div></section>}
+function EmptyLine({text}:{text:string}){return <p className="rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">{text}</p>}
