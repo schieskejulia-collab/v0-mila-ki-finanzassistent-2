@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { ChevronDown, ChevronUp, FolderOpen } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type MilaClient = { id: string; name: string }
@@ -66,7 +67,7 @@ export function ClientSwitcher() {
 
   const activeClient = useMemo(
     () => clients.find((client) => client.id === activeClientId) || null,
-    [clients, activeClientId]
+    [clients, activeClientId],
   )
 
   function switchClient(client: MilaClient) {
@@ -80,35 +81,25 @@ export function ClientSwitcher() {
 
   return (
     <div className="sticky top-0 z-40 px-4 pt-2">
-      <div className="relative flex items-center gap-2 rounded-2xl border border-violet-100 bg-white/95 p-2 shadow-sm backdrop-blur">
+      <div className="relative">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="min-w-0 flex-1 rounded-xl bg-violet-50 px-3 py-2 text-left"
+          className="flex h-11 w-full items-center justify-between rounded-2xl border border-violet-100 bg-white/95 px-4 text-left shadow-sm backdrop-blur"
           aria-expanded={open}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-violet-500">Aktive Akte</p>
-              <p className="truncate text-sm font-black text-slate-950">{activeClient?.name || 'Akte auswählen'}</p>
-            </div>
-            <span className="shrink-0 text-xs font-black text-violet-700">{open ? '▲' : '▼'}</span>
+          <div className="flex min-w-0 items-center gap-2">
+            <FolderOpen className="h-4 w-4 shrink-0 text-violet-600" />
+            <span className="truncate text-sm font-black text-slate-900">{activeClient?.name || 'Akte auswählen'}</span>
           </div>
+          {open ? <ChevronUp className="h-4 w-4 shrink-0 text-violet-600" /> : <ChevronDown className="h-4 w-4 shrink-0 text-violet-600" />}
         </button>
 
-        <Link
-          href="/mandanten"
-          className="shrink-0 rounded-xl border border-violet-100 bg-white px-3 py-3 text-[11px] font-black text-violet-700"
-        >
-          Akten
-        </Link>
-
         {open && (
-          <div className="absolute left-2 right-2 top-[calc(100%+0.4rem)] z-50 max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-violet-100 bg-white p-2 shadow-xl">
+          <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-violet-100 bg-white p-2 shadow-xl">
             {clients.length === 0 ? (
               <div className="p-2">
                 <p className="text-sm font-semibold text-slate-500">Noch keine Akte vorhanden.</p>
-                <Link href="/mandanten" className="mt-2 inline-flex text-sm font-black text-violet-700">Akte anlegen →</Link>
               </div>
             ) : (
               clients.map((client) => {
@@ -121,11 +112,19 @@ export function ClientSwitcher() {
                     className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-black ${selected ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-800'}`}
                   >
                     <span className="truncate">{client.name}</span>
-                    <span className="ml-3 shrink-0 text-xs">{selected ? 'Aktiv' : 'Öffnen'}</span>
+                    {selected && <span className="ml-3 shrink-0 text-[10px] uppercase tracking-wider">aktiv</span>}
                   </button>
                 )
               })
             )}
+
+            <Link
+              href="/mandanten"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center justify-center rounded-xl border border-violet-100 bg-white px-3 py-3 text-sm font-black text-violet-700"
+            >
+              Akten verwalten
+            </Link>
           </div>
         )}
       </div>
