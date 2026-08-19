@@ -30,8 +30,8 @@ export function BottomNav() {
   ) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 md:hidden">
-      <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between rounded-[2rem] border border-violet-100 bg-white/95 px-2 py-2 shadow-xl backdrop-blur">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-2 md:hidden">
+      <nav className="pointer-events-auto flex w-full max-w-md items-center rounded-2xl border border-violet-100 bg-white/96 px-1.5 py-1.5 shadow-lg backdrop-blur">
         {navItems.map((item) => {
           const isActive = pathMatches(pathname, item.paths)
           const Icon = item.icon
@@ -40,11 +40,11 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={isActive
-                ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-1 py-2.5 text-white'
-                : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-1 py-2.5 text-slate-500'}
+                ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl bg-violet-600 px-1 py-2 text-white'
+                : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-2 text-slate-500'}
             >
-              <Icon className="h-5 w-5" strokeWidth={2.2} />
-              <span className="mt-1 truncate text-[9px] font-black">{item.label}</span>
+              <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+              <span className="mt-0.5 truncate text-[8px] font-black">{item.label}</span>
             </Link>
           )
         })}
