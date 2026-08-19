@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FolderOpen, Home, Inbox, ListTodo, MoreHorizontal } from 'lucide-react'
+import { FolderKanban, FolderOpen, Home, Inbox, ListTodo } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Start', icon: Home, paths: ['/'] },
+  { href: '/mandanten', label: 'Akten', icon: FolderKanban, paths: ['/mandanten'] },
   { href: '/eingang', label: 'Eingang', icon: Inbox, paths: ['/eingang', '/stapel', '/neue-buchungen'] },
   { href: '/jetzt', label: 'Vorgänge', icon: ListTodo, paths: ['/jetzt', '/rueckfragen'] },
   { href: '/dokumente', label: 'Mappe', icon: FolderOpen, paths: ['/dokumente'] },
-  { href: '/mehr', label: 'Mehr', icon: MoreHorizontal, paths: ['/mehr', '/mandanten', '/wissen', '/sicherheit'] },
 ]
 
 function pathMatches(pathname: string, paths: string[]) {
@@ -30,7 +30,7 @@ export function BottomNav() {
   ) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 md:hidden">
       <nav className="pointer-events-auto flex w-full max-w-md items-center justify-between rounded-[2rem] border border-violet-100 bg-white/95 px-2 py-2 shadow-xl backdrop-blur">
         {navItems.map((item) => {
           const isActive = pathMatches(pathname, item.paths)
