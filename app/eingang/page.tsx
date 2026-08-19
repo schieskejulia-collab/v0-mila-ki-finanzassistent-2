@@ -1,32 +1,111 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { Camera, FileStack, FileText, Upload, ArrowRight } from 'lucide-react'
+import { useFinance } from '@/lib/store'
+import { checkDocumentQuality } from '@/lib/document-workflow'
 
-type Mode = 'va' | 'kanzlei'
-type CaseItem = { id:string; source:string; caller_name:string|null; company:string|null; phone:string|null; email:string|null; subject:string; summary:string; urgency:string; category:string; status:string; assigned_to:string|null; handoff_summary:string|null; handoff_ready:boolean }
-type Task = { id:string; case_id:string|null; title:string; status:string; next_action:string|null }
-type Update = { id:string; case_id:string; kind:'question'|'answer'|'note'|'handoff'; content:string; status:'open'|'waiting'|'done' }
+function formatEuro(value?: number) {
+  const amount = Number(value || 0)
+  if (!amount) return ''
+  return amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+}
 
-const MODE_KEY='mila-work-mode-v1'
-const empty={source:'phone',caller_name:'',company:'',phone:'',email:'',subject:'',summary:'',urgency:'normal',category:'Anfrage',assigned_to:'',next_action:'',lead:true,sensitive:false}
+export default function EingangPage() {
+  const { documents } = useFinance()
+  const recent = [...documents].slice(0, 8)
+  const needsHelp = recent.filter((doc: any) => !checkDocumentQuality(doc).ok).length
 
-export default function EingangPage(){
- const params=useSearchParams(); const [mode,setMode]=useState<Mode>('va'); const [cases,setCases]=useState<CaseItem[]>([]),[tasks,setTasks]=useState<Task[]>([]),[updates,setUpdates]=useState<Update[]>([]),[selected,setSelected]=useState<string|null>(null); const [draft,setDraft]=useState<any>(empty),[text,setText]=useState(''),[handoff,setHandoff]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false)
- useEffect(()=>{const q=params.get('mode');const stored=typeof window!=='undefined'?window.localStorage.getItem(MODE_KEY):null;const next=(q==='kanzlei'||stored==='kanzlei')?'kanzlei':'va';setMode(next);if(typeof window!=='undefined')window.localStorage.setItem(MODE_KEY,next);void load()},[params])
- async function load(){const {data:a}=await supabase.auth.getUser();if(!a.user){setError('Bitte zuerst anmelden.');return}const [c,t,u]=await Promise.all([supabase.from('mila_intake_cases').select('*').order('created_at',{ascending:false}).limit(100),supabase.from('mila_coordination_tasks').select('*').order('created_at',{ascending:false}).limit(200),supabase.from('mila_case_updates').select('*').order('created_at',{ascending:true}).limit(400)]);if(c.error||t.error||u.error)setError('Mila konnte die Arbeitsdaten nicht vollständig laden.');setCases((c.data||[]) as CaseItem[]);setTasks((t.data||[]) as Task[]);setUpdates((u.data||[]) as Update[])}
- const current=cases.find(c=>c.id===selected)||null,currentTasks=tasks.filter(t=>t.case_id===selected),currentUpdates=updates.filter(u=>u.case_id===selected)
- const phoneCases=cases.filter(c=>c.source==='phone'),openCases=cases.filter(c=>c.status!=='done'),callbackCases=phoneCases.filter(c=>c.status!=='done'),leadCases=cases.filter(c=>c.category==='Neukunde / Interessent'&&c.status!=='done')
- const stats=useMemo(()=>mode==='kanzlei'?[['Anrufe',phoneCases.length],['Rückruf offen',callbackCases.length],['Interessenten',leadCases.length],['Nicht verloren',phoneCases.filter(c=>c.status==='done'||c.handoff_ready).length]]:[['Offene Vorgänge',openCases.length],['Rückfragen',updates.filter(u=>u.kind==='question'&&u.status!=='done').length],['Nachfassen',tasks.filter(t=>t.status!=='done').length],['Übergabebereit',cases.filter(c=>c.handoff_ready&&c.status!=='done').length]],[mode,cases,tasks,updates])
- function patch(k:string,v:any){setDraft((d:any)=>({...d,[k]:v}))}
- async function createCase(){setError('');if(!draft.subject.trim()||!draft.summary.trim()){setError('Bitte Anliegen und kurze Zusammenfassung ausfüllen.');return}setSaving(true);const {data:a}=await supabase.auth.getUser();if(!a.user){setSaving(false);return}const isK=mode==='kanzlei';const {data:c,error:e}=await supabase.from('mila_intake_cases').insert({user_id:a.user.id,source:isK?'phone':draft.source,caller_name:draft.caller_name||null,company:draft.company||null,phone:draft.phone||null,email:draft.email||null,subject:draft.subject,summary:draft.summary,urgency:draft.urgency,category:isK?(draft.lead?'Neukunde / Interessent':'Bestandsmandant / Kunde'):draft.category,status:(draft.sensitive||draft.urgency==='high'||draft.urgency==='critical')?'human_review':'new',assigned_to:draft.assigned_to||null,requires_human:Boolean(draft.sensitive||draft.urgency==='high'||draft.urgency==='critical'),sensitive:Boolean(draft.sensitive)}).select('*').single();if(e||!c){setError('Vorgang konnte nicht gespeichert werden.');setSaving(false);return}await supabase.from('mila_coordination_tasks').insert({user_id:a.user.id,case_id:c.id,title:isK?`Rückruf sichern: ${draft.subject}`:`Koordination: ${draft.subject}`,contact_name:draft.caller_name||draft.company||null,contact_channel:draft.phone||draft.email||null,goal:isK?'Kontakt sichern und Anliegen zuverlässig weitergeben':draft.summary,status:'open',next_action:draft.next_action|| (isK?'Rückruf / Bearbeitung verbindlich übernehmen':'Nächsten Schritt koordinieren')});setDraft(empty);setSelected(c.id);setSaving(false);setNotice(isK?'Anruf gesichert. Der Kontakt bleibt offen, bis jemand übernommen hat.':'Vorgang angelegt. Mila hält die Koordination offen.');await load()}
- async function addUpdate(kind:Update['kind']){if(!current||!text.trim())return;const {data:a}=await supabase.auth.getUser();if(!a.user)return;await supabase.from('mila_case_updates').insert({user_id:a.user.id,case_id:current.id,kind,content:text.trim(),status:kind==='question'?'waiting':'done'});if(kind==='question')await supabase.from('mila_intake_cases').update({status:'waiting'}).eq('id',current.id);setText('');await load()}
- async function closeTask(t:Task){await supabase.from('mila_coordination_tasks').update({status:'done'}).eq('id',t.id);await load()}
- async function closeQuestion(u:Update){await supabase.from('mila_case_updates').update({status:'done'}).eq('id',u.id);await load()}
- async function prepare(){if(!current)return;if(currentUpdates.some(u=>u.kind==='question'&&u.status!=='done')){setError('Offene Rückfragen zuerst klären.');return}const s=handoff.trim()||`Anliegen: ${current.subject}\nKontakt: ${current.caller_name||current.company||'–'}\nTelefon: ${current.phone||'–'}\nZusammenfassung: ${current.summary}\nZuständig: ${current.assigned_to||'noch offen'}`;await supabase.from('mila_intake_cases').update({handoff_summary:s,handoff_ready:true,status:'human_review'}).eq('id',current.id);setHandoff('');setNotice('Übergabe vorbereitet.');await load()}
- async function finish(){if(!current)return;if(!current.handoff_ready||currentTasks.some(t=>t.status!=='done')||currentUpdates.some(u=>u.kind==='question'&&u.status!=='done')){setError('Noch nicht abschließen: Übergabe, Rückfragen oder Nachfassen sind noch offen.');return}await supabase.from('mila_intake_cases').update({status:'done',completed_at:new Date().toISOString()}).eq('id',current.id);setNotice(mode==='kanzlei'?'Kontakt übernommen – dieser Anruf ist nicht verloren gegangen.':'Vorgang vollständig abgeschlossen.');await load()}
- const kanzlei=mode==='kanzlei'
- return <main className="min-h-screen bg-[#fbf9ff] px-4 pb-40 pt-5 text-slate-950"><div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[.2em] text-violet-500">{kanzlei?'Kanzlei / Unternehmen':'VA / Koordination'}</p><h1 className="mt-1 text-3xl font-black">{kanzlei?'Kein Anruf geht verloren.':'Du hältst den Faden.'}</h1></div><Link href="/arbeitsmodus" className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">Modus wechseln</Link></div><p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{kanzlei?'Mila sichert Anrufer, erkennt Rückrufbedarf und hält jeden Kontakt offen, bis das Team übernommen hat. Die echte Telefon-KI kann später an diesen Eingang andocken.':'Ein Ziel, ein Vorgang: Rückfragen bündeln, Beteiligte koordinieren, nachfassen und sauber übergeben.'}</p><section className="mt-5 grid grid-cols-2 gap-3">{stats.map(([l,v])=><div key={String(l)} className="rounded-2xl bg-white p-4 shadow-sm"><p className="text-2xl font-black text-violet-700">{v}</p><p className="text-xs font-black text-slate-500">{l}</p></div>)}</section>{notice&&<p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</p>}{error&&<p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}<section className="mt-5 rounded-3xl border border-violet-100 bg-white p-4 shadow-sm"><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">{kanzlei?'Anruf / Anfrage sichern':'Neuen Vorgang übernehmen'}</p><h2 className="mt-1 text-xl font-black">{kanzlei?'Wer hat angerufen – und was darf nicht verloren gehen?':'Was soll Mila für dich zusammenhalten?'}</h2><div className="mt-4 grid grid-cols-2 gap-2">{!kanzlei&&<select value={draft.source} onChange={e=>patch('source',e.target.value)} className="rounded-xl border p-3 text-sm font-bold"><option value="phone">Telefon</option><option value="email">E-Mail</option><option value="upload">Upload</option><option value="manual">Manuell</option></select>}<select value={draft.urgency} onChange={e=>patch('urgency',e.target.value)} className="rounded-xl border p-3 text-sm font-bold"><option value="low">Niedrig</option><option value="normal">Normal</option><option value="high">Dringend</option><option value="critical">Kritisch</option></select>{kanzlei&&<label className="col-span-2 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm font-black text-emerald-800"><input type="checkbox" checked={draft.lead} onChange={e=>patch('lead',e.target.checked)}/> Neuer Interessent / möglicher Kunde</label>}<input value={draft.caller_name} onChange={e=>patch('caller_name',e.target.value)} placeholder={kanzlei?'Name des Anrufers':'Kontakt / Ansprechpartner'} className="rounded-xl border p-3 text-sm"/><input value={draft.company} onChange={e=>patch('company',e.target.value)} placeholder="Firma / Mandant" className="rounded-xl border p-3 text-sm"/><input value={draft.phone} onChange={e=>patch('phone',e.target.value)} placeholder="Telefon" className="rounded-xl border p-3 text-sm"/><input value={draft.email} onChange={e=>patch('email',e.target.value)} placeholder="E-Mail" className="rounded-xl border p-3 text-sm"/></div><input value={draft.subject} onChange={e=>patch('subject',e.target.value)} placeholder={kanzlei?'Anliegen des Anrufers':'Ziel / Anliegen'} className="mt-2 w-full rounded-xl border p-3 text-sm"/><textarea value={draft.summary} onChange={e=>patch('summary',e.target.value)} placeholder={kanzlei?'Was wurde besprochen? Was braucht der Anrufer?':'Was ist die Ausgangslage und was soll am Ende erledigt sein?'} className="mt-2 min-h-24 w-full rounded-xl border p-3 text-sm"/><div className="mt-2 grid grid-cols-2 gap-2"><input value={draft.assigned_to} onChange={e=>patch('assigned_to',e.target.value)} placeholder={kanzlei?'Wer soll übernehmen?':'Zuständig / Beteiligte'} className="rounded-xl border p-3 text-sm"/><input value={draft.next_action} onChange={e=>patch('next_action',e.target.value)} placeholder="Nächster Schritt" className="rounded-xl border p-3 text-sm"/></div><label className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900"><input type="checkbox" checked={draft.sensitive} onChange={e=>patch('sensitive',e.target.checked)}/> Sensibel / muss ein Mensch prüfen</label><button onClick={createCase} disabled={saving} className="mt-3 w-full rounded-xl bg-violet-600 py-3 text-sm font-black text-white">{saving?'Mila sichert…':kanzlei?'Anruf sichern + Rückruf anlegen':'Vorgang übernehmen + Koordination starten'}</button></section><section className="mt-6"><h2 className="text-xl font-black">{kanzlei?'Gesicherte Kontakte':'Meine Vorgänge'}</h2><div className="mt-3 space-y-2">{cases.map(c=><button key={c.id} onClick={()=>setSelected(c.id)} className={`w-full rounded-2xl border p-4 text-left shadow-sm ${selected===c.id?'border-violet-400 bg-violet-50':'border-slate-100 bg-white'}`}><div className="flex justify-between gap-2"><div><p className="text-[10px] font-black uppercase text-violet-500">{c.source} · {c.category}</p><p className="font-black">{c.subject}</p><p className="text-xs font-semibold text-slate-500">{c.caller_name||c.company||'Kontakt offen'}{c.phone?` · ${c.phone}`:''}</p></div><span className="h-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black">{c.status}</span></div></button>)}</div></section>{current&&<section className="mt-6 rounded-3xl border border-violet-100 bg-white p-4 shadow-sm"><p className="text-[10px] font-black uppercase text-violet-500">Aktiver Vorgang</p><h2 className="text-xl font-black">{current.subject}</h2><p className="mt-2 text-sm text-slate-600">{current.summary}</p><h3 className="mt-5 font-black">Rückfragen & Verlauf</h3>{currentUpdates.map(u=><div key={u.id} className="mt-2 rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-black uppercase text-violet-600">{u.kind}</p><p className="text-sm font-semibold">{u.content}</p>{u.kind==='question'&&u.status!=='done'&&<button onClick={()=>closeQuestion(u)} className="mt-2 text-xs font-black text-emerald-700">Als geklärt markieren</button>}</div>)}<textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Rückfrage, Antwort oder Notiz…" className="mt-3 min-h-20 w-full rounded-xl border p-3 text-sm"/><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={()=>addUpdate('question')} className="rounded-xl bg-amber-50 p-2 text-xs font-black">Rückfrage</button><button onClick={()=>addUpdate('answer')} className="rounded-xl bg-emerald-50 p-2 text-xs font-black">Antwort</button><button onClick={()=>addUpdate('note')} className="rounded-xl bg-slate-100 p-2 text-xs font-black">Notiz</button></div><h3 className="mt-5 font-black">{kanzlei?'Rückruf / Übernahme':'Nachfassen / Koordination'}</h3>{currentTasks.map(t=><div key={t.id} className="mt-2 flex justify-between gap-3 rounded-xl bg-slate-50 p-3"><div><p className="text-sm font-black">{t.title}</p><p className="text-xs text-slate-500">{t.next_action}</p></div>{t.status!=='done'&&<button onClick={()=>closeTask(t)} className="text-xs font-black text-emerald-700">Erledigt</button>}</div>)}<h3 className="mt-5 font-black">Übergabe</h3><textarea value={handoff} onChange={e=>setHandoff(e.target.value)} placeholder="Übergabe an Team / Fachperson…" className="mt-2 min-h-24 w-full rounded-xl border p-3 text-sm"/><button onClick={prepare} className="mt-2 w-full rounded-xl bg-violet-600 py-3 text-sm font-black text-white">Übergabe vorbereiten</button><button onClick={finish} className="mt-3 w-full rounded-xl bg-emerald-600 py-3 text-sm font-black text-white">{kanzlei?'Kontakt übernommen / abgeschlossen':'Vorgang vollständig erledigen'}</button></section>}</main>
+  return (
+    <main className="mx-auto min-h-screen max-w-md space-y-5 px-4 pb-32 pt-5 text-slate-950">
+      <header className="px-1">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Eingang</p>
+        <h1 className="mt-2 text-4xl font-black tracking-tight">Rein damit.</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+          Hier beginnt alles. Foto, PDF oder Stapel rein – Mila liest, zerlegt, ordnet und fragt nur nach, wenn ihr Kontext fehlt.
+        </p>
+      </header>
+
+      <Link href="/stapel" className="block rounded-[2rem] bg-violet-600 p-5 text-white shadow-lg shadow-violet-100">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Ein Ablauf für alles</p>
+            <p className="mt-2 text-2xl font-black">Unterlagen hinzufügen</p>
+            <p className="mt-1 text-sm font-semibold text-white/80">1 bis 20 Bilder oder PDFs in einem Durchgang.</p>
+          </div>
+          <FileStack className="h-10 w-10 shrink-0" />
+        </div>
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <MiniAction icon={Camera} label="Foto" />
+          <MiniAction icon={FileText} label="PDF" />
+          <MiniAction icon={Upload} label="Stapel" />
+        </div>
+      </Link>
+
+      <section className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Letzter Eingang</p>
+            <h2 className="mt-1 text-xl font-black">Was Mila daraus gemacht hat</h2>
+          </div>
+          {recent.length > 0 && (
+            <span className={`rounded-full px-3 py-2 text-xs font-black ${needsHelp > 0 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}>
+              {needsHelp > 0 ? `${needsHelp} brauchen dich` : 'sortiert ✓'}
+            </span>
+          )}
+        </div>
+
+        {recent.length === 0 ? (
+          <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-center">
+            <p className="text-sm font-black text-slate-700">Noch nichts im Eingang.</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Der erste Scan reicht. Du musst vorher keine Ausgabe oder Kategorie anlegen.</p>
+          </div>
+        ) : (
+          <div className="mt-5 divide-y divide-slate-100">
+            {recent.map((doc: any) => {
+              const quality = checkDocumentQuality(doc)
+              return (
+                <div key={doc.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${quality.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black">{doc.title || 'Dokument'}</p>
+                    <p className="truncate text-xs font-semibold text-slate-500">
+                      {doc.partner || 'Anbieter noch offen'}{Number(doc.amount || 0) > 0 ? ` · ${formatEuro(doc.amount)}` : ''}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-[10px] font-black ${quality.ok ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {quality.ok ? 'SORTIERT' : 'PRÜFEN'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {recent.length > 0 && (
+          <Link href="/dokumente?ansicht=dokumente" className="mt-5 flex items-center justify-between rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">
+            Alle Unterlagen ansehen <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
+      </section>
+
+      <section className="rounded-[2rem] border border-violet-100 bg-violet-50/60 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Milas Regel</p>
+        <p className="mt-2 text-lg font-black">Nicht du sortierst vor. Mila sortiert vor.</p>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+          Original rein, Fakten erkennen, Positionen trennen, Akte und Zeitraum zuordnen. Nur Unsicherheit wird zum Vorgang.
+        </p>
+      </section>
+    </main>
+  )
+}
+
+function MiniAction({ icon: Icon, label }: { icon: any; label: string }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 rounded-2xl bg-white/15 px-2 py-3 text-xs font-black">
+      <Icon className="h-4 w-4" /> {label}
+    </div>
+  )
 }
