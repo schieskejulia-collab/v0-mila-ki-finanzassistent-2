@@ -6,42 +6,16 @@ import {
   FolderOpen,
   Home,
   Inbox,
-  PlusCircle,
-  UserRound,
-  Zap,
+  ListTodo,
+  MoreHorizontal,
 } from 'lucide-react'
 
 const navItems = [
-  {
-    href: '/',
-    label: 'Start',
-    icon: Home,
-  },
-  {
-    href: '/jetzt',
-    label: 'JETZT',
-    icon: Zap,
-  },
-  {
-    href: '/eingang',
-    label: 'Eingang',
-    icon: Inbox,
-  },
-  {
-    href: '/stapel',
-    label: 'Neu',
-    icon: PlusCircle,
-  },
-  {
-    href: '/dokumente',
-    label: 'Mappe',
-    icon: FolderOpen,
-  },
-  {
-    href: '/profil',
-    label: 'Profil',
-    icon: UserRound,
-  },
+  { href: '/', label: 'Start', icon: Home },
+  { href: '/eingang', label: 'Eingang', icon: Inbox },
+  { href: '/jetzt', label: 'Vorgänge', icon: ListTodo },
+  { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
+  { href: '/mehr', label: 'Mehr', icon: MoreHorizontal },
 ]
 
 export function BottomNav() {
@@ -49,9 +23,12 @@ export function BottomNav() {
 
   if (
     pathname === '/login' ||
+    pathname === '/register' ||
     pathname === '/angebot' ||
     pathname === '/kontakt' ||
-    pathname === '/akquise'
+    pathname === '/akquise' ||
+    pathname.startsWith('/demo') ||
+    pathname.startsWith('/mandant-upload')
   ) {
     return null
   }
@@ -63,9 +40,7 @@ export function BottomNav() {
           const isActive =
             item.href === '/'
               ? pathname === '/'
-              : pathname === item.href ||
-                pathname.startsWith(`${item.href}/`)
-
+              : pathname === item.href || pathname.startsWith(`${item.href}/`)
           const Icon = item.icon
 
           return (
@@ -74,14 +49,12 @@ export function BottomNav() {
               href={item.href}
               className={
                 isActive
-                  ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-1 py-2 text-white'
-                  : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-1 py-2 text-slate-500'
+                  ? 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl bg-violet-600 px-1 py-2.5 text-white'
+                  : 'flex min-w-0 flex-1 flex-col items-center justify-center rounded-3xl px-1 py-2.5 text-slate-500'
               }
             >
               <Icon className="h-5 w-5" strokeWidth={2.2} />
-              <span className="mt-1 truncate text-[8px] font-black">
-                {item.label}
-              </span>
+              <span className="mt-1 truncate text-[9px] font-black">{item.label}</span>
             </Link>
           )
         })}
