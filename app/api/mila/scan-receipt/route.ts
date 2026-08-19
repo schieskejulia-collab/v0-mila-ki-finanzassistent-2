@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         model: 'qwen/qwen3.6-27b',
         response_format: { type: 'json_object' },
         temperature: 0.05,
-        max_tokens: 1400,
+        max_tokens: 1500,
         reasoning_format: 'hidden',
         reasoning_effort: 'none',
         messages: [
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
               {
                 type: 'text',
                 text: `
-Du bist der Dokument-Extraktor von Mila. Du bewertest NICHT steuerlich und erfindest keinen geschäftlichen Zweck.
+Du bist der Dokument-Extraktor von Mila. Du bewertest NICHT steuerlich oder rechtlich und erfindest keinen geschäftlichen Zweck.
 
 Lies das Dokument positionsgenau und antworte ausschließlich als gültiges JSON:
 
@@ -129,6 +129,7 @@ Lies das Dokument positionsgenau und antworte ausschließlich als gültiges JSON
   "financialDirection": "unknown",
   "scope": "unknown",
   "paymentConfirmed": false,
+  "isObligation": false,
   "dueDate": "",
   "caseNumber": "",
   "originalCreditor": "",
@@ -149,15 +150,19 @@ Lies das Dokument positionsgenau und antworte ausschließlich als gültiges JSON
 }
 
 Regeln:
-- Erfinde nichts. Nicht lesbare Werte bleiben leer/0/unknown.
-- amount = sichtbarer Brutto-Endbetrag.
-- documentDate = Beleg-/Rechnungsdatum in YYYY-MM-DD.
+- Erfinde nichts. Nicht lesbare Werte bleiben leer, 0 oder unknown.
+- amount = sichtbarer Brutto-Endbetrag bzw. bei einer offenen Forderung der eindeutig geforderte Gesamt-/Zahlbetrag.
+- documentDate = tatsächliches Beleg-/Rechnungs-/Dokumentdatum in YYYY-MM-DD. Niemals das heutige Datum ergänzen, wenn es nicht lesbar ist.
+- dueDate = eindeutig genannte Fälligkeit/Zahlungsfrist in YYYY-MM-DD; sonst leer.
 - documentType nur: beleg, quittung, kassenbon, rechnung, gutschrift, lohnabrechnung, versicherung, vertrag, bescheid, mahnung, inkasso, sonstiges.
 - financialDirection nur: income, expense, neutral, unknown.
-- Ein bezahlter Kassenbon oder eine Quittung ist expense.
+- Ein bezahlter Kassenbon oder eine Quittung ist expense und paymentConfirmed = true.
 - Eine Rechnung allein beweist noch keinen Geldfluss: ohne erkennbaren Zahlungshinweis financialDirection = neutral.
 - income nur, wenn ein tatsächlicher Einnahmen-/Zahlungseingang aus dem Dokument hervorgeht.
-- paymentConfirmed nur true, wenn Zahlung/Bezahlung auf dem Dokument erkennbar ist.
+- paymentConfirmed nur true, wenn Zahlung/Bezahlung tatsächlich erkennbar ist.
+- isObligation = true nur bei einer noch offenen Zahlungspflicht/Forderung, z. B. offene Rechnung, Mahnung, Inkasso, Zahlungsaufforderung oder Rate.
+- Bei bereits bezahltem Kassenbon/Quittung ist isObligation = false.
+- Ein bloßer Vertrag ohne eindeutig offene Zahlung ist nicht automatisch eine Verpflichtung.
 - scope nur: business, employee, health, insurance, vehicle, household, private, mixed, unknown.
 - Händlername allein beweist NICHT business/private.
 - Apotheke/Medikamente dürfen als health erkannt werden; das sagt nichts über steuerliche Relevanz aus.
@@ -175,7 +180,7 @@ WICHTIG ZU POSITIONEN:
 - Sonst relevance = needs_context.
 - needsConfirmation = true, sobald Zweck, Zuordnung oder mindestens eine Position Kontext braucht.
 
-Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahiert. Keine Mahn- oder Inkassologik ausführen.
+Keine Mahn-, Inkasso-, Steuer- oder Rechtsentscheidung ausführen. Nur Tatsachen extrahieren.
 `,
               },
               {
@@ -221,6 +226,8 @@ Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahie
     const financialDirection = normalizeDirection(parsed.financialDirection)
     const scope = normalizeScope(parsed.scope)
     const confidence = normalizeConfidence(parsed.confidence, 0.55)
+    const paymentConfirmed = Boolean(parsed.paymentConfirmed)
+    const isObligation = Boolean(parsed.isObligation)
 
     const rawItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : []
     const lineItems = rawItems
@@ -244,12 +251,17 @@ Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahie
       : detectedType || documentClassification.type || 'beleg'
 
     const itemNeedsContext = lineItems.some((item: any) => item.relevance === 'needs_context')
-    const needsConfirmation = Boolean(parsed.needsConfirmation) || itemNeedsContext || scope === 'unknown'
+    const needsConfirmation =
+      Boolean(parsed.needsConfirmation) ||
+      itemNeedsContext ||
+      (financialDirection === 'expense' && scope === 'unknown') ||
+      ((financialDirection === 'expense' || financialDirection === 'income') && (!amount || !documentDate))
+
     const suggestedCategory = categoryForScope(scope)
     const reviewReason = needsConfirmation
       ? lineItems.length > 0 && itemNeedsContext
         ? 'Mindestens eine Position braucht noch einen konkreten Verwendungs-Kontext. Mila rät nicht anhand des Händlers.'
-        : 'Der Verwendungs-Kontext ist aus dem Beleg nicht eindeutig genug erkennbar.'
+        : 'Mindestens eine für die Zuordnung wichtige Angabe ist nicht sicher genug erkennbar.'
       : 'Dokumentart und sichtbarer Kontext konnten strukturiert erfasst werden.'
 
     const document = {
@@ -258,7 +270,8 @@ Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahie
       amount,
       type: documentType,
       status: 'neu',
-      documentDate: documentDate || new Date().toISOString().slice(0, 10),
+      // Kein Fallback auf das heutige Datum: unbekannt bleibt unbekannt.
+      documentDate: documentDate || undefined,
       dueDate: dueDate || undefined,
       fileName: title,
       caseNumber,
@@ -282,7 +295,8 @@ Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahie
         documentType,
         financialDirection,
         scope,
-        paymentConfirmed: Boolean(parsed.paymentConfirmed),
+        paymentConfirmed,
+        isObligation,
         lineItems,
         category: suggestedCategory,
         suggestedCategory,
@@ -292,7 +306,6 @@ Inkasso/Mahnung darf erkannt werden, wird hier aber nur als Dokumenttyp extrahie
         needsReview: needsConfirmation,
         reviewReason,
         taxHint: 'Mila sortiert und prüft Nachweise organisatorisch. Eine steuerliche Bewertung erfolgt hier nicht.',
-        isObligation: false,
         document,
       },
     })
