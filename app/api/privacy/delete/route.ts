@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { deleteUserStoredFiles } from '@/lib/user-storage-cleanup'
 
 const USER_TABLES = [
   'client_questions',
@@ -52,24 +53,24 @@ export async function POST(request: NextRequest) {
 
   const deleted: string[] = []
   const skipped: Array<{ table: string; reason: string }> = []
+  const storageCleanup = await deleteUserStoredFiles(admin, user.id)
 
-  const { data: objects, error: listError } = await admin.storage
-    .from('client-uploads')
-    .list(user.id, { limit: 1000 })
-
-  if (!listError && Array.isArray(objects)) {
-    const paths: string[] = []
-    for (const clientFolder of objects) {
-      const { data: clientObjects } = await admin.storage
-        .from('client-uploads')
-        .list(`${user.id}/${clientFolder.name}`, { limit: 1000 })
-      for (const object of clientObjects || []) {
-        if (object.name) paths.push(`${user.id}/${clientFolder.name}/${object.name}`)
+  if (storageCleanup.failures.length > 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: 'Private Dokumentdateien konnten nicht vollständig gelöscht werden. Die Datenbanklöschung wurde deshalb nicht fortgesetzt.',
+        storageFailures: storageCleanup.failures,
+      },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+          Pragma: 'no-cache',
+          'X-Content-Type-Options': 'nosniff',
+        },
       }
-    }
-    if (paths.length > 0) {
-      await admin.storage.from('client-uploads').remove(paths)
-    }
+    )
   }
 
   for (const table of USER_TABLES) {
@@ -86,10 +87,11 @@ export async function POST(request: NextRequest) {
       ok: skipped.length === 0,
       message:
         skipped.length === 0
-          ? 'Nutzerdaten und zuordenbare Mandanten-Uploads wurden gelöscht. Das Auth-Konto bleibt bestehen.'
+          ? 'Nutzerdaten und zuordenbare private Dokumentdateien wurden gelöscht. Das Auth-Konto bleibt bestehen.'
           : 'Die Löschung wurde ausgeführt, aber nicht alle optionalen Tabellen konnten verarbeitet werden.',
       deleted,
       skipped,
+      removedFiles: storageCleanup.removed,
     },
     {
       headers: {
