@@ -83,27 +83,27 @@ export default function VorgaengePage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-4 px-4 pb-32 pt-4 text-slate-950">
-      <header className="px-1">
+    <main className="mx-auto min-h-screen w-full max-w-7xl space-y-5 px-4 pb-28 pt-6 text-slate-950 sm:px-6 md:pb-10 lg:px-8">
+      <header>
         <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Vorgänge</p>
         <div className="mt-1 flex items-end justify-between gap-4">
-          <h1 className="text-4xl font-black tracking-tight">{totalOpen} offen</h1>
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{totalOpen} offen</h1>
           {totalOpen === 0 && <span className="pb-1 text-sm font-black text-emerald-700">alles ruhig ✓</span>}
         </div>
       </header>
 
-      {documentIssues.length > 0 && (
-        <Link href="/dokumente?ansicht=klaerung" className="flex items-center justify-between rounded-[2rem] bg-amber-50 p-5 ring-1 ring-amber-100">
-          <div>
-            <p className="text-lg font-black">{documentIssues.length} {documentIssues.length === 1 ? 'Unterlage braucht' : 'Unterlagen brauchen'} eine Angabe</p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">Jetzt klären</p>
-          </div>
-          <FileQuestion className="h-7 w-7 text-amber-700" />
-        </Link>
-      )}
-
-      {openItems.length > 0 && (
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-3">
+          {documentIssues.length > 0 && (
+            <Link href="/dokumente?ansicht=klaerung" className="flex items-center justify-between rounded-[1.75rem] bg-amber-50 p-5 ring-1 ring-amber-100">
+              <div>
+                <p className="text-lg font-black">{documentIssues.length} {documentIssues.length === 1 ? 'Unterlage braucht' : 'Unterlagen brauchen'} eine Angabe</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Jetzt klären</p>
+              </div>
+              <FileQuestion className="h-7 w-7 text-amber-700" />
+            </Link>
+          )}
+
           {openItems.map((item) => (
             <article key={item.id} className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
               <p className="text-sm font-black leading-6">{item.text}</p>
@@ -118,26 +118,25 @@ export default function VorgaengePage() {
               </div>
             </article>
           ))}
+
+          {totalOpen === 0 && (
+            <div className="rounded-[1.75rem] bg-emerald-50 p-5 text-sm font-bold text-emerald-800">Nichts offen.</div>
+          )}
         </section>
-      )}
 
-      {totalOpen === 0 && (
-        <div className="rounded-[2rem] bg-emerald-50 p-5 text-sm font-bold text-emerald-800">
-          Nichts offen.
-        </div>
-      )}
-
-      <form onSubmit={add} className="rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
-        <textarea
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder="Etwas festhalten …"
-          className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-base font-semibold outline-none focus:border-violet-400"
-        />
-        <button type="submit" className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3.5 font-black text-white">
-          <Plus className="h-5 w-5" /> Vorgang hinzufügen
-        </button>
-      </form>
+        <form onSubmit={add} className="h-fit rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+          <p className="text-sm font-black">Neuen Vorgang festhalten</p>
+          <textarea
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="z. B. Jobcenter bis morgen antworten"
+            className="mt-3 min-h-32 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-base font-semibold outline-none focus:border-violet-400"
+          />
+          <button type="submit" className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3.5 font-black text-white">
+            <Plus className="h-5 w-5" /> Vorgang hinzufügen
+          </button>
+        </form>
+      </div>
     </main>
   )
 }
