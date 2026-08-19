@@ -101,7 +101,7 @@ export async function POST(req: Request) {
     const explicitlyHuman = boolField(fields, "requires_human")
     const requiresHuman = explicitlyHuman || sensitive || urgency === "high" || urgency === "critical"
 
-    let caseId = body.caseId
+    let caseId: string = body.caseId || ""
 
     if (caseId) {
       const { data: existingCase, error: caseError } = await client
