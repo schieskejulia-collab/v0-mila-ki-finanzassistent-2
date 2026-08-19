@@ -1,78 +1,145 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, FileText, Inbox, Plus, Users } from 'lucide-react'
-import { MorningBriefing } from '@/components/ui/morning-briefing'
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileStack,
+  FolderCheck,
+  ListTodo,
+  ReceiptText,
+  Sparkles,
+} from 'lucide-react'
+import { checkDocumentQuality } from '@/lib/document-workflow'
 
 export function DashboardContent({ model }: { model: any }) {
-  const openItems = Array.isArray(model?.openObligations)
-    ? model.openObligations.length
-    : Number(model?.openObligations ?? model?.obligations?.open ?? 0) || 0
+  const documents = Array.isArray(model?.documents) ? model.documents : []
+  const expenses = Array.isArray(model?.expenses) ? model.expenses : []
+  const incomes = Array.isArray(model?.incomes) ? model.incomes : []
 
-  const documents = Array.isArray(model?.documents)
-    ? model.documents.length
-    : Number(model?.documentCount ?? 0) || 0
+  const clarificationDocs = documents.filter((doc: any) => !checkDocumentQuality(doc).ok)
+  const sortedDocs = Math.max(0, documents.length - clarificationDocs.length)
+  const missingReceipts = expenses.filter(
+    (expense: any) => expense?.hasReceipt === false || expense?.has_receipt === false,
+  )
+  const needsYou = clarificationDocs.length + missingReceipts.length
+  const cashflowItems = expenses.length + incomes.length
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-32 pt-6">
-      <MorningBriefing
-        taxReserve={Number(model?.taxReserve ?? 0)}
-        financeScore={Number(model?.financeScore ?? 0)}
-        availableAfterObligations={model?.availableAfterObligations}
-      />
-
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Heute</p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Was steht an?</h2>
-        <p className="mt-2 text-sm font-medium text-slate-500">
-          {openItems > 0 ? `${openItems} offene Punkte warten auf dich.` : 'Aktuell ist nichts Dringendes offen.'}
+    <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-32 pt-5 text-slate-950">
+      <header className="px-1">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Mila</p>
+        <h1 className="mt-2 text-4xl font-black tracking-tight">Guten Morgen 🌸</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+          Rein damit. Mila sortiert im Hintergrund und holt dich nur dazu, wenn wirklich Kontext fehlt.
         </p>
+      </header>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <Link href="/verpflichtungen" className="rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-100">
-            <p className="text-3xl font-black text-slate-950">{openItems}</p>
-            <p className="mt-1 text-sm font-bold text-slate-700">Offen</p>
-          </Link>
-          <Link href="/dokumente" className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-            <p className="text-3xl font-black text-slate-950">{documents}</p>
-            <p className="mt-1 text-sm font-bold text-slate-700">Dokumente</p>
-          </Link>
+      <section className="rounded-[2rem] border border-violet-100 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Heute braucht Mila dich</p>
+            <p className="mt-2 text-4xl font-black">{needsYou}</p>
+          </div>
+          <div className={`rounded-2xl px-3 py-2 text-xs font-black ${needsYou > 0 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}>
+            {needsYou > 0 ? 'Ausnahmen prüfen' : 'Alles ruhig ✓'}
+          </div>
         </div>
+
+        {needsYou > 0 ? (
+          <div className="mt-5 space-y-2">
+            {clarificationDocs.length > 0 && (
+              <Link href="/dokumente?ansicht=klaerung" className="flex items-center justify-between rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                <div>
+                  <p className="text-sm font-black">{clarificationDocs.length} Unterlagen brauchen eine Entscheidung</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Mila zeigt nur die fehlende Angabe.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-amber-700" />
+              </Link>
+            )}
+            {missingReceipts.length > 0 && (
+              <Link href="/dokumente?ansicht=belege" className="flex items-center justify-between rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
+                <div>
+                  <p className="text-sm font-black">{missingReceipts.length} vorhandene Zahlungen ohne Nachweis</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">Nur Ausnahmefälle, nicht der normale Scan-Weg.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-violet-700" />
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
+            Du musst gerade nichts durchsuchen. Mila hat keinen ungeklärten Dokumentfall gefunden.
+          </div>
+        )}
       </section>
+
+      <Link href="/stapel" className="flex items-center justify-between rounded-[2rem] bg-violet-600 p-5 text-white shadow-lg shadow-violet-100">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Hauptaktion</p>
+          <p className="mt-1 text-2xl font-black">Unterlagen rein</p>
+          <p className="mt-1 text-sm font-semibold text-white/80">Ein Foto oder zwanzig Dateien – derselbe Ablauf.</p>
+        </div>
+        <FileStack className="h-9 w-9 shrink-0" />
+      </Link>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-violet-600" />
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Arbeitsplatz</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">Direkt loslegen</h2>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Was Mila gerade übernimmt</p>
+            <h2 className="mt-1 text-xl font-black">Die Arbeit hinter der Oberfläche</h2>
           </div>
-          <CheckCircle2 className="h-7 w-7 text-emerald-500" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <WorkLink href="/dokumente" icon={FileText} title="Dokumente" />
-          <WorkLink href="/crm" icon={Users} title="Mandanten" />
-          <WorkLink href="/stapel" icon={Plus} title="Belege rein" />
-          <WorkLink href="/jetzt" icon={Inbox} title="Eingang" />
+        <div className="mt-5 space-y-3">
+          <Capability
+            icon={FolderCheck}
+            title="Dokumente verstehen & vorsortieren"
+            detail={`${sortedDocs} von ${documents.length} vorhandenen Unterlagen ohne offene Klärung`}
+          />
+          <Capability
+            icon={ReceiptText}
+            title="IST-Einnahmen & IST-Ausgaben aus Nachweisen ableiten"
+            detail={`${cashflowItems} belegte Finanzvorgänge im aktuellen Bestand`}
+          />
+          <Capability
+            icon={FileStack}
+            title="Mischbons bis auf Positionsebene prüfen"
+            detail="Mila übernimmt Eindeutiges und fragt nur bei unsicherem Zweck nach."
+          />
+          <Capability
+            icon={CheckCircle2}
+            title="Originale sauber für die Übergabe halten"
+            detail={`${documents.length} Dokumente bleiben mit ihrem Original verknüpft`}
+          />
         </div>
       </section>
 
-      <Link href="/jetzt" className="flex items-center justify-between rounded-[2rem] bg-slate-950 p-5 text-white">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">Mila</p>
-          <p className="mt-1 text-lg font-black">Neuen Vorgang bearbeiten</p>
-        </div>
-        <ArrowRight className="h-5 w-5" />
-      </Link>
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/eingang" className="rounded-3xl bg-slate-950 p-4 text-white">
+          <FileStack className="h-6 w-6 text-violet-300" />
+          <p className="mt-5 text-base font-black">Eingang ansehen</p>
+        </Link>
+        <Link href="/jetzt" className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+          <ListTodo className="h-6 w-6 text-violet-600" />
+          <p className="mt-5 text-base font-black">Vorgänge</p>
+        </Link>
+      </div>
     </main>
   )
 }
 
-function WorkLink({ href, icon: Icon, title }: { href: string; icon: any; title: string }) {
+function Capability({ icon: Icon, title, detail }: { icon: any; title: string; detail: string }) {
   return (
-    <Link href={href} className="flex min-h-28 flex-col justify-between rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-      <Icon className="h-6 w-6 text-violet-600" />
-      <span className="text-base font-black text-slate-900">{title}</span>
-    </Link>
+    <div className="flex gap-3 rounded-2xl bg-slate-50 p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-sm font-black text-slate-900">{title}</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{detail}</p>
+      </div>
+    </div>
   )
 }
