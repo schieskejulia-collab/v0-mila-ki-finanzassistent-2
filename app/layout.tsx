@@ -32,7 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#f8f5ff',
+  themeColor: '#fbf9ff',
 }
 
 export default function RootLayout({
@@ -50,11 +50,13 @@ export default function RootLayout({
           forcedTheme="light"
         >
           <FinanceProvider>
-            <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#fbf9ff] text-slate-950">
-              <ClientSwitcher />
-              <div className="relative z-10 flex-1 pb-6">{children}</div>
-              <LegalFooter />
-              <BottomNav />
+            <ClientSwitcher />
+            <div className="min-h-[100dvh] w-full bg-[#fbf9ff] text-slate-950 md:pl-64">
+              <div className="relative flex min-h-[100dvh] w-full flex-col">
+                <div className="relative z-10 flex-1">{children}</div>
+                <LegalFooter />
+                <BottomNav />
+              </div>
             </div>
           </FinanceProvider>
         </ThemeProvider>
