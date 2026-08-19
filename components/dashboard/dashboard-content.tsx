@@ -107,7 +107,7 @@ export function DashboardContent({ model }: { model: any }) {
             </div>
 
             <Link
-              href="/neue-buchung"
+              href="/neue-buchungen"
               className="mt-5 flex items-center justify-between rounded-2xl border border-dashed border-violet-300 bg-violet-50/70 p-4 transition hover:bg-violet-50"
             >
               <div className="flex items-center gap-3">
