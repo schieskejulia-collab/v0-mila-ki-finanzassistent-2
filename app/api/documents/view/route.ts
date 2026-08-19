@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
+function storageBucketForPath(path: string) {
+  // Interne Mila-Uploads: userId/documentId.ext
+  // Mandanten-Upload-Link: userId/clientId/random-file.ext
+  const parts = path.split('/').filter(Boolean)
+  return parts.length >= 3 ? 'client-uploads' : 'mila-dokumente'
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
@@ -36,16 +43,25 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Datei nicht gefunden.' }, { status: 404 })
     }
 
+    const storagePath = String(document.file_url)
+    const bucket = storageBucketForPath(storagePath)
+
     const { data: signed, error: signedError } = await admin.storage
-      .from('client-uploads')
-      .createSignedUrl(String(document.file_url), 60 * 5, { download: false })
+      .from(bucket)
+      .createSignedUrl(storagePath, 60 * 5, { download: false })
 
     if (signedError || !signed?.signedUrl) {
       return NextResponse.json({ error: 'Datei konnte nicht geöffnet werden.' }, { status: 500 })
     }
 
-    return NextResponse.json({ url: signed.signedUrl, fileName: document.file_name || null })
+    return NextResponse.json({
+      url: signed.signedUrl,
+      fileName: document.file_name || null,
+    })
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Datei konnte nicht geöffnet werden.' }, { status: 500 })
+    return NextResponse.json(
+      { error: error?.message || 'Datei konnte nicht geöffnet werden.' },
+      { status: 500 },
+    )
   }
 }
