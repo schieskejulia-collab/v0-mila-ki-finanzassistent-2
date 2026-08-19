@@ -3,23 +3,37 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Clock3, FileText, FolderOpen, MessageCircle, Search, Upload } from 'lucide-react'
-import { useFinance } from '@/lib/store'
 import { getActiveClientId, supabase } from '@/lib/supabase'
 import { buildDocumentWorkName, checkDocumentQuality } from '@/lib/document-workflow'
 
 type CaseItem={id:string;client_id:string|null;subject:string;summary:string;status:string;handoff_ready:boolean;created_at:string}
 type Task={id:string;case_id:string|null;title:string;status:string;next_action:string|null}
 type Update={id:string;case_id:string;kind:'question'|'answer'|'note'|'handoff';content:string;status:'open'|'waiting'|'done'}
+type DocumentItem={id:string;client_id?:string|null;case_id?:string|null;title?:string|null;partner?:string|null;note?:string|null;type?:string|null;file_name?:string|null;file_url?:string|null;status?:string|null;date?:string|null;document_date?:string|null;created_at?:string|null}
 type View='all'|'issues'|'ready'
 function itemDate(i:any){return String(i?.date||i?.documentDate||i?.document_date||i?.createdAt||i?.created_at||'')}
 function monthKey(i:any){const raw=itemDate(i),d=raw?new Date(raw):new Date();return Number.isNaN(d.getTime())?'Ohne Datum':new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(d)}
 
 export default function DokumentePage(){
- const{documents}=useFinance()
+ const[documents,setDocuments]=useState<DocumentItem[]>([])
  const[requestedCaseId,setRequestedCaseId]=useState('')
  const[clientId,setClientId]=useState(''),[clientName,setClientName]=useState(''),[cases,setCases]=useState<CaseItem[]>([]),[tasks,setTasks]=useState<Task[]>([]),[updates,setUpdates]=useState<Update[]>([]),[caseId,setCaseId]=useState(''),[view,setView]=useState<View>('all'),[query,setQuery]=useState(''),[notice,setNotice]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false)
  useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('case')||'';setRequestedCaseId(requested);const id=getActiveClientId();setClientId(id);void load(id,requested)},[])
- async function load(id=clientId,requested=requestedCaseId){setError('');if(!id)return;const[c,cs,t,u]=await Promise.all([supabase.from('clients').select('id,name').eq('id',id).maybeSingle(),supabase.from('mila_intake_cases').select('id,client_id,subject,summary,status,handoff_ready,created_at').order('created_at',{ascending:false}),supabase.from('mila_coordination_tasks').select('id,case_id,title,status,next_action').order('created_at',{ascending:false}),supabase.from('mila_case_updates').select('id,case_id,kind,content,status').order('created_at',{ascending:true})]);if(c.data?.name)setClientName(String(c.data.name));if(cs.error||t.error||u.error)setError('Mila konnte die Arbeitsakte nicht vollständig laden.');const next=(cs.data||[])as CaseItem[];setCases(next);setTasks((t.data||[])as Task[]);setUpdates((u.data||[])as Update[]);setCaseId(x=>requested&&next.some(i=>i.id===requested)?requested:x&&next.some(i=>i.id===x)?x:(next.find(i=>i.status!=='done')?.id||next[0]?.id||''))}
+ async function load(id=clientId,requested=requestedCaseId){
+  setError('');if(!id)return
+  const[c,cs,t,u,d]=await Promise.all([
+   supabase.from('clients').select('id,name').eq('id',id).maybeSingle(),
+   supabase.from('mila_intake_cases').select('id,client_id,subject,summary,status,handoff_ready,created_at').eq('client_id',id).order('created_at',{ascending:false}),
+   supabase.from('mila_coordination_tasks').select('id,case_id,title,status,next_action').order('created_at',{ascending:false}),
+   supabase.from('mila_case_updates').select('id,case_id,kind,content,status').order('created_at',{ascending:true}),
+   supabase.from('documents').select('id,client_id,case_id,title,partner,note,type,file_name,file_url,status,date,document_date,created_at').eq('client_id',id).order('created_at',{ascending:false})
+  ])
+  if(c.data?.name)setClientName(String(c.data.name))
+  if(cs.error||t.error||u.error||d.error)setError('Mila konnte die Arbeitsakte nicht vollständig laden.')
+  const next=(cs.data||[])as CaseItem[]
+  setCases(next);setTasks((t.data||[])as Task[]);setUpdates((u.data||[])as Update[]);setDocuments((d.data||[])as DocumentItem[])
+  setCaseId(x=>requested&&next.some(i=>i.id===requested)?requested:x&&next.some(i=>i.id===x)?x:(next.find(i=>i.status!=='done')?.id||next[0]?.id||''))
+ }
  const current=cases.find(i=>i.id===caseId)||null
  const caseDocuments=useMemo(()=>caseId?documents.filter((d:any)=>String(d.case_id||'')===caseId):[],[documents,caseId])
  const unassigned=useMemo(()=>documents.filter((d:any)=>!d.case_id),[documents])
