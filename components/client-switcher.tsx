@@ -3,25 +3,20 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { ChevronDown, Link2, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-type MilaClient = {
-  id: string
-  name: string
-}
+type MilaClient = { id: string; name: string }
 
 const CLIENTS_KEY = 'mila-clients-v1'
 const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 
 function readCachedClients(): MilaClient[] {
   if (typeof window === 'undefined') return []
-
   try {
     const raw = window.localStorage.getItem(CLIENTS_KEY)
     const parsed = raw ? JSON.parse(raw) : []
-
     if (!Array.isArray(parsed)) return []
-
     return parsed
       .filter((item) => item?.id && item?.name)
       .map((item) => ({ id: String(item.id), name: String(item.name) }))
@@ -38,38 +33,21 @@ export function ClientSwitcher() {
   const [portalStatus, setPortalStatus] = useState('')
 
   const hidden =
-    pathname === '/login' ||
-    pathname === '/register' ||
-    pathname.startsWith('/demo') ||
-    pathname.startsWith('/datenschutz') ||
-    pathname.startsWith('/impressum') ||
-    pathname.startsWith('/agb') ||
-    pathname.startsWith('/widerruf') ||
-    pathname.startsWith('/sicherheit') ||
-    pathname.startsWith('/mandanten') ||
+    pathname === '/login' || pathname === '/register' || pathname.startsWith('/demo') ||
+    pathname.startsWith('/datenschutz') || pathname.startsWith('/impressum') ||
+    pathname.startsWith('/agb') || pathname.startsWith('/widerruf') ||
+    pathname.startsWith('/sicherheit') || pathname.startsWith('/mandanten') ||
     pathname.startsWith('/mandant-upload')
 
   useEffect(() => {
     if (hidden) return
-
-    const cached = readCachedClients()
-    setClients(cached)
+    setClients(readCachedClients())
     setActiveClientId(window.localStorage.getItem(ACTIVE_CLIENT_KEY) || '')
 
     async function refreshClients() {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id,name')
-        .order('created_at', { ascending: false })
-
+      const { data, error } = await supabase.from('clients').select('id,name').order('created_at', { ascending: false })
       if (error || !data) return
-
-      const next = data.map((row: any) => ({
-        id: String(row.id),
-        name: String(row.name || 'Mandant'),
-      }))
-
-      setClients(next)
+      setClients(data.map((row: any) => ({ id: String(row.id), name: String(row.name || 'Mandant') })))
     }
 
     void refreshClients()
@@ -85,7 +63,6 @@ export function ClientSwitcher() {
       setOpen(false)
       return
     }
-
     window.localStorage.setItem(ACTIVE_CLIENT_KEY, client.id)
     setActiveClientId(client.id)
     setOpen(false)
@@ -97,12 +74,9 @@ export function ClientSwitcher() {
       window.alert('Bitte zuerst einen Mandanten auswählen.')
       return
     }
-
     setPortalStatus('Link wird erstellt …')
-
     const { data: sessionData } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
-
     if (!accessToken) {
       setPortalStatus('Bitte neu anmelden.')
       return
@@ -110,13 +84,9 @@ export function ClientSwitcher() {
 
     const response = await fetch('/api/client-portal/link', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ clientId: activeClient.id }),
     })
-
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.url) {
       setPortalStatus(data?.error || 'Link konnte nicht erstellt werden.')
@@ -133,7 +103,6 @@ export function ClientSwitcher() {
         setPortalStatus('Link geteilt ✓')
         return
       }
-
       await navigator.clipboard.writeText(data.url)
       setPortalStatus('Link kopiert ✓')
     } catch (error: any) {
@@ -149,57 +118,62 @@ export function ClientSwitcher() {
   if (hidden) return null
 
   return (
-    <div className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
+    <div className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur-xl lg:hidden">
       <div className="relative mx-auto flex max-w-md items-center gap-2">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 text-left active:scale-[0.99]"
+          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-2.5 text-left"
           aria-expanded={open}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Aktive Akte</p>
-              <p className="truncate text-sm font-black text-slate-950">{activeClient?.name || 'Noch keinen ausgewählt'}</p>
-            </div>
-            <span className="shrink-0 text-xs font-black text-violet-700">{open ? '▲' : '▼'}</span>
+          <div className="min-w-0">
+            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">Aktive Akte</p>
+            <p className="truncate text-[15px] font-black tracking-tight text-slate-950">{activeClient?.name || 'Akte wählen'}</p>
           </div>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-violet-600 transition ${open ? 'rotate-180' : ''}`} />
         </button>
 
-        <Link href="/rueckfragen" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-[11px] font-black text-slate-700">
-          Rückfrage
+        <Link
+          href="/rueckfragen"
+          aria-label="Rückfragen"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700"
+        >
+          <MessageCircle className="h-5 w-5" />
         </Link>
-        <button type="button" onClick={() => void sharePortalLink()} className="rounded-xl bg-violet-600 px-3 py-3 text-[11px] font-black text-white">
-          Upload-Link
+        <button
+          type="button"
+          aria-label="Upload-Link teilen"
+          onClick={() => void sharePortalLink()}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-sm shadow-violet-200"
+        >
+          <Link2 className="h-5 w-5" />
         </button>
 
         {open && (
-          <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-violet-100 bg-white p-2 shadow-xl">
+          <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-50 max-h-72 space-y-1.5 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl">
             {clients.length === 0 ? (
-              <div className="p-2">
-                <p className="text-sm font-semibold text-slate-500">Noch keine Mandanten vorhanden.</p>
-                <Link href="/mandanten" className="mt-2 inline-flex text-sm font-black text-violet-700">Mandant anlegen →</Link>
+              <div className="p-3">
+                <p className="text-sm font-semibold text-slate-500">Noch keine Akte vorhanden.</p>
+                <Link href="/mandanten" className="mt-2 inline-flex text-sm font-black text-violet-700">Akte anlegen →</Link>
               </div>
-            ) : (
-              clients.map((client) => {
-                const selected = client.id === activeClientId
-                return (
-                  <button
-                    key={client.id}
-                    type="button"
-                    onClick={() => switchClient(client)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-black ${selected ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-800'}`}
-                  >
-                    <span className="truncate">{client.name}</span>
-                    <span className="ml-3 shrink-0 text-xs">{selected ? 'Aktiv' : 'Wechseln'}</span>
-                  </button>
-                )
-              })
-            )}
+            ) : clients.map((client) => {
+              const selected = client.id === activeClientId
+              return (
+                <button
+                  key={client.id}
+                  type="button"
+                  onClick={() => switchClient(client)}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-black ${selected ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-800'}`}
+                >
+                  <span className="truncate">{client.name}</span>
+                  <span className="ml-3 shrink-0 text-[10px]">{selected ? 'Aktiv' : 'Öffnen'}</span>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
-      {portalStatus && <p className="mt-1 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>}
+      {portalStatus && <p className="mt-1 text-center text-[9px] font-bold text-slate-400">{portalStatus}</p>}
     </div>
   )
 }
