@@ -45,13 +45,16 @@ export default function VorgaengePage() {
       if (!saved) return
       const parsed = JSON.parse(saved)
       if (!Array.isArray(parsed)) return
-      setItems(parsed.map((item: any) => ({
-        id: String(item.id || crypto.randomUUID()),
-        text: String(item.text || item.what || item.raw || ''),
-        dueAt: String(item.dueAt || ''),
-        status: item.status === 'erledigt' ? 'erledigt' : 'offen',
-        createdAt: String(item.createdAt || new Date().toISOString()),
-      })).filter((item: Item) => item.text))
+      const normalized: Item[] = parsed
+        .map((item: any): Item => ({
+          id: String(item.id || crypto.randomUUID()),
+          text: String(item.text || item.what || item.raw || ''),
+          dueAt: String(item.dueAt || ''),
+          status: item.status === 'erledigt' ? 'erledigt' : 'offen',
+          createdAt: String(item.createdAt || new Date().toISOString()),
+        }))
+        .filter((item) => Boolean(item.text))
+      setItems(normalized)
     } catch {}
   }, [])
 
