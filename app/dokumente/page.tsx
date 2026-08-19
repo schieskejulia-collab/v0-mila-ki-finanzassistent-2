@@ -1,849 +1,281 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  CircleHelp,
+  FileText,
+  FolderArchive,
+  ReceiptText,
+  Search,
+} from 'lucide-react'
 import { useFinance } from '@/lib/store'
 import { getActiveClientId, supabase } from '@/lib/supabase'
-import { buildDocumentWorkName, checkDocumentQuality } from '@/lib/document-workflow'
+import { checkDocumentQuality } from '@/lib/document-workflow'
 
-type FilterKey = 'all' | 'attention' | 'missing' | 'questions' | 'done'
-type SortKey = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'partner'
-type CategoryKey =
-  | 'all'
-  | 'klaerung'
-  | 'einnahmen'
-  | 'ausgaben'
-  | 'bank-kasse'
-  | 'vertraege'
-  | 'steuer'
-  | 'sonstiges'
-
-const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  all: 'Alle',
-  klaerung: 'Klärung nötig',
-  einnahmen: 'Einnahmen',
-  ausgaben: 'Ausgaben',
-  'bank-kasse': 'Bank & Kasse',
-  vertraege: 'Verträge',
-  steuer: 'Steuerunterlagen',
-  sonstiges: 'Sonstiges',
-}
+type View = 'uebersicht' | 'dokumente' | 'belege' | 'klaerung' | 'uebergabe'
 
 function formatEuro(value?: number) {
-  if (!value) return ''
-  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
-}
-
-function getOpenQuestions(documents: any[]) {
-  return documents.filter((doc) => {
-    const note = String(doc.note || '').toLowerCase()
-    return (
-      note.includes('unklar') ||
-      note.includes('rückfrage') ||
-      note.includes('rueckfrage') ||
-      note.includes('prüfen') ||
-      note.includes('pruefen')
-    )
-  })
-}
-
-function getOpenObligations(obligations: any[]) {
-  return obligations.filter(
-    (item) =>
-      !['erledigt', 'bezahlt', 'archiviert', 'completed', 'paid'].includes(
-        String(item.status || '').toLowerCase(),
-      ),
-  )
-}
-
-function getStatus({
-  documentCount,
-  missingReceiptCount,
-  clarificationCount,
-  openObligationCount,
-}: {
-  documentCount: number
-  missingReceiptCount: number
-  clarificationCount: number
-  openObligationCount: number
-}) {
-  if (documentCount === 0 && missingReceiptCount === 0) {
-    return {
-      label: 'Noch nicht gestartet',
-      description:
-        'Sobald die ersten Unterlagen erfasst sind, zeigt Mila hier den Bearbeitungsstand.',
-      badge: 'bg-slate-100 text-slate-600',
-    }
-  }
-
-  const openCount = missingReceiptCount + clarificationCount + openObligationCount
-  if (openCount === 0) {
-    return {
-      label: 'Bereit zur Übergabe',
-      description:
-        'Für die aktuell erfassten Unterlagen sind keine organisatorischen Rückfragen mehr offen.',
-      badge: 'bg-emerald-100 text-emerald-700',
-    }
-  }
-
-  return {
-    label: 'In Bearbeitung',
-    description: `${openCount} organisatorische Punkte sollten vor der Übergabe noch geklärt werden.`,
-    badge: 'bg-amber-100 text-amber-700',
-  }
-}
-
-function expenseTitle(expense: any) {
-  return (
-    expense?.title ||
-    expense?.description ||
-    expense?.merchant ||
-    expense?.partner ||
-    expense?.vendor ||
-    'Nicht zugeordneter Eintrag'
-  )
-}
-
-function expenseAmount(expense: any) {
-  const value = Number(expense?.amount || 0)
-  return Number.isFinite(value) ? value : 0
-}
-
-function receiptHref(expense: any) {
-  if (!expense?.id) return '/neue-buchungen'
-  const params = new URLSearchParams({ expenseId: String(expense.id) })
-  return `/neue-buchungen?${params.toString()}`
+  const amount = Number(value || 0)
+  if (!amount) return ''
+  return amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
 function itemDate(item: any) {
-  return String(
-    item?.date ||
-      item?.documentDate ||
-      item?.document_date ||
-      item?.createdAt ||
-      item?.created_at ||
-      item?.dueDate ||
-      item?.due_date ||
-      '',
-  )
+  return String(item?.date || item?.documentDate || item?.document_date || item?.createdAt || item?.created_at || '')
 }
 
-function monthKey(item: any) {
+function monthLabel(item: any) {
   const raw = itemDate(item)
-  if (!raw) return 'Ohne Datum'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return 'Ohne Datum'
-  return new Intl.DateTimeFormat('de-DE', {
-    month: 'long',
-    year: 'numeric',
-  }).format(date)
-}
-
-function questionHref(doc: any) {
-  const params = new URLSearchParams({
-    documentId: String(doc.id),
-    title: String(doc.title || 'Dokument'),
-  })
-  return `/rueckfragen?${params.toString()}`
-}
-
-function baseCategoryForDocument(
-  doc: any,
-): Exclude<CategoryKey, 'all' | 'klaerung'> {
-  const type = String(doc.type || '').toLowerCase()
-  const text = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.file_name || ''}`.toLowerCase()
-
-  if (type === 'vertrag' || /miete|leasing|versicherung|vertrag/.test(text)) {
-    return 'vertraege'
-  }
-  if (
-    type === 'bescheid' ||
-    /steuerbescheid|umsatzsteuer|finanzamt|steuerunterlage/.test(text)
-  ) {
-    return 'steuer'
-  }
-  if (/kontoauszug|paypal|kreditkarte|bank|kassenbuch|barbeleg|kasse/.test(text)) {
-    return 'bank-kasse'
-  }
-  if (/ausgangsrechnung|zahlungseingang|einnahme|kunde/.test(text)) {
-    return 'einnahmen'
-  }
-  if (
-    type === 'beleg' ||
-    /eingangsrechnung|quittung|kassenbon|abo|tank|büro|buero|bewirtung|ausgabe/.test(
-      text,
-    )
-  ) {
-    return 'ausgaben'
-  }
-
-  return 'sonstiges'
+  const date = raw ? new Date(raw) : null
+  if (!date || Number.isNaN(date.getTime())) return 'Ohne Datum'
+  return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(date)
 }
 
 export default function DokumentePage() {
-  const { documents, expenses, obligations, deleteExpense } = useFinance()
+  const { documents, expenses, incomes, deleteDocument } = useFinance()
+  const [view, setView] = useState<View>('uebersicht')
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<FilterKey>('all')
-  const [sort, setSort] = useState<SortKey>('newest')
-  const [category, setCategory] = useState<CategoryKey>('all')
-  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
-  const [openingDocumentId, setOpeningDocumentId] = useState('')
-  const [deletingDocumentId, setDeletingDocumentId] = useState('')
+  const [openingId, setOpeningId] = useState('')
+  const [deletingId, setDeletingId] = useState('')
 
-  const missingReceipts = expenses.filter(
-    (expense: any) =>
-      expense?.hasReceipt === false || expense?.has_receipt === false,
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get('ansicht')
+    if (value === 'dokumente' || value === 'belege' || value === 'klaerung' || value === 'uebergabe') setView(value)
+  }, [])
+
+  const clarificationDocs = useMemo(
+    () => documents.filter((doc: any) => !checkDocumentQuality(doc).ok),
+    [documents],
   )
-  const openQuestions = getOpenQuestions(documents)
-  const openObligations = getOpenObligations(obligations)
-  const attentionIds = new Set(openQuestions.map((doc: any) => String(doc.id)))
-
-  const documentNeedsClarification = (doc: any) =>
-    attentionIds.has(String(doc.id)) || !checkDocumentQuality(doc).ok
-
-  const clarificationCount = documents.filter(documentNeedsClarification).length
-  const receiptsPresentCount = Math.max(0, expenses.length - missingReceipts.length)
-  const completenessPercent =
-    expenses.length > 0
-      ? Math.round((receiptsPresentCount / expenses.length) * 100)
-      : 0
-
-  const status = getStatus({
-    documentCount: documents.length,
-    missingReceiptCount: missingReceipts.length,
-    clarificationCount,
-    openObligationCount: openObligations.length,
-  })
-
-  const categoryCounts = useMemo(() => {
-    const counts: Record<CategoryKey, number> = {
-      all: documents.length,
-      klaerung: clarificationCount,
-      einnahmen: 0,
-      ausgaben: 0,
-      'bank-kasse': 0,
-      vertraege: 0,
-      steuer: 0,
-      sonstiges: 0,
-    }
-
-    for (const doc of documents) counts[baseCategoryForDocument(doc)] += 1
-    return counts
-  }, [documents, clarificationCount])
+  const missingReceipts = useMemo(
+    () => expenses.filter((expense: any) => expense?.hasReceipt === false || expense?.has_receipt === false),
+    [expenses],
+  )
+  const ready = documents.length > 0 && clarificationDocs.length === 0 && missingReceipts.length === 0
 
   const filteredDocuments = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    let list = documents.filter((doc: any) => {
-      const baseCategory = baseCategoryForDocument(doc)
-      const workName = buildDocumentWorkName(doc, CATEGORY_LABELS[baseCategory])
-      const searchable = `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.type || ''} ${doc.file_name || ''} ${workName}`.toLowerCase()
+    if (!needle) return documents
+    return documents.filter((doc: any) => `${doc.title || ''} ${doc.partner || ''} ${doc.note || ''} ${doc.file_name || ''}`.toLowerCase().includes(needle))
+  }, [documents, query])
 
-      if (needle && !searchable.includes(needle)) return false
-      if (category === 'klaerung' && !documentNeedsClarification(doc)) return false
-      if (
-        category !== 'all' &&
-        category !== 'klaerung' &&
-        baseCategory !== category
-      ) {
-        return false
-      }
-      if (filter === 'questions') return attentionIds.has(String(doc.id))
-      if (filter === 'attention') return documentNeedsClarification(doc)
-      if (filter === 'done') return !documentNeedsClarification(doc)
-      return true
-    })
-
-    list = [...list].sort((a: any, b: any) => {
-      if (sort === 'amount-desc') return Number(b.amount || 0) - Number(a.amount || 0)
-      if (sort === 'amount-asc') return Number(a.amount || 0) - Number(b.amount || 0)
-      if (sort === 'partner') {
-        return String(a.partner || a.title || '').localeCompare(
-          String(b.partner || b.title || ''),
-          'de',
-        )
-      }
-      const aTime = new Date(itemDate(a) || 0).getTime() || 0
-      const bTime = new Date(itemDate(b) || 0).getTime() || 0
-      return sort === 'oldest' ? aTime - bTime : bTime - aTime
-    })
-
-    return list
-  }, [documents, query, filter, sort, category, clarificationCount])
-
-  const groups = useMemo(() => {
-    const map = new Map<string, any[]>()
+  const documentGroups = useMemo(() => {
+    const groups = new Map<string, any[]>()
     for (const doc of filteredDocuments) {
-      const key = monthKey(doc)
-      map.set(key, [...(map.get(key) || []), doc])
+      const key = monthLabel(doc)
+      groups.set(key, [...(groups.get(key) || []), doc])
     }
-    return Array.from(map.entries())
+    return Array.from(groups.entries())
   }, [filteredDocuments])
-
-  async function removeMissingReceipt(expense: any) {
-    if (
-      !window.confirm(
-        'Diesen offenen Eintrag wirklich löschen? Der zugehörige Ausgaben-Datensatz wird entfernt.',
-      )
-    ) {
-      return
-    }
-
-    try {
-      if (!expense?.id) {
-        throw new Error('Dieser alte Eintrag hat noch keine eindeutige ID.')
-      }
-      await deleteExpense(expense)
-    } catch (error: any) {
-      window.alert(error?.message || 'Der offene Eintrag konnte nicht gelöscht werden.')
-    }
-  }
 
   async function openDocument(doc: any) {
     if (!doc?.id || !doc?.file_url) {
       window.alert('Für dieses Dokument ist keine Datei hinterlegt.')
       return
     }
-
+    setOpeningId(String(doc.id))
     const previewWindow = window.open('', '_blank')
-    setOpeningDocumentId(String(doc.id))
-
     try {
       if (/^https?:\/\//i.test(String(doc.file_url))) {
         if (previewWindow) previewWindow.location.href = String(doc.file_url)
         else window.location.href = String(doc.file_url)
         return
       }
-
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) throw new Error('Bitte neu anmelden, um die Datei zu öffnen.')
-
-      const response = await fetch(
-        `/api/documents/view?id=${encodeURIComponent(String(doc.id))}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      )
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data?.url) {
-        throw new Error(data?.error || 'Datei konnte nicht geöffnet werden.')
-      }
-
-      if (previewWindow) previewWindow.location.href = data.url
-      else window.location.href = data.url
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) throw new Error('Die private Datei kann in dieser Sitzung nicht geöffnet werden.')
+      const response = await fetch(`/api/documents/view?id=${encodeURIComponent(String(doc.id))}`, { headers: { Authorization: `Bearer ${token}` } })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload?.url) throw new Error(payload?.error || 'Datei konnte nicht geöffnet werden.')
+      if (previewWindow) previewWindow.location.href = payload.url
+      else window.location.href = payload.url
     } catch (error: any) {
       previewWindow?.close()
       window.alert(error?.message || 'Datei konnte nicht geöffnet werden.')
     } finally {
-      setOpeningDocumentId('')
+      setOpeningId('')
     }
   }
 
   async function removeDocument(doc: any) {
-    if (!doc?.id || deletingDocumentId) return
-    if (
-      !window.confirm(
-        'Dokument wirklich löschen? Mila entfernt auch die private Originaldatei. Eine verknüpfte Zahlung bleibt bestehen und wird wieder als „Beleg fehlt“ markiert, wenn kein weiterer Beleg vorhanden ist.',
-      )
-    ) {
-      return
-    }
-
-    const clientId = getActiveClientId()
-    if (!clientId) {
-      window.alert('Bitte zuerst einen Mandanten auswählen.')
-      return
-    }
-
-    setDeletingDocumentId(String(doc.id))
+    if (!window.confirm(`„${doc.title || 'Dokument'}“ wirklich löschen?`)) return
+    setDeletingId(String(doc.id))
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) throw new Error('Bitte neu anmelden, um das Dokument zu löschen.')
-
-      const response = await fetch(
-        `/api/documents/delete?id=${encodeURIComponent(String(doc.id))}&clientId=${encodeURIComponent(clientId)}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      )
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data?.ok) {
-        throw new Error(data?.error || 'Dokument konnte nicht gelöscht werden.')
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      const clientId = getActiveClientId()
+      if (!token || !clientId) {
+        await deleteDocument(String(doc.id))
+        return
       }
-
+      const response = await fetch(`/api/documents/delete?id=${encodeURIComponent(String(doc.id))}&clientId=${encodeURIComponent(clientId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Dokument konnte nicht gelöscht werden.')
       window.location.reload()
     } catch (error: any) {
       window.alert(error?.message || 'Dokument konnte nicht gelöscht werden.')
     } finally {
-      setDeletingDocumentId('')
+      setDeletingId('')
     }
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-md space-y-5 p-5 pb-40 text-slate-950">
-      <header>
-        <Link href="/" className="text-sm font-semibold text-slate-500">
-          ← Zurück
-        </Link>
-        <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-          Arbeitsmappe
-        </p>
-        <h1 className="mt-2 text-3xl font-black">Mandantenmappe</h1>
-      </header>
-
-      <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-              Bearbeitungsstand
-            </p>
-            <h2 className="mt-2 text-2xl font-black">{status.label}</h2>
-          </div>
-          <span className={`rounded-full px-3 py-2 text-xs font-black ${status.badge}`}>
-            {documents.length} Dokumente
-          </span>
-        </div>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          {status.description}
-        </p>
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <MappeMetric label="Dokumente" value={documents.length} />
-          <MappeMetric label="Ohne Beleg" value={missingReceipts.length} />
-          <MappeMetric label="Klärung" value={clarificationCount} />
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-              Vollständigkeitscheck
-            </p>
-            <h2 className="mt-2 text-xl font-black">Zahlung ↔ Beleg</h2>
-          </div>
-          <span
-            className={`rounded-full px-3 py-2 text-xs font-black ${
-              missingReceipts.length === 0 && expenses.length > 0
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700'
-            }`}
-          >
-            {expenses.length > 0 ? `${completenessPercent}%` : 'Noch offen'}
-          </span>
-        </div>
-        <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-          Mila gleicht die erfassten Zahlungen organisatorisch mit den verknüpften
-          Originalbelegen ab. Noch kein automatischer Bankkonto-Import.
-        </p>
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <MappeMetric label="Zahlungen" value={expenses.length} />
-          <MappeMetric label="Mit Beleg" value={receiptsPresentCount} />
-          <MappeMetric label="Fehlen" value={missingReceipts.length} />
-        </div>
-
-        {expenses.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
-            Noch keine Zahlungen für den Abgleich erfasst.
-          </p>
-        ) : missingReceipts.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-black text-emerald-700">
-            ✓ Für alle aktuell erfassten Zahlungen ist ein Beleg hinterlegt.
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setFilter('missing')}
-            className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-4 text-left text-sm font-black text-amber-800 ring-1 ring-amber-100"
-          >
-            {missingReceipts.length} Zahlungen ohne Beleg prüfen →
+    <main className="mx-auto min-h-screen max-w-md space-y-5 px-4 pb-32 pt-5 text-slate-950">
+      <header className="px-1">
+        {view !== 'uebersicht' && (
+          <button type="button" onClick={() => setView('uebersicht')} className="mb-3 flex items-center gap-1 text-sm font-black text-slate-500">
+            <ArrowLeft className="h-4 w-4" /> Mappe
           </button>
         )}
-      </section>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">Mappe</p>
+        <h1 className="mt-2 text-4xl font-black tracking-tight">
+          {view === 'uebersicht' ? 'Sauber abgelegt.' : view === 'dokumente' ? 'Dokumente' : view === 'belege' ? 'Einnahmen & Ausgaben' : view === 'klaerung' ? 'Klärung' : 'Übergabe'}
+        </h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+          {view === 'uebersicht'
+            ? 'Die Mappe zeigt Ergebnisse. Details öffnest du nur, wenn du sie wirklich brauchst.'
+            : view === 'dokumente'
+              ? 'Originale chronologisch finden – ohne vorher durch Kategorien zu springen.'
+              : view === 'belege'
+                ? 'Nur tatsächlich erfasste IST-Vorgänge und ihre Nachweise.'
+                : view === 'klaerung'
+                  ? 'Nur Unterlagen, bei denen Mila eine konkrete Information vermisst.'
+                  : 'Ein letzter Blick auf Vollständigkeit, bevor der Bestand weitergegeben wird.'}
+        </p>
+      </header>
 
-      {(missingReceipts.length > 0 || clarificationCount > 0) && (
-        <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
-            Aufmerksamkeit zuerst
-          </p>
-          <h2 className="mt-2 text-xl font-black">Was noch offen ist</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-600">
-            {missingReceipts.length} Zahlungen ohne Beleg · {clarificationCount}{' '}
-            Dokumente in Klärung
-          </p>
+      {view === 'uebersicht' && (
+        <>
+          <section className="grid grid-cols-2 gap-3">
+            <MapCard icon={FileText} label="Dokumente" value={documents.length} detail="Originale & Nachweise" onClick={() => setView('dokumente')} />
+            <MapCard icon={ReceiptText} label="Einnahmen & Ausgaben" value={expenses.length + incomes.length} detail="IST-Bestand" onClick={() => setView('belege')} />
+            <MapCard icon={CircleHelp} label="Klärung" value={clarificationDocs.length} detail={clarificationDocs.length ? 'braucht dich' : 'nichts offen'} onClick={() => setView('klaerung')} warning={clarificationDocs.length > 0} />
+            <MapCard icon={FolderArchive} label="Übergabe" value={ready ? '✓' : '…'} detail={ready ? 'bereit' : 'noch nicht bereit'} onClick={() => setView('uebergabe')} success={ready} />
+          </section>
 
-          {missingReceipts.length > 0 && (
-            <div className="mt-4 space-y-3">
-              {missingReceipts.slice(0, 5).map((expense: any) => (
-                <div key={String(expense.id)} className="rounded-2xl bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-black">{expenseTitle(expense)}</p>
-                    {expenseAmount(expense) > 0 && (
-                      <span className="text-sm font-black">
-                        {formatEuro(expenseAmount(expense))}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs font-bold text-amber-700">
-                    Kein Beleg zugeordnet
-                  </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Link
-                      href={receiptHref(expense)}
-                      className="rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white"
-                    >
-                      Beleg erfassen
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void removeMissingReceipt(expense)}
-                      className="rounded-xl bg-white px-3 py-3 text-xs font-black text-red-500 ring-1 ring-red-100"
-                    >
-                      Löschen
-                    </button>
-                  </div>
-                </div>
+          <Link href="/stapel" className="flex items-center justify-between rounded-[2rem] bg-violet-600 p-5 text-white">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/70">Neue Unterlagen</p>
+              <p className="mt-1 text-xl font-black">Direkt in den Eingang</p>
+            </div>
+            <FileText className="h-7 w-7" />
+          </Link>
+        </>
+      )}
+
+      {view === 'dokumente' && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+            <Search className="h-5 w-5 text-slate-400" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Dokument, Anbieter oder Notiz" className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" />
+          </div>
+          {documentGroups.length === 0 ? <Empty text="Keine passenden Dokumente." /> : documentGroups.map(([month, docs]) => (
+            <section key={month} className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{month}</p>
+              <div className="mt-3 divide-y divide-slate-100">
+                {docs.map((doc: any) => <DocumentRow key={doc.id} doc={doc} opening={openingId === String(doc.id)} deleting={deletingId === String(doc.id)} onOpen={() => void openDocument(doc)} onDelete={() => void removeDocument(doc)} />)}
+              </div>
+            </section>
+          ))}
+        </section>
+      )}
+
+      {view === 'belege' && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <Metric label="Einnahmen" value={incomes.length} />
+            <Metric label="Ausgaben" value={expenses.length} />
+            <Metric label="Ohne Nachweis" value={missingReceipts.length} warning={missingReceipts.length > 0} />
+          </div>
+          {missingReceipts.length === 0 ? (
+            <div className="rounded-[2rem] bg-emerald-50 p-5 text-sm font-bold text-emerald-800">Für alle aktuell erfassten Ausgaben ist ein Nachweis hinterlegt.</div>
+          ) : (
+            <div className="space-y-3">
+              {missingReceipts.map((expense: any) => (
+                <article key={expense.id} className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                  <div className="flex justify-between gap-3"><p className="font-black">{expense.title || expense.vendor || 'Ausgabe'}</p><p className="font-black">{formatEuro(expense.amount)}</p></div>
+                  <p className="mt-1 text-xs font-semibold text-amber-700">Nachweis fehlt</p>
+                  <Link href={`/neue-buchungen?expenseId=${encodeURIComponent(String(expense.id))}`} className="mt-3 inline-flex rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-black text-white">Nachweis zuordnen</Link>
+                </article>
               ))}
             </div>
           )}
         </section>
       )}
 
-      <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">
-              Arbeitskategorien
-            </p>
-            <h2 className="mt-2 text-xl font-black">Schneller finden</h2>
-          </div>
-          {category !== 'all' && (
-            <button
-              type="button"
-              onClick={() => setCategory('all')}
-              className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600"
-            >
-              Zurücksetzen
-            </button>
-          )}
-        </div>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
-          Dokumentart und Klärungsstatus bleiben getrennt. Mila nutzt Kategorien zur
-          Ablage, nicht als automatische steuerliche Entscheidung.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {(
-            [
-              'klaerung',
-              'einnahmen',
-              'ausgaben',
-              'bank-kasse',
-              'vertraege',
-              'steuer',
-              'sonstiges',
-            ] as CategoryKey[]
-          ).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setCategory(key)}
-              className={`rounded-2xl p-3 text-left ${
-                category === key
-                  ? 'bg-violet-600 text-white'
-                  : key === 'klaerung'
-                    ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100'
-                    : 'bg-violet-50 text-slate-800'
-              }`}
-            >
-              <p className="text-lg font-black">{categoryCounts[key]}</p>
-              <p className="mt-1 text-[10px] font-black uppercase tracking-wider">
-                {CATEGORY_LABELS[key]}
-              </p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="🔎 Beleg, Anbieter, Arbeitsname oder Notiz suchen"
-          className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold outline-none ring-1 ring-slate-100 focus:ring-violet-300"
-        />
-        {category !== 'all' && (
-          <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">
-            Ansicht: {CATEGORY_LABELS[category]} · {filteredDocuments.length} Treffer
-          </p>
-        )}
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
-            Alle {documents.length}
-          </FilterButton>
-          <FilterButton
-            active={filter === 'attention'}
-            onClick={() => setFilter('attention')}
-          >
-            Klärung {clarificationCount}
-          </FilterButton>
-          <FilterButton active={filter === 'missing'} onClick={() => setFilter('missing')}>
-            Ohne Beleg {missingReceipts.length}
-          </FilterButton>
-          <FilterButton
-            active={filter === 'questions'}
-            onClick={() => setFilter('questions')}
-          >
-            Rückfragen {openQuestions.length}
-          </FilterButton>
-          <FilterButton active={filter === 'done'} onClick={() => setFilter('done')}>
-            Fertig
-          </FilterButton>
-        </div>
-        <select
-          value={sort}
-          onChange={(event) => setSort(event.target.value as SortKey)}
-          className="mt-3 w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none ring-1 ring-slate-100"
-        >
-          <option value="newest">Neueste zuerst</option>
-          <option value="oldest">Älteste zuerst</option>
-          <option value="amount-desc">Betrag: hoch → niedrig</option>
-          <option value="amount-asc">Betrag: niedrig → hoch</option>
-          <option value="partner">Anbieter A–Z</option>
-        </select>
-      </section>
-
-      {filter === 'missing' ? (
+      {view === 'klaerung' && (
         <section className="space-y-3">
-          {missingReceipts.length === 0 ? (
-            <p className="rounded-3xl bg-emerald-50 p-5 text-sm font-black text-emerald-700">
-              ✓ Keine Zahlung wartet auf einen Beleg.
-            </p>
-          ) : (
-            missingReceipts.map((expense: any) => (
-              <div key={String(expense.id)} className="rounded-2xl bg-white p-4 shadow-sm">
-                <div className="flex justify-between gap-3">
-                  <p className="font-black">{expenseTitle(expense)}</p>
-                  <span className="font-black">{formatEuro(expenseAmount(expense))}</span>
-                </div>
-                <p className="mt-2 text-xs font-bold text-amber-700">
-                  Kein Beleg zugeordnet
-                </p>
-                <Link
-                  href={receiptHref(expense)}
-                  className="mt-3 inline-flex rounded-xl bg-violet-600 px-3 py-3 text-xs font-black text-white"
-                >
-                  Beleg erfassen
-                </Link>
-              </div>
-            ))
-          )}
-        </section>
-      ) : groups.length === 0 ? (
-        <section className="rounded-3xl bg-violet-50 p-5">
-          <p className="font-black text-violet-700">Keine passenden Unterlagen</p>
-          <p className="mt-2 text-sm font-semibold text-slate-600">
-            Passe Suche, Kategorie oder Filter an – oder erfasse den nächsten Beleg.
-          </p>
-          <Link
-            href="/stapel"
-            className="mt-4 inline-flex rounded-2xl bg-violet-600 px-4 py-3 text-sm font-black text-white"
-          >
-            Belege hinzufügen
-          </Link>
-        </section>
-      ) : (
-        <div className="space-y-3">
-          {groups.map(([month, docs]) => {
-            const collapsed = collapsedMonths[month]
+          {clarificationDocs.length === 0 ? <Empty text="Mila braucht gerade keine Entscheidung von dir." success /> : clarificationDocs.map((doc: any) => {
+            const quality = checkDocumentQuality(doc)
             return (
-              <section
-                key={month}
-                className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm"
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCollapsedMonths((old) => ({ ...old, [month]: !old[month] }))
-                  }
-                  className="flex w-full items-center justify-between px-5 py-4 text-left"
-                >
-                  <div>
-                    <p className="text-sm font-black capitalize">📁 {month}</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-400">
-                      {docs.length} Unterlagen
-                    </p>
-                  </div>
-                  <span className="font-black text-violet-700">
-                    {collapsed ? '▶' : '▼'}
-                  </span>
-                </button>
-
-                {!collapsed && (
-                  <div className="space-y-2 border-t border-slate-100 p-3">
-                    {docs.map((doc: any) => {
-                      const baseCategory = baseCategoryForDocument(doc)
-                      const quality = checkDocumentQuality(doc)
-                      const workName = buildDocumentWorkName(
-                        doc,
-                        CATEGORY_LABELS[baseCategory],
-                      )
-                      const originalName = String(doc.fileName || doc.file_name || '')
-                      const needsClarification = documentNeedsClarification(doc)
-
-                      return (
-                        <article key={doc.id} className="rounded-2xl bg-slate-50 p-4">
-                          <div className="flex justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate font-black">{doc.title}</p>
-                              {doc.partner && (
-                                <p className="truncate text-xs font-semibold text-slate-500">
-                                  {doc.partner}
-                                </p>
-                              )}
-                            </div>
-                            {Number(doc.amount || 0) > 0 ? (
-                              <span className="shrink-0 text-sm font-black">
-                                {formatEuro(Number(doc.amount))}
-                              </span>
-                            ) : (
-                              <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                Betrag offen
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
-                              Arbeits-/Exportname
-                            </p>
-                            <p className="mt-1 break-all text-xs font-black text-slate-700">
-                              {workName}
-                            </p>
-                            {originalName && (
-                              <p className="mt-2 break-all text-[10px] font-semibold text-slate-400">
-                                Original bleibt erhalten: {originalName}
-                              </p>
-                            )}
-                          </div>
-
-                          <div
-                            className={`mt-3 rounded-xl p-3 ${
-                              quality.ok ? 'bg-emerald-50' : 'bg-amber-50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p
-                                className={`text-xs font-black ${
-                                  quality.ok ? 'text-emerald-700' : 'text-amber-700'
-                                }`}
-                              >
-                                {quality.ok ? '✓ Belegcheck vollständig' : '⚠ Klärung nötig'}
-                              </p>
-                              <span className="text-[10px] font-black text-slate-500">
-                                {quality.checks.filter((check) => check.ok).length}/
-                                {quality.checks.length}
-                              </span>
-                            </div>
-                            {!quality.ok && (
-                              <p className="mt-2 text-[11px] font-semibold text-slate-600">
-                                Offen: {quality.issues.join(' · ')}
-                              </p>
-                            )}
-                          </div>
-
-                          {doc.note && (
-                            <p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-500">
-                              {doc.note}
-                            </p>
-                          )}
-
-                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap gap-2">
-                              <span className="rounded-full bg-violet-100 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700">
-                                {CATEGORY_LABELS[baseCategory]}
-                              </span>
-                              {needsClarification && (
-                                <span className="rounded-full bg-amber-100 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-800">
-                                  Klärung nötig
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              {doc.file_url && (
-                                <button
-                                  type="button"
-                                  onClick={() => void openDocument(doc)}
-                                  disabled={openingDocumentId === String(doc.id)}
-                                  className="rounded-lg bg-white px-2.5 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 disabled:opacity-50"
-                                >
-                                  {openingDocumentId === String(doc.id) ? 'Öffne …' : 'Ansehen'}
-                                </button>
-                              )}
-                              <Link
-                                href={questionHref(doc)}
-                                className="rounded-lg bg-violet-100 px-2.5 py-2 text-xs font-black text-violet-700"
-                              >
-                                Rückfrage
-                              </Link>
-                              <button
-                                type="button"
-                                disabled={deletingDocumentId === String(doc.id)}
-                                onClick={() => void removeDocument(doc)}
-                                className="text-xs font-black text-red-500 disabled:opacity-40"
-                              >
-                                {deletingDocumentId === String(doc.id) ? 'Lösche …' : 'Löschen'}
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      )
-                    })}
-                  </div>
-                )}
-              </section>
+              <article key={doc.id} className="rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-amber-100">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">Mila braucht eine Angabe</p>
+                <div className="mt-2 flex justify-between gap-3"><p className="font-black">{doc.title || 'Dokument'}</p><p className="font-black">{formatEuro(doc.amount)}</p></div>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{quality.issues.length ? quality.issues.join(' · ') : 'Kontext ist noch nicht eindeutig.'}</p>
+                <div className="mt-3 flex gap-2">
+                  <Link href={`/rueckfragen?documentId=${encodeURIComponent(String(doc.id))}&title=${encodeURIComponent(String(doc.title || 'Dokument'))}`} className="flex-1 rounded-xl bg-violet-600 px-3 py-3 text-center text-xs font-black text-white">Klärung öffnen</Link>
+                  {doc.file_url && <button type="button" onClick={() => void openDocument(doc)} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Original</button>}
+                </div>
+              </article>
             )
           })}
-        </div>
+        </section>
       )}
 
-      <Link
-        href="/stapel"
-        className="flex w-full items-center justify-center rounded-2xl bg-violet-600 px-4 py-4 text-sm font-black text-white shadow-sm"
-      >
-        + Belege hinzufügen
-      </Link>
+      {view === 'uebergabe' && (
+        <section className="space-y-4">
+          <div className={`rounded-[2rem] p-5 ${ready ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-950'}`}>
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-7 w-7" />
+              <div><p className="text-xs font-black uppercase tracking-[0.14em]">Stand</p><p className="mt-1 text-xl font-black">{ready ? 'Bereit zur Übergabe' : 'Noch nicht vollständig'}</p></div>
+            </div>
+            <p className="mt-4 text-sm font-semibold leading-6">{ready ? 'Alle aktuell erfassten Dokumente sind ohne offene Klärung und die erfassten Ausgaben haben einen Nachweis.' : `${clarificationDocs.length} Dokumente brauchen Klärung · ${missingReceipts.length} Ausgaben haben noch keinen Nachweis.`}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3"><Metric label="Originale" value={documents.length} /><Metric label="IST-Vorgänge" value={expenses.length + incomes.length} /></div>
+          {!ready && <button type="button" onClick={() => setView(clarificationDocs.length ? 'klaerung' : 'belege')} className="w-full rounded-2xl bg-violet-600 py-4 font-black text-white">Offene Punkte ansehen</button>}
+        </section>
+      )}
     </main>
   )
 }
 
-function MappeMetric({ label, value }: { label: string; value: number }) {
+function MapCard({ icon: Icon, label, value, detail, onClick, warning, success }: any) {
   return (
-    <div className="rounded-2xl bg-violet-50 p-3 text-center">
-      <p className="text-xl font-black">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
-        {label}
-      </p>
-    </div>
+    <button type="button" onClick={onClick} className={`min-h-40 rounded-[1.75rem] p-4 text-left shadow-sm ring-1 ${warning ? 'bg-amber-50 ring-amber-100' : success ? 'bg-emerald-50 ring-emerald-100' : 'bg-white ring-slate-100'}`}>
+      <Icon className={`h-6 w-6 ${warning ? 'text-amber-700' : success ? 'text-emerald-700' : 'text-violet-600'}`} />
+      <p className="mt-6 text-3xl font-black">{value}</p>
+      <p className="mt-1 text-sm font-black">{label}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{detail}</p>
+    </button>
   )
 }
 
-function FilterButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
+function Metric({ label, value, warning }: { label: string; value: number; warning?: boolean }) {
+  return <div className={`rounded-2xl p-3 text-center ${warning ? 'bg-amber-50' : 'bg-white ring-1 ring-slate-100'}`}><p className="text-2xl font-black">{value}</p><p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-500">{label}</p></div>
+}
+
+function Empty({ text, success }: { text: string; success?: boolean }) {
+  return <div className={`rounded-[2rem] p-5 text-sm font-bold ${success ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-600'}`}>{text}</div>
+}
+
+function DocumentRow({ doc, opening, deleting, onOpen, onDelete }: any) {
+  const quality = checkDocumentQuality(doc)
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 rounded-full px-3 py-2 text-xs font-black ${
-        active ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'
-      }`}
-    >
-      {children}
-    </button>
+    <div className="py-3 first:pt-0 last:pb-0">
+      <div className="flex justify-between gap-3">
+        <div className="min-w-0"><p className="truncate text-sm font-black">{doc.title || 'Dokument'}</p><p className="mt-1 truncate text-xs font-semibold text-slate-500">{doc.partner || 'Anbieter offen'}{Number(doc.amount || 0) ? ` · ${formatEuro(doc.amount)}` : ''}</p></div>
+        <span className={`shrink-0 text-[9px] font-black ${quality.ok ? 'text-emerald-700' : 'text-amber-700'}`}>{quality.ok ? 'OK' : 'PRÜFEN'}</span>
+      </div>
+      <div className="mt-2 flex gap-2">
+        {doc.file_url && <button type="button" onClick={onOpen} disabled={opening} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">{opening ? 'Öffne …' : 'Ansehen'}</button>}
+        <button type="button" onClick={onDelete} disabled={deleting} className="rounded-lg px-2 py-2 text-xs font-black text-rose-500">{deleting ? 'Lösche …' : 'Löschen'}</button>
+      </div>
+    </div>
   )
 }
