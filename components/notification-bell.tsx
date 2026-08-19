@@ -47,7 +47,7 @@ export function NotificationBell() {
   if (hidden) return null
 
   return (
-    <div className="fixed right-4 top-[7.2rem] z-50">
+    <div className="fixed right-4 top-[7.2rem] z-50 lg:hidden">
       <Link
         href="/benachrichtigungen"
         className="relative flex h-11 w-11 items-center justify-center rounded-full border border-violet-100 bg-white/95 text-xl shadow-lg backdrop-blur"
