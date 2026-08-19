@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, Clock3, FileText, FolderOpen, MessageCircle, Search, Upload } from 'lucide-react'
 import { useFinance } from '@/lib/store'
 import { getActiveClientId, supabase } from '@/lib/supabase'
@@ -16,10 +15,11 @@ function itemDate(i:any){return String(i?.date||i?.documentDate||i?.document_dat
 function monthKey(i:any){const raw=itemDate(i),d=raw?new Date(raw):new Date();return Number.isNaN(d.getTime())?'Ohne Datum':new Intl.DateTimeFormat('de-DE',{month:'long',year:'numeric'}).format(d)}
 
 export default function DokumentePage(){
- const params=useSearchParams(),{documents}=useFinance()
+ const{documents}=useFinance()
+ const[requestedCaseId,setRequestedCaseId]=useState('')
  const[clientId,setClientId]=useState(''),[clientName,setClientName]=useState(''),[cases,setCases]=useState<CaseItem[]>([]),[tasks,setTasks]=useState<Task[]>([]),[updates,setUpdates]=useState<Update[]>([]),[caseId,setCaseId]=useState(''),[view,setView]=useState<View>('all'),[query,setQuery]=useState(''),[notice,setNotice]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false)
- useEffect(()=>{const id=getActiveClientId();setClientId(id);void load(id)},[])
- async function load(id=clientId){setError('');if(!id)return;const[c,cs,t,u]=await Promise.all([supabase.from('clients').select('id,name').eq('id',id).maybeSingle(),supabase.from('mila_intake_cases').select('id,client_id,subject,summary,status,handoff_ready,created_at').order('created_at',{ascending:false}),supabase.from('mila_coordination_tasks').select('id,case_id,title,status,next_action').order('created_at',{ascending:false}),supabase.from('mila_case_updates').select('id,case_id,kind,content,status').order('created_at',{ascending:true})]);if(c.data?.name)setClientName(String(c.data.name));if(cs.error||t.error||u.error)setError('Mila konnte die Arbeitsakte nicht vollständig laden.');const next=(cs.data||[])as CaseItem[];setCases(next);setTasks((t.data||[])as Task[]);setUpdates((u.data||[])as Update[]);const requested=params.get('case')||'';setCaseId(x=>requested&&next.some(i=>i.id===requested)?requested:x&&next.some(i=>i.id===x)?x:(next.find(i=>i.status!=='done')?.id||next[0]?.id||''))}
+ useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('case')||'';setRequestedCaseId(requested);const id=getActiveClientId();setClientId(id);void load(id,requested)},[])
+ async function load(id=clientId,requested=requestedCaseId){setError('');if(!id)return;const[c,cs,t,u]=await Promise.all([supabase.from('clients').select('id,name').eq('id',id).maybeSingle(),supabase.from('mila_intake_cases').select('id,client_id,subject,summary,status,handoff_ready,created_at').order('created_at',{ascending:false}),supabase.from('mila_coordination_tasks').select('id,case_id,title,status,next_action').order('created_at',{ascending:false}),supabase.from('mila_case_updates').select('id,case_id,kind,content,status').order('created_at',{ascending:true})]);if(c.data?.name)setClientName(String(c.data.name));if(cs.error||t.error||u.error)setError('Mila konnte die Arbeitsakte nicht vollständig laden.');const next=(cs.data||[])as CaseItem[];setCases(next);setTasks((t.data||[])as Task[]);setUpdates((u.data||[])as Update[]);setCaseId(x=>requested&&next.some(i=>i.id===requested)?requested:x&&next.some(i=>i.id===x)?x:(next.find(i=>i.status!=='done')?.id||next[0]?.id||''))}
  const current=cases.find(i=>i.id===caseId)||null
  const caseDocuments=useMemo(()=>caseId?documents.filter((d:any)=>String(d.case_id||'')===caseId):[],[documents,caseId])
  const unassigned=useMemo(()=>documents.filter((d:any)=>!d.case_id),[documents])
