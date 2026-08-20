@@ -111,8 +111,11 @@ export default function UebergabenPage() {
   }
 
   const caseMap = useMemo(() => new Map(cases.map((item) => [item.id, item])), [cases])
-  const completedCount = useMemo(() => cases.filter((item) => item.status === 'done').length, [cases])
   const archivedCaseIds = useMemo(() => new Set(handoffs.map((item) => item.case_id)), [handoffs])
+  const completedCount = useMemo(
+    () => cases.filter((item) => item.status === 'done' && archivedCaseIds.has(item.id)).length,
+    [cases, archivedCaseIds],
+  )
 
   function exportBridgePackage(handoff: HandoffItem) {
     const linkedCase = caseMap.get(handoff.case_id)
