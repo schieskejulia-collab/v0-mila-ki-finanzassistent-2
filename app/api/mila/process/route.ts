@@ -118,6 +118,21 @@ export async function POST(req: Request) {
     const explicitlyHuman = boolField(fields, "requires_human")
     const requiresHuman = explicitlyHuman || sensitive || urgency === "high" || urgency === "critical"
 
+    if (!activeClientId) {
+      return NextResponse.json({ success: false, error: "Bitte zuerst eine aktive Akte auswählen" }, { status: 409 })
+    }
+
+    const { data: activeClient, error: activeClientError } = await client
+      .from("clients")
+      .select("id")
+      .eq("id", activeClientId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (activeClientError || !activeClient) {
+      return NextResponse.json({ success: false, error: "Aktive Akte wurde nicht gefunden" }, { status: 404 })
+    }
+
     let caseId: string = body.caseId || ""
 
     if (caseId) {
@@ -136,7 +151,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Vorgang nicht gefunden" }, { status: 404 })
       }
 
-      if (activeClientId && existingCase.client_id && existingCase.client_id !== activeClientId) {
+      if (existingCase.client_id !== activeClientId) {
         return NextResponse.json({ success: false, error: "Vorgang gehört nicht zur aktiven Akte" }, { status: 409 })
       }
     } else {
@@ -152,7 +167,7 @@ export async function POST(req: Request) {
         .from("mila_intake_cases")
         .insert({
           user_id: user.id,
-          client_id: activeClientId || null,
+          client_id: activeClientId,
           source: storedSource,
           caller_name: callerName,
           company,
@@ -182,13 +197,11 @@ export async function POST(req: Request) {
       caseId = createdCase.id
     }
 
-    const memory = activeClientId
-      ? await loadPersistentMilaMemory({
-          client,
-          userId: user.id,
-          clientId: activeClientId,
-        })
-      : undefined
+    const memory = await loadPersistentMilaMemory({
+      client,
+      userId: user.id,
+      clientId: activeClientId,
+    })
 
     const plan = buildProcessPlan({
       caseId,
@@ -202,6 +215,7 @@ export async function POST(req: Request) {
     })
 
     const baseCaseUpdate: Record<string, unknown> = {
+      client_id: activeClientId,
       caller_name: callerName,
       company,
       phone,
@@ -211,9 +225,10 @@ export async function POST(req: Request) {
       urgency,
       sensitive,
       requires_human: requiresHuman || plan.interpretation.confidence === "low",
+      handoff_ready: false,
+      handoff_summary: null,
     }
 
-    if (activeClientId) baseCaseUpdate.client_id = activeClientId
     if (category) baseCaseUpdate.category = category
 
     if (plan.questions.length > 0) {
@@ -230,40 +245,10 @@ export async function POST(req: Request) {
 
       Object.assign(baseCaseUpdate, {
         status: "needs_info",
-        handoff_ready: false,
-      })
-    } else if (plan.handoffReady) {
-      const handoffSummary = JSON.stringify(
-        {
-          clientId: activeClientId || null,
-          processType: plan.interpretation.processType,
-          summary: plan.interpretation.summary,
-          facts: plan.interpretation.knownFacts,
-          target: body.target ?? null,
-        },
-        null,
-        2,
-      )
-
-      Object.assign(baseCaseUpdate, {
-        status: "human_review",
-        handoff_ready: true,
-        handoff_summary: handoffSummary,
-        requires_human: true,
-      })
-
-      await insertUpdateOnce({
-        client,
-        userId: user.id,
-        caseId,
-        kind: "handoff",
-        content: handoffSummary,
-        status: "open",
       })
     } else {
       Object.assign(baseCaseUpdate, {
         status: requiresHuman ? "human_review" : "in_progress",
-        handoff_ready: false,
       })
     }
 
@@ -272,6 +257,7 @@ export async function POST(req: Request) {
       .update(baseCaseUpdate)
       .eq("id", caseId)
       .eq("user_id", user.id)
+      .eq("client_id", activeClientId)
 
     if (caseUpdateError) {
       return NextResponse.json({ success: false, error: caseUpdateError.message }, { status: 500 })
@@ -291,7 +277,7 @@ export async function POST(req: Request) {
         nextAction ||
         plan.questions[0]?.question ||
         (plan.handoffReady
-          ? "Vorgang fachlich prüfen und übernehmen"
+          ? "Organisatorische Vollständigkeit im Vorgang prüfen"
           : "Vorgang prüfen und nächsten Schritt festlegen")
 
       const { error: taskError } = await client.from("mila_coordination_tasks").insert({
@@ -314,36 +300,33 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       caseId,
-      clientId: activeClientId || null,
+      clientId: activeClientId,
       data: plan,
       workspace: {
         status:
           plan.questions.length > 0
             ? "needs_info"
-            : plan.handoffReady
+            : requiresHuman
               ? "human_review"
-              : requiresHuman
-                ? "human_review"
-                : "in_progress",
+              : "in_progress",
         question: plan.questions[0]?.question || null,
-        handoffReady: plan.handoffReady,
+        handoffReady: false,
+        interpretationReady: plan.handoffReady,
         nextAction:
           nextAction ||
           plan.questions[0]?.question ||
-          (plan.handoffReady ? "Fachliche Prüfung" : "Nächsten Schritt festlegen"),
+          (plan.handoffReady ? "Organisatorische Vollständigkeit prüfen" : "Nächsten Schritt festlegen"),
       },
-      memory: memory
-        ? {
-            client: memory.client,
-            projects: memory.projects.length,
-            vehicles: memory.vehicles.length,
-            contacts: memory.contacts.length,
-            confirmedPatterns: memory.confirmedPatterns.length,
-          }
-        : null,
+      memory: {
+        client: memory.client,
+        projects: memory.projects.length,
+        vehicles: memory.vehicles.length,
+        contacts: memory.contacts.length,
+        confirmedPatterns: memory.confirmedPatterns.length,
+      },
       next:
         plan.questions[0]?.question ??
-        (plan.handoffReady ? "human_review" : "needs_interpretation"),
+        (plan.handoffReady ? "check_readiness" : "needs_interpretation"),
     })
   } catch (error: any) {
     return NextResponse.json(
