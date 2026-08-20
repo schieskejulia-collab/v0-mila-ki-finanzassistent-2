@@ -203,6 +203,13 @@ export async function POST(req: Request) {
       clientId: activeClientId,
     })
 
+    if (!memory) {
+      return NextResponse.json(
+        { success: false, error: "Mila konnte den Aktenkontext nicht laden" },
+        { status: 500 },
+      )
+    }
+
     const plan = buildProcessPlan({
       caseId,
       source: body.source,
