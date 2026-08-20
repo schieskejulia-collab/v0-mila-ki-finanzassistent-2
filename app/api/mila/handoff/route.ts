@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Vorgang oder aktive Akte fehlt.' }, { status: 400 })
     }
 
-    const [caseResult, documentResult, taskResult, updateResult, eventResult] = await Promise.all([
+    const [caseResult, documentResult, taskResult, updateResult] = await Promise.all([
       client
         .from('mila_intake_cases')
         .select('*')
@@ -49,34 +49,27 @@ export async function POST(req: Request) {
         .eq('case_id', caseId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: true }),
-      client
-        .from('mila_case_events')
-        .select('*')
-        .eq('case_id', caseId)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true }),
     ])
 
     if (caseResult.error || !caseResult.data) {
-      return NextResponse.json({ success: false, error: 'Vorgang gehört nicht zur aktiven Akte oder wurde nicht gefunden.' }, { status: 404 })
+      return NextResponse.json(
+        { success: false, error: 'Vorgang gehört nicht zur aktiven Akte oder wurde nicht gefunden.' },
+        { status: 404 },
+      )
     }
 
-    if (documentResult.error || taskResult.error || updateResult.error || eventResult.error) {
-      return NextResponse.json({ success: false, error: 'Mila konnte den vollständigen Vorgangsstand nicht laden.' }, { status: 500 })
+    if (documentResult.error || taskResult.error || updateResult.error) {
+      return NextResponse.json(
+        { success: false, error: 'Mila konnte den vollständigen Vorgangsstand nicht laden.' },
+        { status: 500 },
+      )
     }
 
     const currentCase = caseResult.data
     const documents = documentResult.data || []
     const tasks = taskResult.data || []
     const updates = updateResult.data || []
-    const events = eventResult.data || []
-
-    const readiness = assessCaseReadiness({
-      status: currentCase.status,
-      documents,
-      tasks,
-      updates,
-    })
+    const readiness = assessCaseReadiness({ status: currentCase.status, documents, tasks, updates })
 
     if (!readiness.ready) {
       return NextResponse.json(
@@ -102,90 +95,37 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .join('\n')
 
-    const previousState = {
-      status: currentCase.status,
-      handoff_ready: currentCase.handoff_ready,
-      handoff_summary: currentCase.handoff_summary,
-    }
-
     const { error: updateError } = await client
       .from('mila_intake_cases')
-      .update({
-        status: 'human_review',
-        handoff_ready: true,
-        handoff_summary: handoffSummary,
-      })
+      .update({ status: 'human_review', handoff_ready: true, handoff_summary: handoffSummary })
       .eq('id', caseId)
       .eq('user_id', user.id)
       .eq('client_id', clientId)
 
     if (updateError) {
-      return NextResponse.json({ success: false, error: 'Übergabe konnte nicht vorbereitet werden.' }, { status: 500 })
+      return NextResponse.json(
+        { success: false, error: updateError.message || 'Übergabe konnte nicht vorbereitet werden.' },
+        { status: 500 },
+      )
     }
 
-    const { data: refreshedEvents } = await client
-      .from('mila_case_events')
-      .select('*')
-      .eq('case_id', caseId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true })
-
-    const { data: lastHandoff, error: versionError } = await client
+    // Der unveränderliche Snapshot wird zentral durch den DB-Trigger erzeugt,
+    // sobald handoff_ready von false auf true wechselt. So gibt es unabhängig
+    // von der UI nur einen einzigen Versionierungsweg.
+    const { data: handoff, error: handoffError } = await client
       .from('mila_case_handoffs')
-      .select('version')
+      .select('id,version,created_at')
       .eq('case_id', caseId)
       .eq('user_id', user.id)
       .order('version', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    if (versionError) {
-      await client
-        .from('mila_intake_cases')
-        .update(previousState)
-        .eq('id', caseId)
-        .eq('user_id', user.id)
-      return NextResponse.json({ success: false, error: 'Übergabeversion konnte nicht bestimmt werden.' }, { status: 500 })
-    }
-
-    const version = (lastHandoff?.version || 0) + 1
-    const capturedAt = new Date().toISOString()
-    const snapshot = {
-      format: 'mila-handoff-snapshot',
-      format_version: 1,
-      captured_at: capturedAt,
-      readiness,
-      case: {
-        ...currentCase,
-        status: 'human_review',
-        handoff_ready: true,
-        handoff_summary: handoffSummary,
-      },
-      documents,
-      updates,
-      tasks,
-      events: refreshedEvents || events,
-    }
-
-    const { data: handoff, error: insertError } = await client
-      .from('mila_case_handoffs')
-      .insert({
-        user_id: user.id,
-        case_id: caseId,
-        version,
-        summary: handoffSummary,
-        snapshot,
-      })
-      .select('id,version,created_at')
-      .single()
-
-    if (insertError || !handoff) {
-      await client
-        .from('mila_intake_cases')
-        .update(previousState)
-        .eq('id', caseId)
-        .eq('user_id', user.id)
-      return NextResponse.json({ success: false, error: 'Übergabestand konnte nicht versioniert archiviert werden.' }, { status: 500 })
+    if (handoffError || !handoff) {
+      return NextResponse.json(
+        { success: false, error: 'Übergabe wurde vorbereitet, aber der archivierte Stand konnte nicht bestätigt werden.' },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({
