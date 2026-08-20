@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import {
   Archive,
@@ -11,9 +12,11 @@ import {
   UserRound,
   Zap,
   Search,
-  Files,
   ChevronRight,
 } from 'lucide-react'
+
+const CLIENTS_KEY = 'mila-clients-v1'
+const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 
 const navItems = [
   { href: '/', label: 'Start', icon: Home },
@@ -26,9 +29,9 @@ const navItems = [
 
 const desktopItems = [
   { href: '/', label: 'Start', icon: Home },
-  { href: '/dokumente', label: 'Akten', icon: Files },
   { href: '/eingang', label: 'Eingang', icon: Inbox },
   { href: '/jetzt', label: 'Vorgänge', icon: Zap },
+  { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
   { href: '/uebergaben', label: 'Übergaben', icon: Archive },
   { href: '/suche', label: 'Suche', icon: Search },
 ]
@@ -39,8 +42,27 @@ function active(pathname: string, href: string) {
     : pathname === href || pathname.startsWith(`${href}/`)
 }
 
+function readActiveClientName() {
+  if (typeof window === 'undefined') return ''
+  try {
+    const activeId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
+    const raw = window.localStorage.getItem(CLIENTS_KEY)
+    const clients = raw ? JSON.parse(raw) : []
+    if (!activeId || !Array.isArray(clients)) return ''
+    const activeClient = clients.find((item: any) => String(item?.id || '') === activeId)
+    return activeClient?.name ? String(activeClient.name) : ''
+  } catch {
+    return ''
+  }
+}
+
 export function BottomNav() {
   const pathname = usePathname()
+  const [activeClientName, setActiveClientName] = useState('')
+
+  useEffect(() => {
+    setActiveClientName(readActiveClientName())
+  }, [pathname])
 
   if (
     pathname === '/login' ||
@@ -92,8 +114,8 @@ export function BottomNav() {
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-950">Tester A</p>
-                <p className="mt-0.5 text-[9px] font-semibold text-slate-400">Arbeitsakte geöffnet</p>
+                <p className="truncate text-sm font-black text-slate-950">{activeClientName || 'Akte auswählen'}</p>
+                <p className="mt-0.5 text-[9px] font-semibold text-slate-400">{activeClientName ? 'Arbeitsakte geöffnet' : 'Noch keine aktive Akte'}</p>
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
             </div>
