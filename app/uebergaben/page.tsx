@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Archive, Download, FileCheck2, Loader2, RefreshCw } from 'lucide-react'
+import { Archive, CheckCircle2, Download, FileCheck2, Home, Loader2, RefreshCw } from 'lucide-react'
 import { getActiveClientId, supabase } from '@/lib/supabase'
 
 type CaseItem = {
@@ -11,6 +11,8 @@ type CaseItem = {
   summary: string
   status: string
   client_id: string | null
+  handoff_ready: boolean
+  completed_at: string | null
 }
 
 type HandoffItem = {
@@ -22,7 +24,8 @@ type HandoffItem = {
   created_at: string
 }
 
-function formatTime(value: string) {
+function formatTime(value: string | null) {
+  if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   return date.toLocaleString('de-DE', {
@@ -72,7 +75,7 @@ export default function UebergabenPage() {
 
     const caseResult = await supabase
       .from('mila_intake_cases')
-      .select('id,subject,summary,status,client_id')
+      .select('id,subject,summary,status,client_id,handoff_ready,completed_at')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
@@ -108,6 +111,8 @@ export default function UebergabenPage() {
   }
 
   const caseMap = useMemo(() => new Map(cases.map((item) => [item.id, item])), [cases])
+  const completedCount = useMemo(() => cases.filter((item) => item.status === 'done').length, [cases])
+  const archivedCaseIds = useMemo(() => new Set(handoffs.map((item) => item.case_id)), [handoffs])
 
   function exportBridgePackage(handoff: HandoffItem) {
     const linkedCase = caseMap.get(handoff.case_id)
@@ -143,7 +148,7 @@ export default function UebergabenPage() {
             </div>
             <h1 className="mt-3 text-3xl font-black tracking-tight lg:text-4xl">Was wurde wirklich übergeben?</h1>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-              Jede vorbereitete Übergabe wird als eigener, unveränderlicher Stand festgehalten. Spätere Änderungen erzeugen eine neue Version statt die alte zu überschreiben.
+              Jede vorbereitete Übergabe bleibt als eigener Stand erhalten. Abschluss und spätere Versionen verändern diesen festgehaltenen Zustand nicht.
             </p>
           </div>
           <button
@@ -154,6 +159,14 @@ export default function UebergabenPage() {
             <RefreshCw className="h-4 w-4" /> Aktualisieren
           </button>
         </header>
+
+        {!loading && !error && (
+          <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Metric label="Übergabestände" value={handoffs.length} />
+            <Metric label="Vorgänge im Archiv" value={archivedCaseIds.size} />
+            <Metric label="Abgeschlossen" value={completedCount} />
+          </section>
+        )}
 
         {error && <p className="mt-5 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</p>}
 
@@ -180,16 +193,27 @@ export default function UebergabenPage() {
               const updates = Array.isArray(handoff.snapshot?.updates) ? handoff.snapshot.updates : []
               const tasks = Array.isArray(handoff.snapshot?.tasks) ? handoff.snapshot.tasks : []
               const events = Array.isArray(handoff.snapshot?.events) ? handoff.snapshot.events : []
+              const completed = linkedCase?.status === 'done'
 
               return (
                 <article key={handoff.id} className="rounded-2xl border bg-white p-4 shadow-sm lg:p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-600">
-                        Übergabestand v{handoff.version}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-600">
+                          Übergabestand v{handoff.version}
+                        </p>
+                        <span className={completed ? 'rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-700' : 'rounded-full bg-violet-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-violet-700'}>
+                          {completed ? 'Abgeschlossen' : 'Festgehalten'}
+                        </span>
+                      </div>
                       <h2 className="mt-1 text-xl font-black">{linkedCase?.subject || handoff.snapshot?.case?.subject || 'Vorgang'}</h2>
-                      <p className="mt-1 text-xs font-semibold text-slate-400">Festgehalten am {formatTime(handoff.created_at)}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-400">Übergabe festgehalten am {formatTime(handoff.created_at)}</p>
+                      {completed && linkedCase?.completed_at && (
+                        <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-black text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" /> Vorgang abgeschlossen am {formatTime(linkedCase.completed_at)}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -224,6 +248,10 @@ export default function UebergabenPage() {
                 </article>
               )
             })}
+
+            <Link href="/" className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-700">
+              <Home className="h-4 w-4" /> Zurück zum Arbeitsstand
+            </Link>
           </div>
         )}
       </div>
