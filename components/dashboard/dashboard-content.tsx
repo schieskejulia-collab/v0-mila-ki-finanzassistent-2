@@ -45,6 +45,8 @@ type Task = {
 
 type DocumentItem = {
   id: string
+  client_id?: string | null
+  case_id?: string | null
   title?: string | null
   partner?: string | null
   note?: string | null
@@ -93,14 +95,23 @@ export function DashboardContent({ model }: { model: any }) {
       .order('created_at', { ascending: false })
       .limit(100)
 
-    if (clientId) caseQuery = caseQuery.eq('client_id', clientId)
+    let documentQuery: any = supabase
+      .from('documents')
+      .select('id,client_id,case_id,title,partner,note,file_name,created_at')
+      .order('created_at', { ascending: false })
+      .limit(200)
+
+    if (clientId) {
+      caseQuery = caseQuery.eq('client_id', clientId)
+      documentQuery = documentQuery.eq('client_id', clientId)
+    }
 
     const [clientResult, caseResult, taskResult, updateResult, documentResult] = await Promise.all([
       clientPromise,
       caseQuery,
       supabase.from('mila_coordination_tasks').select('id,case_id,status,title,next_action,created_at').order('created_at', { ascending: false }).limit(300),
       supabase.from('mila_case_updates').select('id,case_id,kind,status,content,created_at').order('created_at', { ascending: false }).limit(500),
-      supabase.from('documents').select('id,title,partner,note,file_name,created_at').order('created_at', { ascending: false }).limit(200),
+      documentQuery,
     ])
 
     if (clientResult.data?.name) setClientName(String(clientResult.data.name))
@@ -114,18 +125,23 @@ export function DashboardContent({ model }: { model: any }) {
   const caseIds = useMemo(() => new Set(cases.map((item) => item.id)), [cases])
   const caseTasks = useMemo(() => tasks.filter((item) => item.case_id && caseIds.has(item.case_id)), [tasks, caseIds])
   const caseUpdates = useMemo(() => updates.filter((item) => caseIds.has(item.case_id)), [updates, caseIds])
+  const caseLinkedDocuments = useMemo(
+    () => documents.filter((item) => item.case_id && caseIds.has(item.case_id)),
+    [documents, caseIds],
+  )
+  const unassignedDocuments = useMemo(() => documents.filter((item) => !item.case_id), [documents])
 
   const openQuestions = caseUpdates.filter((item) => item.kind === 'question' && item.status !== 'done')
   const openTasks = caseTasks.filter((item) => item.status !== 'done')
   const readyCases = cases.filter((item) => item.handoff_ready && item.status !== 'done')
   const openCases = cases.filter((item) => item.status !== 'done')
   const waitingCases = cases.filter((item) => item.status === 'waiting' || item.status === 'needs_info')
-  const documentIssues = documents.filter(needsDocumentContext)
-  const cleanDocuments = documents.filter((item) => !needsDocumentContext(item))
+  const documentIssues = caseLinkedDocuments.filter(needsDocumentContext)
+  const cleanDocuments = caseLinkedDocuments.filter((item) => !needsDocumentContext(item))
 
   const todayItems = [
     ...(documentIssues.length
-      ? [{ kind: 'document', title: `${documentIssues.length} Unterlage${documentIssues.length === 1 ? '' : 'n'} brauchen Zuordnung`, text: 'Diese Eingänge benötigen noch Kontext.', count: documentIssues.length, href: '/dokumente' }]
+      ? [{ kind: 'document', title: `${documentIssues.length} Unterlage${documentIssues.length === 1 ? '' : 'n'} brauchen Klärung`, text: 'Diese Vorgänge benötigen noch Dokumentkontext.', count: documentIssues.length, href: '/dokumente' }]
       : []),
     ...(openQuestions.length
       ? [{ kind: 'question', title: `${openQuestions.length} Rückfrage${openQuestions.length === 1 ? '' : 'n'} offen`, text: 'Hier fehlen Informationen oder Bestätigungen.', count: openQuestions.length, href: '/jetzt' }]
@@ -138,12 +154,13 @@ export function DashboardContent({ model }: { model: any }) {
   const laterItems = [
     ...waitingCases.slice(0, 1).map(() => ({ title: `${waitingCases.length} Vorgang${waitingCases.length === 1 ? '' : 'e'} wartet auf Rückmeldung`, count: waitingCases.length, href: '/jetzt' })),
     ...(openTasks.length > 0 ? [{ title: `${openTasks.length} Arbeitsschritt${openTasks.length === 1 ? '' : 'e'} noch offen`, count: openTasks.length, href: '/jetzt' }] : []),
-    ...(cleanDocuments.length > 0 ? [{ title: `${cleanDocuments.length} Unterlage${cleanDocuments.length === 1 ? '' : 'n'} bereits sauber abgelegt`, count: cleanDocuments.length, href: '/dokumente' }] : []),
+    ...(cleanDocuments.length > 0 ? [{ title: `${cleanDocuments.length} Unterlage${cleanDocuments.length === 1 ? '' : 'n'} im Vorgang sauber abgelegt`, count: cleanDocuments.length, href: '/dokumente' }] : []),
+    ...(unassignedDocuments.length > 0 ? [{ title: `${unassignedDocuments.length} ältere Unterlage${unassignedDocuments.length === 1 ? '' : 'n'} noch ohne Vorgang`, count: unassignedDocuments.length, href: '/dokumente' }] : []),
   ].slice(0, 3)
 
   const activities = [
     ...caseUpdates.slice(0, 2).map((item) => ({ text: item.kind === 'question' ? `Rückfrage: ${item.content}` : item.kind === 'handoff' ? 'Übergabe wurde vorbereitet' : item.content, when: 'Vorgang' })),
-    ...documents.slice(0, 2).map((doc) => ({ text: doc.title || doc.file_name || 'Dokument erfasst', when: clientName })),
+    ...caseLinkedDocuments.slice(0, 2).map((doc) => ({ text: doc.title || doc.file_name || 'Unterlage erfasst', when: clientName })),
   ].slice(0, 3)
 
   return (
@@ -153,7 +170,7 @@ export function DashboardContent({ model }: { model: any }) {
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950 lg:text-[34px]">{greeting}, {userName} 👋</h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              Heute zuerst: <span className="font-black text-rose-500">{documentIssues.length} Unterlagen</span> zuordnen
+              Heute zuerst: <span className="font-black text-rose-500">{documentIssues.length} Unterlagen</span> klären
               <span className="mx-2 text-slate-300">·</span>
               <span className="font-black text-amber-600">{openQuestions.length} Rückfrage{openQuestions.length === 1 ? '' : 'n'}</span> klären
             </p>
@@ -205,18 +222,18 @@ export function DashboardContent({ model }: { model: any }) {
               <div className="flex min-w-0 items-center gap-4">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600"><Upload className="h-6 w-6" /></span>
                 <div>
-                  <p className="text-base font-black text-slate-950">Beleg-Stapel hochladen</p>
-                  <p className="mt-1 text-xs font-medium leading-5 text-slate-500">Mehrere Dateien auswählen oder hier ablegen – Mila übernimmt den Rest.</p>
+                  <p className="text-base font-black text-slate-950">Unterlagen-Stapel hochladen</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-slate-500">Mehrere Dateien auswählen oder hier ablegen – Mila verbindet sie mit einem Vorgang.</p>
                 </div>
               </div>
-              <span className="hidden rounded-xl border border-violet-200 px-4 py-2 text-xs font-black text-violet-700 sm:inline-flex">Belege auswählen</span>
+              <span className="hidden rounded-xl border border-violet-200 px-4 py-2 text-xs font-black text-violet-700 sm:inline-flex">Unterlagen auswählen</span>
             </Link>
 
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatusCard label="Eingang" value={openCases.length} helper="offene Vorgänge" icon={<Inbox className="h-4 w-4" />} tone="blue" />
               <StatusCard label="In Klärung" value={openQuestions.length} helper="warten auf Antwort" icon={<Clock3 className="h-4 w-4" />} tone="amber" />
               <StatusCard label="Übergabebereit" value={readyCases.length} helper="bereit für Prüfung" icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
-              <StatusCard label="Archiv / Mappe" value={documents.length} helper="Unterlagen" icon={<FolderOpen className="h-4 w-4" />} tone="violet" />
+              <StatusCard label="Archiv / Mappe" value={caseLinkedDocuments.length} helper="zugeordnete Unterlagen" icon={<FolderOpen className="h-4 w-4" />} tone="violet" />
             </section>
           </div>
 
