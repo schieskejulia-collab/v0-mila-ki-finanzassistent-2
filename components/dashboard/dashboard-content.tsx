@@ -23,6 +23,7 @@ type CaseItem = {
   urgency?: string | null
   handoff_ready?: boolean | null
   created_at?: string | null
+  completed_at?: string | null
 }
 
 type Update = {
@@ -91,7 +92,7 @@ export function DashboardContent({ model }: { model: any }) {
 
     let caseQuery: any = supabase
       .from('mila_intake_cases')
-      .select('id,client_id,subject,status,urgency,handoff_ready,created_at')
+      .select('id,client_id,subject,status,urgency,handoff_ready,created_at,completed_at')
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -123,25 +124,37 @@ export function DashboardContent({ model }: { model: any }) {
   }
 
   const caseIds = useMemo(() => new Set(cases.map((item) => item.id)), [cases])
-  const caseTasks = useMemo(() => tasks.filter((item) => item.case_id && caseIds.has(item.case_id)), [tasks, caseIds])
-  const caseUpdates = useMemo(() => updates.filter((item) => caseIds.has(item.case_id)), [updates, caseIds])
+  const openCases = cases.filter((item) => item.status !== 'done')
+  const openCaseIds = useMemo(() => new Set(openCases.map((item) => item.id)), [openCases])
   const caseLinkedDocuments = useMemo(
     () => documents.filter((item) => item.case_id && caseIds.has(item.case_id)),
     [documents, caseIds],
   )
+  const activeCaseDocuments = useMemo(
+    () => caseLinkedDocuments.filter((item) => item.case_id && openCaseIds.has(item.case_id)),
+    [caseLinkedDocuments, openCaseIds],
+  )
   const unassignedDocuments = useMemo(() => documents.filter((item) => !item.case_id), [documents])
+  const caseTasks = useMemo(
+    () => tasks.filter((item) => item.case_id && openCaseIds.has(item.case_id)),
+    [tasks, openCaseIds],
+  )
+  const caseUpdates = useMemo(
+    () => updates.filter((item) => openCaseIds.has(item.case_id)),
+    [updates, openCaseIds],
+  )
 
   const openQuestions = caseUpdates.filter((item) => item.kind === 'question' && item.status !== 'done')
   const openTasks = caseTasks.filter((item) => item.status !== 'done')
-  const readyCases = cases.filter((item) => item.handoff_ready && item.status !== 'done')
-  const openCases = cases.filter((item) => item.status !== 'done')
-  const waitingCases = cases.filter((item) => item.status === 'waiting' || item.status === 'needs_info')
-  const documentIssues = caseLinkedDocuments.filter(needsDocumentContext)
-  const cleanDocuments = caseLinkedDocuments.filter((item) => !needsDocumentContext(item))
+  const readyCases = openCases.filter((item) => item.handoff_ready)
+  const waitingCases = openCases.filter((item) => item.status === 'waiting' || item.status === 'needs_info')
+  const documentIssues = activeCaseDocuments.filter(needsDocumentContext)
+  const cleanDocuments = activeCaseDocuments.filter((item) => !needsDocumentContext(item))
+  const completedCases = cases.filter((item) => item.status === 'done')
 
   const todayItems = [
     ...(documentIssues.length
-      ? [{ kind: 'document', title: `${documentIssues.length} Unterlage${documentIssues.length === 1 ? '' : 'n'} brauchen Klärung`, text: 'Diese Vorgänge benötigen noch Dokumentkontext.', count: documentIssues.length, href: '/dokumente' }]
+      ? [{ kind: 'document', title: `${documentIssues.length} Unterlage${documentIssues.length === 1 ? '' : 'n'} brauchen Klärung`, text: 'Diese offenen Vorgänge benötigen noch Dokumentkontext.', count: documentIssues.length, href: '/dokumente' }]
       : []),
     ...(openQuestions.length
       ? [{ kind: 'question', title: `${openQuestions.length} Rückfrage${openQuestions.length === 1 ? '' : 'n'} offen`, text: 'Hier fehlen Informationen oder Bestätigungen.', count: openQuestions.length, href: '/jetzt' }]
@@ -154,12 +167,13 @@ export function DashboardContent({ model }: { model: any }) {
   const laterItems = [
     ...waitingCases.slice(0, 1).map(() => ({ title: `${waitingCases.length} Vorgang${waitingCases.length === 1 ? '' : 'e'} wartet auf Rückmeldung`, count: waitingCases.length, href: '/jetzt' })),
     ...(openTasks.length > 0 ? [{ title: `${openTasks.length} Arbeitsschritt${openTasks.length === 1 ? '' : 'e'} noch offen`, count: openTasks.length, href: '/jetzt' }] : []),
-    ...(cleanDocuments.length > 0 ? [{ title: `${cleanDocuments.length} Unterlage${cleanDocuments.length === 1 ? '' : 'n'} im Vorgang sauber abgelegt`, count: cleanDocuments.length, href: '/dokumente' }] : []),
+    ...(cleanDocuments.length > 0 ? [{ title: `${cleanDocuments.length} Unterlage${cleanDocuments.length === 1 ? '' : 'n'} im offenen Vorgang sauber abgelegt`, count: cleanDocuments.length, href: '/dokumente' }] : []),
     ...(unassignedDocuments.length > 0 ? [{ title: `${unassignedDocuments.length} ältere Unterlage${unassignedDocuments.length === 1 ? '' : 'n'} noch ohne Vorgang`, count: unassignedDocuments.length, href: '/dokumente' }] : []),
   ].slice(0, 3)
 
   const activities = [
-    ...caseUpdates.slice(0, 2).map((item) => ({ text: item.kind === 'question' ? `Rückfrage: ${item.content}` : item.kind === 'handoff' ? 'Übergabe wurde vorbereitet' : item.content, when: 'Vorgang' })),
+    ...completedCases.slice(0, 1).map((item) => ({ text: `Vorgang abgeschlossen: ${item.subject}`, when: 'Erledigt' })),
+    ...caseUpdates.filter((item) => item.status !== 'done' && item.kind !== 'question').slice(0, 1).map((item) => ({ text: item.kind === 'handoff' ? 'Übergabe wurde vorbereitet' : item.content, when: 'Vorgang' })),
     ...caseLinkedDocuments.slice(0, 2).map((doc) => ({ text: doc.title || doc.file_name || 'Unterlage erfasst', when: clientName })),
   ].slice(0, 3)
 
