@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  Archive,
   FolderOpen,
   Home,
   Inbox,
@@ -20,6 +21,7 @@ const navItems = [
   { href: '/eingang', label: 'Eingang', icon: Inbox },
   { href: '/neue-buchungen', label: 'Neu', icon: PlusCircle },
   { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
+  { href: '/uebergaben', label: 'Archiv', icon: Archive },
 ]
 
 const desktopItems = [
@@ -27,6 +29,7 @@ const desktopItems = [
   { href: '/dokumente', label: 'Akten', icon: Files },
   { href: '/eingang', label: 'Eingang', icon: Inbox },
   { href: '/jetzt', label: 'Vorgänge', icon: Zap },
+  { href: '/uebergaben', label: 'Übergaben', icon: Archive },
   { href: '/suche', label: 'Suche', icon: Search },
 ]
 
@@ -109,7 +112,7 @@ export function BottomNav() {
       </aside>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(.6rem,env(safe-area-inset-bottom))] lg:hidden">
-        <nav className="pointer-events-auto grid w-full max-w-md grid-cols-5 items-center rounded-[1.6rem] border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.16)] backdrop-blur-xl">
+        <nav className="pointer-events-auto grid w-full max-w-md grid-cols-6 items-center rounded-[1.6rem] border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.16)] backdrop-blur-xl">
           {navItems.map((item) => {
             const isActive = active(pathname, item.href)
             const Icon = item.icon
