@@ -13,10 +13,11 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { getActiveClientId, supabase } from '@/lib/supabase'
 
 type CaseItem = {
   id: string
+  client_id: string | null
   source: string
   caller_name: string | null
   company: string | null
@@ -100,22 +101,68 @@ export default function EingangPage() {
       return
     }
 
-    const [caseResult, taskResult, updateResult] = await Promise.all([
-      supabase.from('mila_intake_cases').select('*').order('created_at', { ascending: false }).limit(100),
-      supabase.from('mila_coordination_tasks').select('*').order('created_at', { ascending: false }).limit(200),
-      supabase.from('mila_case_updates').select('*').order('created_at', { ascending: true }).limit(400),
-    ])
+    const clientId = getActiveClientId()
+    if (!clientId) {
+      setCases([])
+      setTasks([])
+      setUpdates([])
+      setSelected(null)
+      setError('Bitte zuerst eine aktive Akte auswählen.')
+      return
+    }
 
-    if (caseResult.error || taskResult.error || updateResult.error) {
-      setError('Mila konnte den Eingang nicht vollständig laden.')
+    const caseResult = await supabase
+      .from('mila_intake_cases')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (caseResult.error) {
+      setError('Mila konnte den Eingang dieser Akte nicht laden.')
+      return
     }
 
     const nextCases = (caseResult.data || []) as CaseItem[]
+    const caseIds = nextCases.map((item) => item.id)
+
+    if (caseIds.length === 0) {
+      setCases([])
+      setTasks([])
+      setUpdates([])
+      setSelected(null)
+      return
+    }
+
+    const [taskResult, updateResult] = await Promise.all([
+      supabase
+        .from('mila_coordination_tasks')
+        .select('*')
+        .in('case_id', caseIds)
+        .order('created_at', { ascending: false })
+        .limit(300),
+      supabase
+        .from('mila_case_updates')
+        .select('*')
+        .in('case_id', caseIds)
+        .order('created_at', { ascending: true })
+        .limit(600),
+    ])
+
+    if (taskResult.error || updateResult.error) {
+      setError('Mila konnte den Eingang nicht vollständig laden.')
+    }
+
     setCases(nextCases)
     setTasks((taskResult.data || []) as Task[])
     setUpdates((updateResult.data || []) as Update[])
 
-    const nextSelected = selectId || selected || nextCases[0]?.id || null
+    const nextSelected =
+      selectId && nextCases.some((item) => item.id === selectId)
+        ? selectId
+        : selected && nextCases.some((item) => item.id === selected)
+          ? selected
+          : nextCases[0]?.id || null
     setSelected(nextSelected)
   }
 
@@ -128,13 +175,16 @@ export default function EingangPage() {
     const token = sessionData.session?.access_token
     if (!token) throw new Error('Bitte neu anmelden.')
 
+    const clientId = getActiveClientId()
+    if (!clientId) throw new Error('Bitte zuerst eine aktive Akte auswählen.')
+
     const response = await fetch('/api/mila/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, clientId }),
     })
 
     const data = await response.json().catch(() => ({}))
@@ -177,8 +227,8 @@ export default function EingangPage() {
 
       if (result.workspace?.question) {
         setNotice(`Mila hat den Eingang verstanden und eine Rückfrage markiert: ${result.workspace.question}`)
-      } else if (result.workspace?.handoffReady) {
-        setNotice('Mila hat den Eingang geordnet. Der Vorgang ist für die fachliche Prüfung vorbereitet.')
+      } else if (result.workspace?.interpretationReady) {
+        setNotice('Mila hat den Eingang verstanden. Jetzt wird im Vorgang nur noch die organisatorische Vollständigkeit geprüft.')
       } else {
         setNotice('Mila hat den Eingang geordnet und den nächsten Schritt angelegt.')
       }
@@ -204,12 +254,19 @@ export default function EingangPage() {
       .includes(needle)
   })
 
+  async function invalidateHandoff(caseId: string, status = 'in_progress') {
+    await supabase
+      .from('mila_intake_cases')
+      .update({ status, handoff_ready: false, handoff_summary: null })
+      .eq('id', caseId)
+  }
+
   async function addUpdate(kind: Update['kind']) {
     if (!current || !timelineText.trim()) return
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) return
 
-    await supabase.from('mila_case_updates').insert({
+    const { error: insertError } = await supabase.from('mila_case_updates').insert({
       user_id: auth.user.id,
       case_id: current.id,
       kind,
@@ -217,22 +274,36 @@ export default function EingangPage() {
       status: kind === 'question' ? 'waiting' : 'done',
     })
 
-    if (kind === 'question') {
-      await supabase.from('mila_intake_cases').update({ status: 'needs_info', handoff_ready: false }).eq('id', current.id)
+    if (insertError) {
+      setError('Eintrag konnte nicht gespeichert werden.')
+      return
     }
 
+    await invalidateHandoff(current.id, kind === 'question' ? 'needs_info' : 'in_progress')
     setTimelineText('')
     await load(current.id)
   }
 
   async function closeQuestion(update: Update) {
-    await supabase.from('mila_case_updates').update({ status: 'done' }).eq('id', update.id)
-    await load(current?.id)
+    if (!current) return
+    const { error: updateError } = await supabase.from('mila_case_updates').update({ status: 'done' }).eq('id', update.id)
+    if (updateError) {
+      setError('Rückfrage konnte nicht geschlossen werden.')
+      return
+    }
+    await invalidateHandoff(current.id)
+    await load(current.id)
   }
 
   async function closeTask(task: Task) {
-    await supabase.from('mila_coordination_tasks').update({ status: 'done' }).eq('id', task.id)
-    await load(current?.id)
+    if (!current) return
+    const { error: taskError } = await supabase.from('mila_coordination_tasks').update({ status: 'done' }).eq('id', task.id)
+    if (taskError) {
+      setError('Arbeitsschritt konnte nicht abgeschlossen werden.')
+      return
+    }
+    await invalidateHandoff(current.id)
+    await load(current.id)
   }
 
   async function runMilaAgain() {
@@ -265,8 +336,8 @@ export default function EingangPage() {
 
       if (result.workspace?.question) {
         setNotice(`Mila braucht noch genau diese Information: ${result.workspace.question}`)
-      } else if (result.workspace?.handoffReady) {
-        setNotice('Mila hat den Vorgang neu geprüft. Organisatorisch ist er jetzt bereit für die fachliche Prüfung.')
+      } else if (result.workspace?.interpretationReady) {
+        setNotice('Mila versteht den Sachverhalt. Die Übergabe wird erst nach der gemeinsamen Vollständigkeitsprüfung freigegeben.')
       } else {
         setNotice('Mila hat den Vorgang neu geprüft und den Arbeitsstand aktualisiert.')
       }
@@ -345,7 +416,7 @@ export default function EingangPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-black">Eingangsliste</h2>
-                <p className="text-[11px] text-slate-500">Ein Sachverhalt, ein Vorgang.</p>
+                <p className="text-[11px] text-slate-500">Nur Vorgänge der aktiven Akte.</p>
               </div>
               <Link href="/jetzt" className="inline-flex items-center gap-1 text-xs font-black text-violet-700">Vorgänge <ArrowRight className="h-3.5 w-3.5" /></Link>
             </div>
@@ -409,7 +480,7 @@ export default function EingangPage() {
                     <div>
                       <p className="text-xs font-black text-violet-700">Mila Core</p>
                       <p className="mt-1 text-xs leading-5 text-slate-600">
-                        Mila prüft hier nur Organisation, Kontext und Vollständigkeit. Die fachliche Entscheidung bleibt beim Menschen.
+                        Mila prüft hier Organisation und Kontext. Übergabebereit wird der Vorgang ausschließlich nach der gemeinsamen Vollständigkeitsprüfung.
                       </p>
                     </div>
                     <Sparkles className="h-5 w-5 shrink-0 text-violet-500" />
@@ -422,7 +493,7 @@ export default function EingangPage() {
                 <div className="mt-5">
                   <h3 className="text-sm font-black">Nächster Schritt</h3>
                   <div className="mt-2 space-y-2">
-                    {currentTasks.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">Kein offener Arbeitsschritt.</p>}
+                    {currentTasks.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">Kein Arbeitsschritt vorhanden.</p>}
                     {currentTasks.map((task) => (
                       <div key={task.id} className="flex items-start justify-between gap-3 rounded-xl border p-3">
                         <div>
@@ -463,7 +534,7 @@ export default function EingangPage() {
                   </div>
                 </div>
 
-                <Link href="/jetzt" className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+                <Link href={`/jetzt?case=${current.id}`} className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
                   Vorgang im Arbeitsplatz öffnen <ArrowRight className="h-4 w-4" />
                 </Link>
               </>
