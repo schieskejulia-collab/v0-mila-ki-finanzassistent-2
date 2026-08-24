@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { FinanceProvider } from '@/lib/store'
 import { BottomNav } from '@/components/bottom-nav'
 import { LegalFooter } from '@/components/legal-footer'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ClientSwitcher } from '@/components/client-switcher'
 import { NotificationBell } from '@/components/notification-bell'
+import { WorkspaceProviders } from '@/components/workspace-providers'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -50,7 +50,7 @@ export default function RootLayout({
           enableSystem={false}
           forcedTheme="light"
         >
-          <FinanceProvider>
+          <WorkspaceProviders>
             <div className="min-h-[100dvh] bg-[#fbf9ff] text-slate-950 lg:pl-[220px]">
               <BottomNav />
               <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1440px] flex-col">
@@ -60,7 +60,7 @@ export default function RootLayout({
                 <LegalFooter />
               </div>
             </div>
-          </FinanceProvider>
+          </WorkspaceProviders>
         </ThemeProvider>
       </body>
     </html>
