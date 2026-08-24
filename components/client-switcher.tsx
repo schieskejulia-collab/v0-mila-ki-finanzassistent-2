@@ -11,6 +11,12 @@ type MilaClient = {
   name: string
 }
 
+type PortalCase = {
+  id: string
+  subject: string
+  status: string
+}
+
 const CLIENTS_KEY = 'mila-clients-v1'
 const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 const ACTIVE_CLIENT_COOKIE = 'mila_active_client'
@@ -46,6 +52,7 @@ export function ClientSwitcher() {
   const [activeClientId, setActiveClientId] = useState('')
   const [open, setOpen] = useState(false)
   const [portalStatus, setPortalStatus] = useState('')
+  const [portalCases, setPortalCases] = useState<PortalCase[] | null>(null)
 
   const hidden =
     pathname === '/login' ||
@@ -109,7 +116,7 @@ export function ClientSwitcher() {
     window.location.reload()
   }
 
-  async function sharePortalLink() {
+  async function createPortalLink(caseItem: PortalCase) {
     if (!activeClient) {
       window.alert('Bitte zuerst einen Mandanten auswählen.')
       return
@@ -130,7 +137,7 @@ export function ClientSwitcher() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ clientId: activeClient.id }),
+      body: JSON.stringify({ clientId: activeClient.id, caseId: caseItem.id }),
     })
 
     const data = await response.json().catch(() => ({}))
@@ -143,7 +150,7 @@ export function ClientSwitcher() {
       if (navigator.share) {
         await navigator.share({
           title: `Mila Upload-Link · ${activeClient.name}`,
-          text: 'Hier können Unterlagen und Antworten sicher übermittelt werden:',
+          text: `Hier können Unterlagen und Antworten zum Vorgang „${caseItem.subject}“ sicher übermittelt werden:`,
           url: data.url,
         })
         setPortalStatus('Link geteilt ✓')
@@ -161,11 +168,46 @@ export function ClientSwitcher() {
     }
   }
 
+  async function sharePortalLink() {
+    if (!activeClient) {
+      window.alert('Bitte zuerst einen Mandanten auswählen.')
+      return
+    }
+
+    setPortalStatus('Vorgänge werden geladen …')
+    const { data, error } = await supabase
+      .from('mila_intake_cases')
+      .select('id,subject,status')
+      .eq('client_id', activeClient.id)
+      .neq('status', 'done')
+      .order('created_at', { ascending: false })
+
+    if (error || !data?.length) {
+      setPortalStatus('Lege zuerst einen aktiven Vorgang an.')
+      return
+    }
+
+    const cases = data.map((item: any) => ({
+      id: String(item.id),
+      subject: String(item.subject || 'Vorgang'),
+      status: String(item.status || 'new'),
+    }))
+
+    if (cases.length === 1) {
+      await createPortalLink(cases[0])
+      return
+    }
+
+    setPortalStatus('')
+    setPortalCases(cases)
+  }
+
   if (hidden) return null
 
   return (
-    <div className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/96 px-3 py-2 backdrop-blur lg:hidden">
-      <div className="relative mx-auto flex max-w-md items-center gap-2">
+    <>
+      <div className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/96 px-3 py-2 backdrop-blur lg:hidden">
+        <div className="relative mx-auto flex max-w-md items-center gap-2">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -206,8 +248,27 @@ export function ClientSwitcher() {
             })}
           </div>
         )}
+        </div>
+        {portalStatus && <p className="mt-1 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>}
       </div>
-      {portalStatus && <p className="mt-1 text-center text-[10px] font-bold text-slate-500">{portalStatus}</p>}
-    </div>
+      {portalCases && (
+        <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/35 p-3 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-label="Vorgang für Mandanten-Link auswählen">
+          <section className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-600">Sicherer Mandanten-Link</p>
+            <h2 className="mt-1 text-xl font-black text-slate-950">Für welchen Vorgang?</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">Antworten und Dateien werden genau diesem Vorgang zugeordnet.</p>
+            <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
+              {portalCases.map((caseItem) => (
+                <button key={caseItem.id} type="button" onClick={() => { setPortalCases(null); void createPortalLink(caseItem) }} className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-violet-300 hover:bg-violet-50">
+                  <p className="text-sm font-black text-slate-950">{caseItem.subject}</p>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-400">{caseItem.status}</p>
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setPortalCases(null)} className="mt-4 w-full rounded-2xl bg-slate-100 p-3 text-sm font-black text-slate-700">Abbrechen</button>
+          </section>
+        </div>
+      )}
+    </>
   )
 }
