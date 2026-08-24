@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     let link: any = null
     const withExpiry = await admin
       .from('client_upload_links')
-      .select('user_id,client_id,expires_at')
+      .select('user_id,client_id,case_id,expires_at')
       .eq('token', token)
       .eq('active', true)
       .maybeSingle()
@@ -44,25 +44,26 @@ export async function POST(request: Request) {
     } else {
       const fallback = await admin
         .from('client_upload_links')
-        .select('user_id,client_id')
+        .select('user_id,client_id,case_id')
         .eq('token', token)
         .eq('active', true)
         .maybeSingle()
       link = fallback.data
     }
 
-    if (!link || (link.expires_at && new Date(link.expires_at).getTime() <= Date.now())) {
+    if (!link || !link.case_id || (link.expires_at && new Date(link.expires_at).getTime() <= Date.now())) {
       return NextResponse.json({ error: 'Link ungültig, abgelaufen oder deaktiviert.' }, { status: 404 })
     }
 
     if (questionId) {
       const { data: question } = await admin
-        .from('client_questions')
+        .from('mila_case_updates')
         .select('id')
         .eq('id', questionId)
         .eq('user_id', link.user_id)
-        .eq('client_id', link.client_id)
-        .neq('status', 'erledigt')
+        .eq('case_id', link.case_id)
+        .eq('kind', 'question')
+        .neq('status', 'done')
         .maybeSingle()
 
       if (!question) {
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
     const { error: documentError } = await admin.from('documents').insert({
       user_id: link.user_id,
       client_id: link.client_id,
+      case_id: link.case_id,
       title: filename.replace(/\.[^.]+$/, '') || 'Nachgereichter Beleg',
       partner: '',
       type: 'beleg',
@@ -111,15 +113,36 @@ export async function POST(request: Request) {
 
     if (questionId) {
       await admin
-        .from('client_questions')
-        .update({
-          answer: `Beleg nachgereicht: ${filename}`,
-          status: 'beantwortet',
-          answered_at: now.toISOString(),
-        })
+        .from('mila_case_updates')
+        .update({ status: 'done' })
         .eq('id', questionId)
         .eq('user_id', link.user_id)
-        .eq('client_id', link.client_id)
+        .eq('case_id', link.case_id)
+
+      await admin.from('mila_case_updates').insert({
+        user_id: link.user_id,
+        case_id: link.case_id,
+        kind: 'answer',
+        content: `Beleg nachgereicht: ${filename}${note ? ` – ${note}` : ''}`,
+        status: 'done',
+      })
+
+      const { count: remainingQuestions } = await admin
+        .from('mila_case_updates')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', link.user_id)
+        .eq('case_id', link.case_id)
+        .eq('kind', 'question')
+        .neq('status', 'done')
+
+      if ((remainingQuestions || 0) === 0) {
+        await admin
+          .from('mila_intake_cases')
+          .update({ status: 'in_progress' })
+          .eq('id', link.case_id)
+          .eq('user_id', link.user_id)
+          .eq('status', 'needs_info')
+      }
     }
 
     if ('expires_at' in link) {
