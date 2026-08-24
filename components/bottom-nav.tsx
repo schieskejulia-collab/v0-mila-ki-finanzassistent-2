@@ -65,6 +65,7 @@ export function BottomNav() {
 
   if (
     pathname === '/login' ||
+    pathname === '/sicher' ||
     pathname === '/angebot' ||
     pathname === '/kontakt' ||
     pathname === '/akquise'
