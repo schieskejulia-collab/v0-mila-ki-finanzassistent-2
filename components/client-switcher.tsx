@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Link2, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { NotificationBell } from '@/components/notification-bell'
 
 type MilaClient = {
   id: string
@@ -226,6 +227,7 @@ export function ClientSwitcher() {
         <Link href="/rueckfragen" aria-label="Rückfragen" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
           <MessageCircle className="h-5 w-5" />
         </Link>
+        <NotificationBell variant="toolbar" />
         <button type="button" aria-label="Upload-Link" onClick={() => void sharePortalLink()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md shadow-violet-200">
           <Link2 className="h-5 w-5" />
         </button>
