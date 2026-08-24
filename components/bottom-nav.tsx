@@ -8,10 +8,9 @@ import {
   FolderOpen,
   Home,
   Inbox,
-  PlusCircle,
+  BriefcaseBusiness,
   UserRound,
   Zap,
-  Search,
   ChevronRight,
 } from 'lucide-react'
 
@@ -20,20 +19,20 @@ const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 
 const navItems = [
   { href: '/', label: 'Start', icon: Home },
-  { href: '/jetzt', label: 'Vorgänge', icon: Zap },
+  { href: '/mandanten', label: 'Mandanten', icon: BriefcaseBusiness },
   { href: '/eingang', label: 'Eingang', icon: Inbox },
-  { href: '/neue-buchungen', label: 'Neu', icon: PlusCircle },
+  { href: '/jetzt', label: 'Vorgänge', icon: Zap },
   { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
-  { href: '/uebergaben', label: 'Archiv', icon: Archive },
+  { href: '/uebergaben', label: 'Übergabe', icon: Archive },
 ]
 
 const desktopItems = [
   { href: '/', label: 'Start', icon: Home },
+  { href: '/mandanten', label: 'Mandanten', icon: BriefcaseBusiness },
   { href: '/eingang', label: 'Eingang', icon: Inbox },
   { href: '/jetzt', label: 'Vorgänge', icon: Zap },
   { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
   { href: '/uebergaben', label: 'Übergaben', icon: Archive },
-  { href: '/suche', label: 'Suche', icon: Search },
 ]
 
 function active(pathname: string, href: string) {
