@@ -631,15 +631,11 @@ useEffect(() => {
       return
     }
 
-    // PersÃ¶nliche Profildaten lokal laden.
-    loadLocalProfile(uid)
-
-    // Finanzdaten danach verbindlich aus Supabase holen.
-    await fetchFinanceData(uid)
-
-    if (mounted) {
-      setProfileLoaded(true)
-    }
+    // Der aktuelle Mila-Arbeitsplatz lädt Akten, Vorgänge und Originale
+    // jeweils gezielt in seiner eigenen Ansicht. Der alte Finanzspeicher
+    // darf nach dem Login deshalb nicht mehr alle historischen Daten auf
+    // einmal in den mobilen Speicher ziehen.
+    if (mounted) setProfileLoaded(true)
   }
 
   void loadSessionData()
@@ -664,12 +660,9 @@ useEffect(() => {
           return
         }
 
-        loadLocalProfile(uid)
-        await fetchFinanceData(uid)
-
-        if (mounted) {
-          setProfileLoaded(true)
-        }
+        // Siehe Initial-Ladevorgang oben: kein globales Nachladen des
+        // stillgelegten Finanzspeichers nach einer Auth-Änderung.
+        if (mounted) setProfileLoaded(true)
       }, 0)
     }
   )
