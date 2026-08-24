@@ -15,6 +15,7 @@ export function NotificationBell({ variant = 'floating' }: NotificationBellProps
 
   const hidden =
     pathname === '/login' ||
+    pathname === '/sicher' ||
     pathname === '/register' ||
     pathname.startsWith('/demo') ||
     pathname.startsWith('/mandant-upload') ||
