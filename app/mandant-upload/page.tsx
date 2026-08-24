@@ -12,6 +12,7 @@ type Question = {
 export default function MandantUploadPage() {
   const [token, setToken] = useState('')
   const [clientName, setClientName] = useState('')
+  const [caseSubject, setCaseSubject] = useState('')
   const [questions, setQuestions] = useState<Question[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
@@ -48,6 +49,7 @@ export default function MandantUploadPage() {
     }
 
     setClientName(String(data?.clientName || ''))
+    setCaseSubject(String(data?.caseSubject || ''))
     setQuestions(Array.isArray(data?.questions) ? data.questions : [])
     setMessage('')
     setReady(true)
@@ -119,6 +121,7 @@ export default function MandantUploadPage() {
         <h1 className="mt-2 text-3xl font-black">Unterlagen & Rückfragen</h1>
         <p className="mt-3 text-sm font-semibold text-white/85">
           {clientName ? `Bereich für ${clientName}.` : 'Sicherer Bereich für Nachreichungen.'}
+          {caseSubject ? ` Vorgang: ${caseSubject}.` : ''}
         </p>
       </header>
 
