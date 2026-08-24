@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, FileText, FolderOpen, Loader2, Upload } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileText, FolderOpen, Loader2, Sparkles, Upload } from 'lucide-react'
 import { getActiveClientId, supabase } from '@/lib/supabase'
+import { checkDocumentQuality } from '@/lib/document-workflow'
 
 type CaseItem={id:string;subject:string;status:string;created_at:string}
+type DocumentSuggestion={title:string;partner:string;type:string;documentDate:string;note:string;source:'filename'|'pdf';needsReview:boolean}
 
 function inferDocumentType(name:string){
  const value=name.toLowerCase()
@@ -18,6 +20,22 @@ function inferDocumentType(name:string){
  return'unterlage'
 }
 
+function normalizeDocumentType(value:string){
+ const type=String(value||'').toLowerCase()
+ if(['rechnung','invoice'].includes(type))return'rechnung'
+ if(['mahnung','reminder'].includes(type))return'mahnung'
+ if(['bescheid','authority'].includes(type))return'bescheid'
+ if(['vertrag','contract'].includes(type))return'vertrag'
+ if(['schreiben','letter'].includes(type))return'schreiben'
+ if(['beleg','receipt'].includes(type))return'beleg'
+ return'unterlage'
+}
+
+function fromFilename(file:File):DocumentSuggestion{
+ const type=inferDocumentType(file.name)
+ return {title:file.name.replace(/\.[^.]+$/,''),partner:'',type,documentDate:'',note:type==='unterlage'?'Dateiname gibt keine sichere Dokumentart her.':'Aus dem Dateinamen vorgeschlagen.',source:'filename',needsReview:true}
+}
+
 async function hashFile(file:File){
  const buffer=await file.arrayBuffer()
  const digest=await crypto.subtle.digest('SHA-256',buffer)
@@ -26,22 +44,45 @@ async function hashFile(file:File){
 
 export default function NeueBuchungPage(){
  const router=useRouter()
- const[clientId,setClientId]=useState(''),[clientName,setClientName]=useState(''),[cases,setCases]=useState<CaseItem[]>([]),[caseId,setCaseId]=useState(''),[files,setFiles]=useState<File[]>([]),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
+ const[clientId,setClientId]=useState(''),[clientName,setClientName]=useState(''),[cases,setCases]=useState<CaseItem[]>([]),[caseId,setCaseId]=useState(''),[files,setFiles]=useState<File[]>([]),[suggestions,setSuggestions]=useState<DocumentSuggestion[]>([]),[reviewing,setReviewing]=useState(false),[reviewProgress,setReviewProgress]=useState(''),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
  useEffect(()=>{const id=getActiveClientId();setClientId(id);void load(id)},[])
  async function load(id:string){if(!id)return;const[c,cs]=await Promise.all([supabase.from('clients').select('id,name').eq('id',id).maybeSingle(),supabase.from('mila_intake_cases').select('id,subject,status,created_at').eq('client_id',id).order('created_at',{ascending:false}).limit(100)]);if(c.data?.name)setClientName(String(c.data.name));setCases((cs.data||[])as CaseItem[])}
  const selected=useMemo(()=>cases.find(i=>i.id===caseId)||null,[cases,caseId])
  async function callCore(payload:Record<string,unknown>){const{data:s}=await supabase.auth.getSession();const token=s.session?.access_token;if(!token)throw new Error('Bitte neu anmelden.');const r=await fetch('/api/mila/process',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)});const data=await r.json().catch(()=>({}));if(!r.ok||!data?.success)throw new Error(data?.error||'Mila konnte den Vorgang nicht verarbeiten.');return data}
+ async function reviewStack(){
+  if(!files.length)return
+  setError('');setReviewing(true);setReviewProgress('Mila erstellt sichere Vorschläge …')
+  const next=files.map(fromFilename);setSuggestions(next)
+  for(let index=0;index<files.length;index+=1){
+   const file=files[index]
+   setReviewProgress(`Unterlage ${index+1} von ${files.length} wird geprüft …`)
+   if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf'))continue
+   try{
+    const form=new FormData();form.set('file',file)
+    const response=await fetch('/api/mila/scan-document',{method:'POST',body:form})
+    const result=await response.json().catch(()=>({}))
+    if(!response.ok||!result?.success)continue
+    const data=result.data||{}
+    next[index]={title:String(data.title||next[index].title),partner:String(data.vendor||''),type:normalizeDocumentType(String(data.documentType||'')),documentDate:'',note:String(data.note||'PDF automatisch ausgelesen. Dokumentdatum bitte prüfen.'),source:'pdf',needsReview:true}
+    setSuggestions([...next])
+   }catch{ /* Der sichere Dateinamen-Vorschlag bleibt erhalten. */ }
+  }
+  setReviewProgress('Vorschläge bereit. Prüfe gelb markierte Unterlagen vor dem Übernehmen.')
+  setReviewing(false)
+ }
+ function updateSuggestion(index:number,patch:Partial<DocumentSuggestion>){setSuggestions(current=>current.map((item,itemIndex)=>{if(itemIndex!==index)return item;const next={...item,...patch};const quality=checkDocumentQuality({title:next.title,partner:next.partner,type:next.type,document_date:next.documentDate,file_name:files[index]?.name||'',file_url:'pending'});return{...next,needsReview:!quality.ok}}))}
  async function upload(){
   setError('');setNotice('')
   if(!clientId){setError('Bitte zuerst oben eine aktive Akte wählen.');return}
   if(!files.length){setError('Bitte mindestens eine Unterlage auswählen.');return}
+  if(suggestions.length!==files.length){setError('Bitte den Stapel zuerst prüfen. Mila übernimmt keine ungeprüften Sammel-Uploads.');return}
   if(files.some(f=>f.size>10*1024*1024)){setError('Eine Datei ist größer als 10 MB.');return}
   setSaving(true)
   const uploadedPaths:string[]=[];const insertedIds:string[]=[]
   let targetCaseId=caseId;let createdCase=false
   try{
    const{data:a}=await supabase.auth.getUser();if(!a.user)throw new Error('Bitte neu anmelden.')
-   const preparedFiles=[] as Array<{file:File;hash:string;type:string}>
+   const preparedFiles=[] as Array<{file:File;hash:string;type:string;suggestion:DocumentSuggestion}>
    const batchHashes=new Set<string>()
    for(const file of files){
     const hash=await hashFile(file)
@@ -50,14 +91,14 @@ export default function NeueBuchungPage(){
     const{data:duplicate,error:duplicateError}=await supabase.from('documents').select('id,title,file_name').eq('client_id',clientId).eq('content_hash',hash).limit(1).maybeSingle()
     if(duplicateError)throw duplicateError
     if(duplicate)throw new Error(`„${file.name}“ ist in dieser Akte bereits als identischer Dateiinhalt vorhanden. Mila legt kein zweites Original an.`)
-    preparedFiles.push({file,hash,type:inferDocumentType(file.name)})
+    preparedFiles.push({file,hash,type:suggestions[preparedFiles.length].type,suggestion:suggestions[preparedFiles.length]})
    }
    if(!targetCaseId){const created=await callCore({clientId,source:'upload',subject:`Unterlagen-Eingang · ${files.length} Datei${files.length===1?'':'en'}`,text:`Für ${clientName||'die aktive Akte'} sind ${files.length} neue Originalunterlagen eingegangen.`,fields:{category:'Dokumenten-Eingang'}});targetCaseId=String(created.caseId||'');createdCase=true;if(!targetCaseId)throw new Error('Mila konnte keinen Vorgang für den Upload anlegen.')}
    for(const item of preparedFiles){
     const file=item.file,documentId=crypto.randomUUID(),ext=file.name.split('.').pop()?.toLowerCase()||'bin',path=`${a.user.id}/${clientId}/${targetCaseId}/${documentId}.${ext}`
     const{error:up}=await supabase.storage.from('mila-dokumente').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});if(up)throw up;uploadedPaths.push(path)
-    const needsContext=item.type!=='unterlage'
-    const{error:db}=await supabase.from('documents').insert({id:documentId,user_id:a.user.id,client_id:clientId,case_id:targetCaseId,title:file.name,type:item.type,status:needsContext?'klaerung':'erfasst',file_name:file.name,file_url:path,content_hash:item.hash,note:'Original unverändert hochgeladen'})
+    const quality=checkDocumentQuality({title:item.suggestion.title,partner:item.suggestion.partner,type:item.type,document_date:item.suggestion.documentDate,file_name:file.name,file_url:path})
+    const{error:db}=await supabase.from('documents').insert({id:documentId,user_id:a.user.id,client_id:clientId,case_id:targetCaseId,title:item.suggestion.title||file.name,type:item.type,status:quality.ok?'erfasst':'klaerung',partner:item.suggestion.partner||null,document_date:item.suggestion.documentDate||null,file_name:file.name,file_url:path,content_hash:item.hash,note:`Original unverändert hochgeladen · ${item.suggestion.note}`})
     if(db){
      if((db as any).code==='23505')throw new Error(`„${file.name}“ wurde zwischenzeitlich bereits in dieser Akte gespeichert. Mila legt kein zweites Original an.`)
      throw db
@@ -65,7 +106,7 @@ export default function NeueBuchungPage(){
     insertedIds.push(documentId)
    }
    await callCore({caseId:targetCaseId,clientId,source:'upload',subject:selected?.subject||`Unterlagen-Eingang · ${files.length} Datei${files.length===1?'':'en'}`,text:`Originalunterlagen verbunden: ${files.map(f=>f.name).join(', ')}`,fields:{category:'Dokumenten-Eingang'}})
-   setNotice(`${files.length} Unterlage${files.length===1?'':'n'} erfolgreich mit genau einem Vorgang verbunden. Identische Datei-Dubletten werden technisch erkannt.`);setFiles([])
+   setNotice(`${files.length} Unterlage${files.length===1?'':'n'} erfolgreich mit genau einem Vorgang verbunden. Identische Datei-Dubletten werden technisch erkannt.`);setFiles([]);setSuggestions([]);setReviewProgress('')
    setTimeout(()=>router.push(`/dokumente?case=${targetCaseId}`),450)
   }catch(e:any){
    if(insertedIds.length)await supabase.from('documents').delete().in('id',insertedIds)
@@ -78,7 +119,8 @@ export default function NeueBuchungPage(){
  return <main className="min-h-screen bg-[#f8f7fb] px-4 pb-28 pt-6 text-slate-950 sm:px-6 lg:px-8 lg:pb-10"><div className="mx-auto max-w-4xl"><header className="border-b border-slate-200 pb-5"><p className="text-[11px] font-black uppercase tracking-[.18em] text-violet-600">Unterlagen-Eingang</p><h1 className="mt-1 text-3xl font-black lg:text-4xl">Unterlagen-Stapel hochladen</h1><p className="mt-2 text-sm font-semibold text-slate-500">Akte <span className="font-black text-slate-800">{clientName}</span> · Originale bleiben unverändert und landen vollständig in genau einem Vorgang.</p></header>
  {error&&<p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p>}{notice&&<p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</p>}
  <section className="mt-6 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]"><aside className="rounded-2xl border bg-white p-4 shadow-sm"><p className="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">Zu welchem Vorgang?</p><select value={caseId} onChange={e=>setCaseId(e.target.value)} className="mt-3 w-full rounded-xl border p-3 text-sm font-bold"><option value="">Neuen Vorgang aus Upload erstellen</option>{cases.filter(i=>i.status!=='done').map(i=><option key={i.id} value={i.id}>{i.subject}</option>)}</select><div className="mt-4 rounded-xl bg-violet-50 p-3 text-xs font-semibold leading-5 text-violet-800">{selected?'Der gesamte Stapel bleibt im gewählten Vorgang zusammen.':'Mila erstellt genau einen neuen Vorgang für den gesamten Stapel.'}</div><p className="mt-3 text-[10px] font-semibold leading-4 text-slate-400">Mila bildet vor dem Speichern einen SHA-256-Fingerabdruck. Identischer Dateiinhalt wird weder innerhalb des Stapels noch später in derselben Akte doppelt abgelegt.</p><p className="mt-2 text-[10px] font-semibold leading-4 text-slate-400">Wenn ein Upload technisch scheitert, entfernt Mila den begonnenen Stapel wieder – keine halben Vorgänge.</p></aside>
- <section className="rounded-2xl border bg-white p-5 shadow-sm"><label className="flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-6 text-center hover:bg-violet-50"><Upload className="h-9 w-9 text-violet-600"/><p className="mt-3 text-lg font-black">Dateien auswählen</p><p className="mt-1 text-xs font-semibold text-slate-500">Mehrere Bilder oder PDFs auf einmal · max. 10 MB je Datei</p><input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e=>setFiles(Array.from(e.target.files||[]))}/></label>
- {files.length>0&&<div className="mt-4 space-y-2"><div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.14em] text-slate-400">{files.length} ausgewählt</p><button onClick={()=>setFiles([])} className="text-xs font-black text-slate-500">Leeren</button></div>{files.map((f,i)=><div key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-xl border px-3 py-3"><FileText className="h-4 w-4 shrink-0 text-violet-500"/><span className="min-w-0 flex-1 truncate text-sm font-bold">{f.name}</span><CheckCircle2 className="h-4 w-4 text-emerald-500"/></div>)}</div>}
- <button onClick={()=>void upload()} disabled={saving||!files.length} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white disabled:bg-slate-200 disabled:text-slate-400">{saving?<><Loader2 className="h-4 w-4 animate-spin"/>Mila prüft und verbindet…</>:<><FolderOpen className="h-4 w-4"/>Stapel in Vorgang übernehmen</>}</button></section></section></div></main>
+ <section className="rounded-2xl border bg-white p-5 shadow-sm"><label className="flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-6 text-center hover:bg-violet-50"><Upload className="h-9 w-9 text-violet-600"/><p className="mt-3 text-lg font-black">Dateien auswählen</p><p className="mt-1 text-xs font-semibold text-slate-500">Mehrere Bilder oder PDFs auf einmal · max. 10 MB je Datei</p><input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e=>{setFiles(Array.from(e.target.files||[]));setSuggestions([]);setReviewProgress('')}}/></label>
+ {files.length>0&&<div className="mt-4 space-y-3"><div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[.14em] text-slate-400">{files.length} ausgewählt</p><button onClick={()=>{setFiles([]);setSuggestions([]);setReviewProgress('')}} className="text-xs font-black text-slate-500">Leeren</button></div><button onClick={()=>void reviewStack()} disabled={reviewing} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white disabled:bg-violet-200">{reviewing?<><Loader2 className="h-4 w-4 animate-spin"/>{reviewProgress}</>:<><Sparkles className="h-4 w-4"/>Stapel prüfen & Vorschläge erstellen</>}</button>{reviewProgress&&!reviewing&&<p className="rounded-xl bg-violet-50 p-3 text-xs font-bold text-violet-800">{reviewProgress}</p>}
+ {suggestions.length===files.length&&suggestions.map((suggestion,index)=><article key={`${files[index].name}-${index}`} className={`rounded-xl border p-3 ${suggestion.needsReview?'border-amber-200 bg-amber-50/40':'border-emerald-200 bg-emerald-50/30'}`}><div className="flex items-start gap-2"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-violet-500"/><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{files[index].name}</p><p className="mt-1 text-[10px] font-bold text-slate-500">{suggestion.source==='pdf'?'PDF ausgelesen – Vorschlag':'Dateiname geprüft – bitte einordnen'}</p></div>{suggestion.needsReview?<AlertTriangle className="h-4 w-4 shrink-0 text-amber-600"/>:<CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600"/>}</div><div className="mt-3 grid gap-2 sm:grid-cols-2"><input value={suggestion.title} onChange={e=>updateSuggestion(index,{title:e.target.value})} aria-label="Bezeichnung" className="w-full rounded-lg border bg-white px-3 py-2 text-xs font-bold" placeholder="Bezeichnung"/><select value={suggestion.type} onChange={e=>updateSuggestion(index,{type:e.target.value})} aria-label="Dokumentart" className="w-full rounded-lg border bg-white px-3 py-2 text-xs font-bold"><option value="unterlage">Unterlage / noch unklar</option><option value="rechnung">Rechnung</option><option value="mahnung">Mahnung</option><option value="bescheid">Bescheid</option><option value="vertrag">Vertrag</option><option value="schreiben">Schreiben</option><option value="beleg">Beleg</option></select><input value={suggestion.partner} onChange={e=>updateSuggestion(index,{partner:e.target.value})} aria-label="Absender" className="w-full rounded-lg border bg-white px-3 py-2 text-xs font-bold" placeholder="Absender / Partner"/><input type="date" value={suggestion.documentDate} onChange={e=>updateSuggestion(index,{documentDate:e.target.value})} aria-label="Dokumentdatum" className="w-full rounded-lg border bg-white px-3 py-2 text-xs font-bold"/></div>{suggestion.note&&<p className="mt-2 text-[10px] font-semibold leading-4 text-slate-500">{suggestion.note}</p>}</article>)}</div>}
+ <button onClick={()=>void upload()} disabled={saving||!files.length||suggestions.length!==files.length||reviewing} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white disabled:bg-slate-200 disabled:text-slate-400">{saving?<><Loader2 className="h-4 w-4 animate-spin"/>Mila übernimmt den Stapel…</>:<><FolderOpen className="h-4 w-4"/>Geprüften Stapel in Vorgang übernehmen</>}</button></section></section></div></main>
 }
