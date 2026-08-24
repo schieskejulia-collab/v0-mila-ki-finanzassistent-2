@@ -12,6 +12,14 @@ type MilaClient = {
   createdAt: string
 }
 
+type PortalCase = {
+  id: string
+  client_id: string
+  subject: string
+  status: string
+  created_at: string
+}
+
 type Takeover = {
   clientId: string
   startDate: string
@@ -75,7 +83,9 @@ function takeoverLabel(value: Takeover['completeness']) {
 
 export default function MandantenPage() {
   const [clients, setClients] = useState<MilaClient[]>([])
+  const [cases, setCases] = useState<PortalCase[]>([])
   const [activeClientId, setActiveClientId] = useState('')
+  const [portalCaseId, setPortalCaseId] = useState('')
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
   const [note, setNote] = useState('')
@@ -95,20 +105,28 @@ export default function MandantenPage() {
       setActiveClientId(savedActive)
       setTakeovers(readTakeovers())
 
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id,name,contact,note,created_at')
-        .order('created_at', { ascending: false })
+      const [clientResult, caseResult] = await Promise.all([
+        supabase.from('clients').select('id,name,contact,note,created_at').order('created_at', { ascending: false }),
+        savedActive
+          ? supabase.from('mila_intake_cases').select('id,client_id,subject,status,created_at').eq('client_id', savedActive).order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+      ])
 
-      if (!error && data) {
-        const remoteClients = data.map(toClient)
+      if (!clientResult.error && clientResult.data) {
+        const remoteClients = clientResult.data.map(toClient)
         setClients(remoteClients)
         window.localStorage.setItem(CLIENTS_KEY, JSON.stringify(remoteClients))
+        const nextCases = (caseResult.data || []) as PortalCase[]
+        setCases(nextCases)
+        setPortalCaseId((current) => current && nextCases.some((item) => item.id === current)
+          ? current
+          : nextCases.find((item) => item.status !== 'done')?.id || nextCases[0]?.id || '')
         setLoading(false)
         return
       }
 
       setClients(readLocalClients())
+      setCases([])
       setLoading(false)
     }
 
@@ -201,48 +219,56 @@ export default function MandantenPage() {
     window.location.assign('/mandanten')
   }
 
-  async function createPortalLink(client: MilaClient) {
-    setLinkStatus((current) => ({ ...current, [client.id]: 'Erstelle sicheren Link …' }))
+  async function createPortalLink(client: MilaClient, caseId: string) {
+    const statusKey = `${client.id}:${caseId}`
+    if (!caseId) {
+      setLinkStatus((current) => ({ ...current, [client.id]: 'Bitte zuerst einen Vorgang auswählen.' }))
+      return
+    }
+    setLinkStatus((current) => ({ ...current, [statusKey]: 'Erstelle sicheren Link …' }))
     const { data: sessionData } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
     if (!accessToken) {
-      setLinkStatus((current) => ({ ...current, [client.id]: 'Bitte neu anmelden.' }))
+      setLinkStatus((current) => ({ ...current, [statusKey]: 'Bitte neu anmelden.' }))
       return
     }
 
     const response = await fetch('/api/client-portal/link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ clientId: client.id }),
+      body: JSON.stringify({ clientId: client.id, caseId }),
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.url) {
-      setLinkStatus((current) => ({ ...current, [client.id]: data?.error || 'Link konnte nicht erstellt werden.' }))
+      setLinkStatus((current) => ({ ...current, [statusKey]: data?.error || 'Link konnte nicht erstellt werden.' }))
       return
     }
 
     try {
       if (navigator.share) {
-        await navigator.share({ title: `Unterlagen für ${client.name}`, text: 'Hier kannst du deine Unterlagen sicher einreichen:', url: data.url })
-        setLinkStatus((current) => ({ ...current, [client.id]: 'Link bereit zum Teilen ✓' }))
+        await navigator.share({ title: `Unterlagen für ${data.caseSubject || client.name}`, text: `Hier kannst du Unterlagen sicher für „${data.caseSubject || 'diesen Vorgang'}“ einreichen:`, url: data.url })
+        setLinkStatus((current) => ({ ...current, [statusKey]: 'Link bereit zum Teilen ✓' }))
       } else {
         await navigator.clipboard.writeText(data.url)
-        setLinkStatus((current) => ({ ...current, [client.id]: 'Link kopiert ✓' }))
+        setLinkStatus((current) => ({ ...current, [statusKey]: 'Link kopiert ✓' }))
       }
     } catch (error: any) {
       if (error?.name === 'AbortError') {
-        setLinkStatus((current) => ({ ...current, [client.id]: 'Teilen abgebrochen – Link bleibt verfügbar.' }))
+        setLinkStatus((current) => ({ ...current, [statusKey]: 'Teilen abgebrochen – Link bleibt verfügbar.' }))
         return
       }
       try {
         await navigator.clipboard.writeText(data.url)
-        setLinkStatus((current) => ({ ...current, [client.id]: 'Link kopiert ✓' }))
+        setLinkStatus((current) => ({ ...current, [statusKey]: 'Link kopiert ✓' }))
       } catch {
         window.prompt('Mandanten-Link kopieren:', data.url)
-        setLinkStatus((current) => ({ ...current, [client.id]: 'Link erstellt ✓' }))
+        setLinkStatus((current) => ({ ...current, [statusKey]: 'Link erstellt ✓' }))
       }
     }
   }
+
+  const activeCases = useMemo(() => cases.filter((item) => item.status !== 'done'), [cases])
+  const selectedPortalCase = cases.find((item) => item.id === portalCaseId) || null
 
   async function deleteClient(client: MilaClient) {
     const confirmed = window.confirm(`${client.name} wirklich aus der Mandantenliste entfernen? Die bereits zugeordneten Unterlagen werden dabei nicht gelöscht.`)
@@ -275,11 +301,19 @@ export default function MandantenPage() {
           <h2 className="mt-2 text-2xl font-black">{activeClient.name}</h2>
           <p className="mt-2 text-sm font-semibold text-white/80">Alles hier wird eindeutig diesem Mandanten zugeordnet.</p>
           <div className="mt-5 space-y-2">
-            <button type="button" onClick={() => void createPortalLink(activeClient)} className="w-full rounded-2xl bg-white px-4 py-4 text-base font-black text-violet-700">🔗 Upload-Link erstellen & teilen</button>
+            {activeCases.length > 0 ? <>
+              <label className="block text-xs font-black uppercase tracking-[.12em] text-white/70">Vorgang für diesen Link
+                <select value={portalCaseId} onChange={(event) => setPortalCaseId(event.target.value)} className="mt-2 w-full rounded-2xl border-0 bg-white px-4 py-4 text-base font-black text-slate-950">
+                  {activeCases.map((item) => <option key={item.id} value={item.id}>{item.subject}</option>)}
+                </select>
+              </label>
+              <p className="rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-relaxed text-white/85">Der Mandant sieht und beantwortet nur Rückfragen aus diesem einen Vorgang. Nachgereichte Dateien landen ebenfalls genau hier.</p>
+              <button type="button" onClick={() => void createPortalLink(activeClient, portalCaseId)} className="w-full rounded-2xl bg-white px-4 py-4 text-base font-black text-violet-700">🔗 Sicheren Vorgangs-Link teilen</button>
+            </> : <div className="rounded-2xl bg-white/10 p-4"><p className="text-sm font-black">Noch kein aktiver Vorgang.</p><p className="mt-1 text-xs font-semibold text-white/80">Lege zuerst im Eingang ein konkretes Anliegen an. Erst dann kann Mila einen sicheren Link eindeutig zuordnen.</p><Link href="/eingang" className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-xs font-black text-violet-700">Zum Eingang</Link></div>}
             <Link href="/rueckfragen" className="block w-full rounded-2xl bg-violet-500 px-4 py-4 text-center text-base font-black text-white ring-1 ring-white/20">💬 Allgemeine Rückfrage erstellen</Link>
             <Link href="/dokumente" className="block w-full rounded-2xl bg-violet-500 px-4 py-4 text-center text-base font-black text-white ring-1 ring-white/20">📁 Mandantenmappe öffnen</Link>
           </div>
-          {linkStatus[activeClient.id] && <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-center text-xs font-bold text-white">{linkStatus[activeClient.id]}</p>}
+          {selectedPortalCase && linkStatus[`${activeClient.id}:${selectedPortalCase.id}`] && <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-center text-xs font-bold text-white">{linkStatus[`${activeClient.id}:${selectedPortalCase.id}`]}</p>}
         </section>
       )}
 
@@ -339,8 +373,7 @@ export default function MandantenPage() {
               <div className="flex items-start justify-between gap-3"><div><p className="text-lg font-black">{client.name}</p>{client.contact && <p className="mt-1 text-sm font-semibold text-slate-500">{client.contact}</p>}</div>{selected && <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-black text-white">Aktiv</span>}</div>
               {client.note && <p className="mt-3 rounded-2xl bg-white/80 p-3 text-sm font-semibold leading-relaxed text-slate-600">{client.note}</p>}
               {takeovers[client.id] && <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">✓ Übernahmebestand dokumentiert</p>}
-              <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => selectClient(client)} className={`rounded-xl px-3 py-3 text-sm font-black ${selected ? 'bg-white text-violet-700 ring-1 ring-violet-200' : 'bg-violet-600 text-white'}`}>{selected ? 'Aktiv' : 'Auswählen'}</button><button type="button" onClick={() => void createPortalLink(client)} className="rounded-xl bg-white px-3 py-3 text-sm font-black text-violet-700 ring-1 ring-violet-200">Upload-Link</button></div>
-              {linkStatus[client.id] && <p className="mt-2 text-center text-xs font-bold text-slate-500">{linkStatus[client.id]}</p>}
+              <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => selectClient(client)} className={`rounded-xl px-3 py-3 text-sm font-black ${selected ? 'bg-white text-violet-700 ring-1 ring-violet-200' : 'bg-violet-600 text-white'}`}>{selected ? 'Aktiv' : 'Auswählen'}</button><Link href={selected ? '/eingang' : '/mandanten'} className="rounded-xl bg-white px-3 py-3 text-center text-sm font-black text-violet-700 ring-1 ring-violet-200">{selected ? 'Vorgänge' : 'Erst auswählen'}</Link></div>
               <button type="button" onClick={() => void deleteClient(client)} className="mt-3 w-full rounded-xl bg-white px-3 py-3 text-sm font-black text-red-500 ring-1 ring-red-100">Entfernen</button>
             </article>
           )
