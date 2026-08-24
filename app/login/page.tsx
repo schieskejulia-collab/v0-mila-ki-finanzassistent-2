@@ -77,7 +77,7 @@ export default function LoginPage() {
       profile?.display_name?.trim() &&
       profile?.user_status?.trim()
 
-    window.location.assign(profileComplete ? '/' : '/profil')
+    window.location.assign(profileComplete ? '/sicher' : '/profil')
   }
 
   return (
