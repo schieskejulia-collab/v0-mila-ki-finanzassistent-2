@@ -25,8 +25,9 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}))
     const clientId = String(body?.clientId || '').trim()
-    if (!clientId) {
-      return NextResponse.json({ error: 'Mandant fehlt.' }, { status: 400 })
+    const caseId = String(body?.caseId || '').trim()
+    if (!clientId || !caseId) {
+      return NextResponse.json({ error: 'Akte oder Vorgang fehlt.' }, { status: 400 })
     }
 
     const { data: client, error: clientError } = await admin
@@ -40,6 +41,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Mandant nicht gefunden.' }, { status: 404 })
     }
 
+    const { data: caseItem, error: caseError } = await admin
+      .from('mila_intake_cases')
+      .select('id,subject')
+      .eq('id', caseId)
+      .eq('client_id', clientId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (caseError || !caseItem) {
+      return NextResponse.json({ error: 'Vorgang nicht gefunden.' }, { status: 404 })
+    }
+
     const now = new Date()
     const expiresAt = new Date(now.getTime() + LINK_TTL_MS).toISOString()
 
@@ -49,6 +62,7 @@ export async function POST(request: Request) {
       .select('token,expires_at')
       .eq('user_id', user.id)
       .eq('client_id', clientId)
+      .eq('case_id', caseId)
       .eq('active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -62,6 +76,7 @@ export async function POST(request: Request) {
         .select('token')
         .eq('user_id', user.id)
         .eq('client_id', clientId)
+        .eq('case_id', caseId)
         .eq('active', true)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -82,18 +97,19 @@ export async function POST(request: Request) {
         .update({ active: false })
         .eq('user_id', user.id)
         .eq('client_id', clientId)
+        .eq('case_id', caseId)
         .eq('active', true)
 
       let createdResult = await admin
         .from('client_upload_links')
-        .insert({ user_id: user.id, client_id: clientId, active: true, expires_at: expiresAt })
+        .insert({ user_id: user.id, client_id: clientId, case_id: caseId, active: true, expires_at: expiresAt })
         .select('token,expires_at')
         .single()
 
       if (createdResult.error) {
         createdResult = await admin
           .from('client_upload_links')
-          .insert({ user_id: user.id, client_id: clientId, active: true })
+          .insert({ user_id: user.id, client_id: clientId, case_id: caseId, active: true })
           .select('token')
           .single() as any
       }
@@ -110,6 +126,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         clientName: client.name,
+        caseSubject: caseItem.subject,
         url: `${origin}/mandant-upload?token=${encodeURIComponent(portalToken)}`,
         expiresAt: portalExpiresAt,
       },
