@@ -28,7 +28,7 @@ export default function KontaktPage() {
   const [company, setCompany] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
-  const [copied, setCopied] = useState(false)
+  const contactEmail = 'schieskejulia@gmx.de'
 
   const requestText = useMemo(() => {
     const roleLabel =
@@ -53,10 +53,9 @@ export default function KontaktPage() {
     ].join('\n')
   }, [company, email, message, name, role])
 
-  async function copyRequest() {
-    await navigator.clipboard.writeText(requestText)
-    setCopied(true)
-  }
+  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
+    `Mila-Pilot-Anfrage · ${role === 'kanzlei' ? 'Steuerkanzlei' : 'Betrieb'}`
+  )}&body=${encodeURIComponent(requestText)}`
 
   return (
     <main className="min-h-screen bg-[#fbf9ff] px-4 py-6 text-slate-950">
@@ -154,17 +153,16 @@ export default function KontaktPage() {
             {requestText}
           </pre>
 
-          <button
-            type="button"
-            onClick={copyRequest}
-            className="mt-4 w-full rounded-2xl bg-violet-600 px-4 py-4 text-sm font-black text-white"
+          <a
+            href={mailtoHref}
+            className="mt-4 block w-full rounded-2xl bg-violet-600 px-4 py-4 text-center text-sm font-black text-white"
           >
-            {copied ? 'Anfrage kopiert' : 'Anfrage kopieren'}
-          </button>
+            Anfrage per E-Mail senden
+          </a>
 
           <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
-            Der nächste technische Schritt ist ein echter Versandweg, sobald
-            deine finale Kontaktadresse oder dein bevorzugtes Formular feststeht.
+            Die Anfrage wird als vorbereitete E-Mail an Julia geöffnet. Erst nach
+            dem Absenden im eigenen Mailprogramm wird sie verschickt.
           </p>
         </section>
       </section>
