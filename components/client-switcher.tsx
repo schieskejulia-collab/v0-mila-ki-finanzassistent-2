@@ -57,6 +57,7 @@ export function ClientSwitcher() {
 
   const hidden =
     pathname === '/login' ||
+    pathname === '/sicher' ||
     pathname === '/register' ||
     pathname.startsWith('/demo') ||
     pathname.startsWith('/datenschutz') ||
