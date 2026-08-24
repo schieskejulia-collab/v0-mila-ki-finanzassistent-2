@@ -2,12 +2,9 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
-  const router = useRouter()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -52,33 +49,35 @@ export default function LoginPage() {
       return
     }
 
-    // Kurz warten bis Supabase die Session gesetzt hat
+    // Nach dem Login bewusst einen vollständigen Seitenaufruf nutzen.
+    // Das vermeidet einen anfälligen clientseitigen Routenwechsel direkt
+    // während Supabase die Session im Browser speichert.
     const {
-  data: { session },
-} = await supabase.auth.getSession()
+      data: { session },
+    } = await supabase.auth.getSession()
 
-const userId = session?.user?.id
+    const userId = session?.user?.id
 
-if (!userId) {
-  setMessage('Login fehlgeschlagen.')
-  setLoading(false)
-  return
-}
+    if (!userId) {
+      setMessage('Login fehlgeschlagen.')
+      setLoading(false)
+      return
+    }
 
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('display_name, user_status')
-  .eq('id', userId)
-  .maybeSingle()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, user_status')
+      .eq('id', userId)
+      .maybeSingle()
 
-setMessage('Login erfolgreich.')
-setLoading(false)
+    setMessage('Login erfolgreich.')
+    setLoading(false)
 
-const profileComplete =
-  profile?.display_name?.trim() &&
-  profile?.user_status?.trim()
+    const profileComplete =
+      profile?.display_name?.trim() &&
+      profile?.user_status?.trim()
 
-router.replace(profileComplete ? '/' : '/profil')
+    window.location.assign(profileComplete ? '/' : '/profil')
   }
 
   return (
