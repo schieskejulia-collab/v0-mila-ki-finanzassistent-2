@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
-import { useFinance } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
-import { buildDashboardModel } from '@/lib/dashboard-model'
 
 export default function DashboardPage() {
-  const finance = useFinance()
   const router = useRouter()
-  const [isClient, setIsClient] = useState(false)
+  const [ready, setReady] = useState(false)
+  const [userName, setUserName] = useState('Julia')
 
   useEffect(() => {
     async function checkLogin() {
@@ -23,19 +21,26 @@ export default function DashboardPage() {
         return
       }
 
-      setIsClient(true)
+      const name = String(session.user.user_metadata?.full_name || session.user.user_metadata?.name || '').trim()
+      if (name) setUserName(name.split(/\s+/)[0])
+      setReady(true)
     }
 
     checkLogin()
   }, [router])
 
-  if (!isClient || !finance.summary) {
+  if (!ready) {
     return <DashboardLoading />
   }
 
-  const model = buildDashboardModel(finance)
+  return <DashboardContent model={{ greeting: greeting(), userName }} />
+}
 
-  return <DashboardContent model={model} />
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Guten Morgen'
+  if (hour < 18) return 'Guten Tag'
+  return 'Guten Abend'
 }
 
 function DashboardLoading() {
