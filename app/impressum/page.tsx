@@ -9,21 +9,26 @@ export default function ImpressumPage() {
         <h1 className="text-3xl font-black tracking-tight">Impressum</h1>
 
         <div className="space-y-2 text-sm leading-6 text-slate-700">
-          <p>[DEIN NAME / UNTERNEHMENSNAME]</p>
-          <p>[ANSCHRIFT]</p>
+          <p>Julia Schieske</p>
+          <p>[vollständige ladungsfähige Anschrift ergänzen]</p>
           <p>Deutschland</p>
         </div>
 
         <div className="space-y-2 text-sm leading-6 text-slate-700">
           <h2 className="font-black text-slate-950">Kontakt</h2>
-          <p>E-Mail: [E-MAIL-ADRESSE]</p>
+          <p>
+            E-Mail:{' '}
+            <a className="font-semibold text-violet-700 underline underline-offset-4" href="mailto:schieskejulia@gmx.de">
+              schieskejulia@gmx.de
+            </a>
+          </p>
         </div>
 
         <div className="space-y-2 text-sm leading-6 text-slate-700">
           <h2 className="font-black text-slate-950">
             Verantwortlich für den Inhalt
           </h2>
-          <p>[DEIN NAME], [ANSCHRIFT]</p>
+          <p>Julia Schieske, [vollständige ladungsfähige Anschrift ergänzen]</p>
         </div>
 
         <p className="rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-600">
