@@ -81,11 +81,25 @@ function takeoverLabel(value: Takeover['completeness']) {
   return 'Vollständigkeit bei Übernahme unbekannt'
 }
 
+function toTakeover(row: any): Takeover {
+  return {
+    clientId: String(row.client_id),
+    startDate: String(row.start_date || '').slice(0, 10),
+    period: String(row.period_start || '').slice(0, 7),
+    existingFiles: row.existing_files as Takeover['existingFiles'],
+    completeness: row.completeness as Takeover['completeness'],
+    handoffRhythm: row.handoff_rhythm as Takeover['handoffRhythm'],
+    note: String(row.note || ''),
+    recordedAt: String(row.recorded_at || new Date().toISOString()),
+  }
+}
+
 export default function MandantenPage() {
   const [clients, setClients] = useState<MilaClient[]>([])
   const [cases, setCases] = useState<PortalCase[]>([])
   const [activeClientId, setActiveClientId] = useState('')
   const [portalCaseId, setPortalCaseId] = useState('')
+  const [editingTakeover, setEditingTakeover] = useState(false)
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
   const [note, setNote] = useState('')
@@ -103,19 +117,23 @@ export default function MandantenPage() {
     async function loadClients() {
       const savedActive = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
       setActiveClientId(savedActive)
-      setTakeovers(readTakeovers())
-
-      const [clientResult, caseResult] = await Promise.all([
+      const [clientResult, caseResult, takeoverResult] = await Promise.all([
         supabase.from('clients').select('id,name,contact,note,created_at').order('created_at', { ascending: false }),
         savedActive
           ? supabase.from('mila_intake_cases').select('id,client_id,subject,status,created_at').eq('client_id', savedActive).order('created_at', { ascending: false })
           : Promise.resolve({ data: [], error: null }),
+        supabase.from('mila_client_takeovers').select('client_id,start_date,period_start,existing_files,completeness,handoff_rhythm,note,recorded_at').order('updated_at', { ascending: false }),
       ])
 
       if (!clientResult.error && clientResult.data) {
         const remoteClients = clientResult.data.map(toClient)
         setClients(remoteClients)
         window.localStorage.setItem(CLIENTS_KEY, JSON.stringify(remoteClients))
+        const persistedTakeovers = Object.fromEntries((takeoverResult.data || []).map((row: any) => {
+          const takeover = toTakeover(row)
+          return [takeover.clientId, takeover]
+        })) as Record<string, Takeover>
+        setTakeovers(takeoverResult.error ? readTakeovers() : persistedTakeovers)
         const nextCases = (caseResult.data || []) as PortalCase[]
         setCases(nextCases)
         setPortalCaseId((current) => current && nextCases.some((item) => item.id === current)
@@ -177,13 +195,20 @@ export default function MandantenPage() {
     setNote('')
   }
 
-  function saveTakeover() {
+  async function saveTakeover() {
     if (!activeClient) return
     if (!startDate || !period) {
       window.alert('Bitte Bearbeitungsbeginn und Startzeitraum angeben.')
       return
     }
 
+    const { data: authData } = await supabase.auth.getUser()
+    if (!authData.user) {
+      window.alert('Bitte erneut anmelden.')
+      return
+    }
+
+    const now = new Date().toISOString()
     const entry: Takeover = {
       clientId: activeClient.id,
       startDate,
@@ -192,11 +217,28 @@ export default function MandantenPage() {
       completeness,
       handoffRhythm,
       note: takeoverNote.trim(),
-      recordedAt: new Date().toISOString(),
+      recordedAt: activeTakeover?.recordedAt || now,
+    }
+    const { error } = await supabase.from('mila_client_takeovers').upsert({
+      user_id: authData.user.id,
+      client_id: entry.clientId,
+      start_date: entry.startDate,
+      period_start: `${entry.period}-01`,
+      existing_files: entry.existingFiles,
+      completeness: entry.completeness,
+      handoff_rhythm: entry.handoffRhythm,
+      note: entry.note || null,
+      recorded_at: entry.recordedAt,
+      updated_at: now,
+    }, { onConflict: 'user_id,client_id' })
+    if (error) {
+      window.alert(`Übernahmebestand konnte nicht gespeichert werden: ${error.message}`)
+      return
     }
     const next = { ...takeovers, [activeClient.id]: entry }
     setTakeovers(next)
     window.localStorage.setItem(TAKEOVER_KEY, JSON.stringify(next))
+    setEditingTakeover(false)
   }
 
   function editTakeover() {
@@ -207,15 +249,13 @@ export default function MandantenPage() {
     setCompleteness(activeTakeover.completeness)
     setHandoffRhythm(activeTakeover.handoffRhythm)
     setTakeoverNote(activeTakeover.note || '')
-    const next = { ...takeovers }
-    delete next[activeTakeover.clientId]
-    setTakeovers(next)
-    window.localStorage.setItem(TAKEOVER_KEY, JSON.stringify(next))
+    setEditingTakeover(true)
   }
 
   function selectClient(client: MilaClient) {
     window.localStorage.setItem(ACTIVE_CLIENT_KEY, client.id)
     setActiveClientId(client.id)
+    setEditingTakeover(false)
     window.location.assign('/mandanten')
   }
 
@@ -321,7 +361,7 @@ export default function MandantenPage() {
         <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Mandanten-Onboarding</p>
           <h2 className="mt-2 text-xl font-black">Übernahmebestand</h2>
-          {activeTakeover ? (
+          {activeTakeover && !editingTakeover ? (
             <div className="mt-4 space-y-3">
               <div className="rounded-2xl bg-emerald-50 p-4">
                 <p className="text-sm font-black text-emerald-800">✓ Übernahme dokumentiert</p>
@@ -346,7 +386,7 @@ export default function MandantenPage() {
               <label className="block text-xs font-black text-slate-500">Vollständigkeit bei Übernahme<select value={completeness} onChange={(e) => setCompleteness(e.target.value as Takeover['completeness'])} className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base font-semibold"><option value="unknown">Unbekannt / noch zu prüfen</option><option value="yes">Mandant gibt Bestand als vollständig an</option><option value="no">Bestand ist noch unvollständig</option></select></label>
               <label className="block text-xs font-black text-slate-500">Übergaberhythmus<select value={handoffRhythm} onChange={(e) => setHandoffRhythm(e.target.value as Takeover['handoffRhythm'])} className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 text-base font-semibold"><option value="kanzlei">Laut Kanzlei</option><option value="monthly">Monatlich</option><option value="quarterly">Quartalsweise</option><option value="halfyear">Halbjährlich</option><option value="yearly">Jährlich</option><option value="individual">Individuell</option></select></label>
               <textarea value={takeoverNote} onChange={(e) => setTakeoverNote(e.target.value)} placeholder="Notiz zur Übernahme, z. B. welche Unterlagen noch nachgereicht werden" rows={3} className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-base font-semibold" />
-              <button type="button" onClick={saveTakeover} className="w-full rounded-2xl bg-emerald-600 px-4 py-4 text-base font-black text-white">Übernahmebestand festhalten</button>
+              <button type="button" onClick={() => void saveTakeover()} className="w-full rounded-2xl bg-emerald-600 px-4 py-4 text-base font-black text-white">{editingTakeover ? 'Änderung dauerhaft speichern' : 'Übernahmebestand dauerhaft festhalten'}</button>
             </div>
           )}
         </section>
