@@ -10,7 +10,8 @@ export default function ImpressumPage() {
 
         <div className="space-y-2 text-sm leading-6 text-slate-700">
           <p>Julia Schieske</p>
-          <p>[vollständige ladungsfähige Anschrift ergänzen]</p>
+          <p>Bergstraße 35b</p>
+          <p>39576 Stendal</p>
           <p>Deutschland</p>
         </div>
 
@@ -28,7 +29,7 @@ export default function ImpressumPage() {
           <h2 className="font-black text-slate-950">
             Verantwortlich für den Inhalt
           </h2>
-          <p>Julia Schieske, [vollständige ladungsfähige Anschrift ergänzen]</p>
+          <p>Julia Schieske, Bergstraße 35b, 39576 Stendal</p>
         </div>
 
         <p className="rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-600">
