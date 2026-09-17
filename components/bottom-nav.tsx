@@ -1,157 +1,48 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import {
-  Archive,
-  FolderOpen,
-  Home,
-  Inbox,
-  BriefcaseBusiness,
-  UserRound,
-  Zap,
-  ChevronRight,
-} from 'lucide-react'
-
-const CLIENTS_KEY = 'mila-clients-v1'
-const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
+import { FileText, Home, MessageCircleHeart, UserRound, WalletCards } from 'lucide-react'
 
 const navItems = [
-  { href: '/', label: 'Start', icon: Home },
-  { href: '/mandanten', label: 'Mandanten', icon: BriefcaseBusiness },
-  { href: '/eingang', label: 'Eingang', icon: Inbox },
-  { href: '/jetzt', label: 'Vorgänge', icon: Zap },
-  { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
-  { href: '/uebergaben', label: 'Übergabe', icon: Archive },
-]
-
-const desktopItems = [
-  { href: '/', label: 'Start', icon: Home },
-  { href: '/mandanten', label: 'Mandanten', icon: BriefcaseBusiness },
-  { href: '/eingang', label: 'Eingang', icon: Inbox },
-  { href: '/jetzt', label: 'Vorgänge', icon: Zap },
-  { href: '/dokumente', label: 'Mappe', icon: FolderOpen },
-  { href: '/uebergaben', label: 'Übergaben', icon: Archive },
+  { href: '/sicher', label: 'Start', icon: Home },
+  { href: '/buchungen', label: 'Finanzen', icon: WalletCards },
+  { href: '/dokumente', label: 'Dokumente', icon: FileText },
+  { href: '/chat', label: 'Mila fragen', icon: MessageCircleHeart },
+  { href: '/profil', label: 'Profil', icon: UserRound },
 ]
 
 function active(pathname: string, href: string) {
-  return href === '/'
-    ? pathname === '/'
-    : pathname === href || pathname.startsWith(`${href}/`)
-}
-
-function readActiveClientName() {
-  if (typeof window === 'undefined') return ''
-  try {
-    const activeId = window.localStorage.getItem(ACTIVE_CLIENT_KEY) || ''
-    const raw = window.localStorage.getItem(CLIENTS_KEY)
-    const clients = raw ? JSON.parse(raw) : []
-    if (!activeId || !Array.isArray(clients)) return ''
-    const activeClient = clients.find((item: any) => String(item?.id || '') === activeId)
-    return activeClient?.name ? String(activeClient.name) : ''
-  } catch {
-    return ''
-  }
+  return pathname === href || pathname.startsWith(`${href}/`)
 }
 
 export function BottomNav() {
   const pathname = usePathname()
-  const [activeClientName, setActiveClientName] = useState('')
-
-  useEffect(() => {
-    setActiveClientName(readActiveClientName())
-  }, [pathname])
-
-  if (
-    pathname === '/login' ||
-    pathname === '/sicher' ||
-    pathname === '/angebot' ||
-    pathname === '/kontakt' ||
-    pathname === '/akquise'
-  ) return null
+  if (['/login', '/angebot', '/kontakt', '/akquise'].includes(pathname)) return null
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[208px] border-r border-slate-200 bg-white lg:flex lg:flex-col">
-        <div className="px-5 pb-4 pt-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-sm font-black text-white">M</div>
-            <div>
-              <span className="block text-lg font-black tracking-tight text-slate-950">Mila</span>
-              <span className="block text-[8px] font-black uppercase tracking-[0.16em] text-slate-400">Arbeitsplatz</span>
-            </div>
-          </Link>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-2">
-          <div className="space-y-1">
-            {desktopItems.map((item) => {
-              const Icon = item.icon
-              const isActive = active(pathname, item.href)
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={
-                    isActive
-                      ? 'flex items-center gap-3 rounded-xl bg-slate-950 px-3.5 py-2.5 text-sm font-black text-white'
-                      : 'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950'
-                  }
-                >
-                  <Icon className="h-4 w-4" strokeWidth={2} />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </div>
-
-          <div className="my-5 border-t border-slate-100" />
-          <p className="px-2 text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">Aktive Akte</p>
-          <Link
-            href="/dokumente"
-            className="mt-2 block rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-violet-200 hover:bg-violet-50/50"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-950">{activeClientName || 'Akte auswählen'}</p>
-                <p className="mt-0.5 text-[9px] font-semibold text-slate-400">{activeClientName ? 'Arbeitsakte geöffnet' : 'Noch keine aktive Akte'}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
-            </div>
-          </Link>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[208px] border-r border-violet-100 bg-white lg:flex lg:flex-col">
+        <Link href="/sicher" className="flex items-center gap-3 px-5 pb-5 pt-7">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-600 text-base font-black text-white">M</span>
+          <span><span className="block text-lg font-black tracking-tight">Mila</span><span className="block text-[9px] font-bold text-slate-400">Damit dein Kopf freier wird.</span></span>
+        </Link>
+        <nav className="flex-1 space-y-1 px-3 py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive = active(pathname, item.href)
+            return <Link key={item.href} href={item.href} className={isActive ? 'flex items-center gap-3 rounded-xl bg-violet-600 px-3.5 py-3 text-sm font-black text-white' : 'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 hover:bg-violet-50'}><Icon className="h-4 w-4" />{item.label}</Link>
+          })}
         </nav>
-
-        <div className="border-t border-slate-100 p-3">
-          <Link
-            href="/profil"
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            <UserRound className="h-4 w-4" />
-            Einstellungen
-          </Link>
-        </div>
+        <div className="border-t border-violet-50 p-4 text-xs font-semibold leading-5 text-slate-400">Finanzen und Behörden im Blick.</div>
       </aside>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(.6rem,env(safe-area-inset-bottom))] lg:hidden">
-        <nav className="pointer-events-auto grid w-full max-w-md grid-cols-6 items-center rounded-[1.6rem] border border-slate-200/90 bg-white/96 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,.16)] backdrop-blur-xl">
+        <nav className="pointer-events-auto grid w-full max-w-md grid-cols-5 items-center rounded-[1.6rem] border border-violet-100 bg-white/95 p-1.5 shadow-[0_12px_40px_rgba(76,29,149,.16)] backdrop-blur-xl">
           {navItems.map((item) => {
-            const isActive = active(pathname, item.href)
             const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={
-                  isActive
-                    ? 'flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] bg-slate-950 px-1 py-2 text-white'
-                    : 'flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] px-1 py-2 text-slate-500'
-                }
-              >
-                <Icon className="h-4.5 w-4.5" strokeWidth={2.15} />
-                <span className="mt-1 truncate text-[8px] font-black">{item.label}</span>
-              </Link>
-            )
+            const isActive = active(pathname, item.href)
+            return <Link key={item.href} href={item.href} className={isActive ? 'flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] bg-violet-600 px-1 py-2 text-white' : 'flex min-w-0 flex-col items-center justify-center rounded-[1.15rem] px-1 py-2 text-slate-500'}><Icon className="h-[18px] w-[18px]" /><span className="mt-1 truncate text-[8px] font-black">{item.label}</span></Link>
           })}
         </nav>
       </div>

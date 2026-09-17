@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -84,7 +83,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-[#fbf9ff] p-4 text-slate-950">
       <section className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-500">
-          Mila Kanzlei-Vorbereitung
+          Mila · Finanzen und Behörden im Blick
         </p>
 
         <h1 className="mt-3 text-3xl font-black">
@@ -94,16 +93,8 @@ export default function LoginPage() {
         </h1>
 
         <p className="mt-2 text-sm text-slate-500">
-          Melde dich an, um Demo, Mandantenmappe und VA-Arbeitsbereich zu
-          öffnen.
+          Melde dich an. Danach zeigt dir Mila in Ruhe, was gerade wichtig ist.
         </p>
-
-        <Link
-          href="/angebot"
-          className="mt-4 inline-flex rounded-2xl bg-violet-50 px-4 py-3 text-sm font-black text-violet-700"
-        >
-          Angebot ansehen
-        </Link>
 
         <div className="mt-6 space-y-4">
           <input

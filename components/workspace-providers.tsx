@@ -15,6 +15,7 @@ const LegacyFinanceProvider = dynamic(
 )
 
 const LEGACY_FINANCE_ROUTES = [
+  '/sicher',
   '/buchungen',
   '/rechnungen',
   '/verpflichtungen',

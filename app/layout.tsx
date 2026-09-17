@@ -16,9 +16,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Mila – digitaler Kanzlei- & VA-Arbeitsplatz',
+  title: 'Mila – Finanzen und Behörden im Blick',
   description:
-    'Mila verbindet Akten, Vorgänge, Originalunterlagen, Rückfragen, Arbeitsschritte und versionierte Übergaben in einem nachvollziehbaren digitalen Arbeitsablauf.',
+    'Mila hilft dir, Zahlungen, Bescheide, Fristen und offene Fragen zu sortieren – wenn dein Kopf schon voll ist.',
   generator: 'v0.app',
   manifest: '/manifest.json',
   appleWebApp: {

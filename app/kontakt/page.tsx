@@ -2,170 +2,74 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { ArrowLeft, HeartHandshake, Mail } from 'lucide-react'
 
-type Role = 'kanzlei' | 'betrieb'
-
-const roleOptions: Array<{
-  value: Role
-  label: string
-  hint: string
-}> = [
-  {
-    value: 'kanzlei',
-    label: 'Steuerkanzlei',
-    hint: 'Ich möchte wissen, ob Mila meine Mandantenübergaben entlastet.',
-  },
-  {
-    value: 'betrieb',
-    label: 'Betrieb',
-    hint: 'Ich möchte meine Unterlagen für die Kanzlei vorbereiten lassen.',
-  },
-]
+const inputClass = 'w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-violet-400'
 
 export default function KontaktPage() {
-  const [role, setRole] = useState<Role>('kanzlei')
   const [name, setName] = useState('')
-  const [company, setCompany] = useState('')
   const [email, setEmail] = useState('')
+  const [topic, setTopic] = useState('Bescheid oder Schreiben')
   const [message, setMessage] = useState('')
   const contactEmail = 'schieskejulia@gmx.de'
 
-  const requestText = useMemo(() => {
-    const roleLabel =
-      role === 'kanzlei'
-        ? 'Steuerkanzlei'
-        : 'Betrieb / Mandant'
+  const requestText = useMemo(() => [
+    'Hallo Julia,',
+    '',
+    'ich brauche Unterstützung und komme gerade allein nicht weiter.',
+    '',
+    `Name: ${name || '-'}`,
+    `E-Mail: ${email || '-'}`,
+    `Worum geht es: ${topic}`,
+    '',
+    message || '-',
+    '',
+    'Bitte melde dich bei mir.',
+  ].join('\n'), [email, message, name, topic])
 
-    return [
-      'Hallo Julia,',
-      '',
-      'ich interessiere mich für den Mila-Pilot zur Kanzlei-Vorbereitung.',
-      '',
-      `Rolle: ${roleLabel}`,
-      `Name: ${name || '-'}`,
-      `Unternehmen/Kanzlei: ${company || '-'}`,
-      `E-Mail: ${email || '-'}`,
-      '',
-      'Worum geht es?',
-      message || '-',
-      '',
-      'Bitte melde dich mit den nächsten Schritten.',
-    ].join('\n')
-  }, [company, email, message, name, role])
-
-  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
-    `Mila-Pilot-Anfrage · ${role === 'kanzlei' ? 'Steuerkanzlei' : 'Betrieb'}`
-  )}&body=${encodeURIComponent(requestText)}`
+  const mailtoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(`Mila · Ich brauche Hilfe bei ${topic}`)}&body=${encodeURIComponent(requestText)}`
 
   return (
-    <main className="min-h-screen bg-[#fbf9ff] px-4 py-6 text-slate-950">
-      <section className="mx-auto flex w-full max-w-md flex-col gap-5">
-        <div>
-          <Link
-            href="/angebot"
-            className="text-sm font-bold text-slate-500"
-          >
-            ← Zurück zum Angebot
-          </Link>
+    <main className="min-h-screen bg-gradient-to-b from-violet-50 via-[#fffafd] to-white px-4 py-7 text-slate-950">
+      <section className="mx-auto w-full max-w-md">
+        <Link href="/sicher" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500">
+          <ArrowLeft className="h-4 w-4" /> Zurück zu Mila
+        </Link>
 
-          <p className="mt-6 text-xs font-black uppercase tracking-[0.22em] text-violet-600">
-            Pilot-Anfrage
-          </p>
+        <span className="mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+          <HeartHandshake className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 text-3xl font-black tracking-tight">Ich helfe dir weiter.</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+          Du musst nicht wissen, wie du es richtig formulierst. Schreib einfach, wo du festhängst.
+        </p>
 
-          <h1 className="mt-3 text-4xl font-black tracking-tight">
-            Lass uns klären, ob Mila passt
-          </h1>
-
-          <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
-            Kurze Anfrage vorbereiten, damit Julia sofort erkennt, ob es um
-            eine Kanzlei-Kooperation oder um VA-Unterstützung für einen Betrieb
-            geht.
-          </p>
-        </div>
-
-        <section className="rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-            Ich bin
-          </p>
-
-          <div className="mt-3 grid gap-2">
-            {roleOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setRole(option.value)}
-                className={
-                  role === option.value
-                    ? 'rounded-2xl border border-violet-200 bg-violet-50 p-4 text-left'
-                    : 'rounded-2xl border border-slate-100 bg-white p-4 text-left'
-                }
-              >
-                <p className="font-black text-slate-950">
-                  {option.label}
-                </p>
-
-                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                  {option.hint}
-                </p>
-              </button>
-            ))}
-          </div>
+        <section className="mt-6 space-y-4 rounded-[1.8rem] border border-violet-100 bg-white p-5 shadow-sm">
+          <Field label="Dein Name"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Wie darf ich dich ansprechen?" className={inputClass} /></Field>
+          <Field label="Deine E-Mail"><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Damit ich dir antworten kann" className={inputClass} /></Field>
+          <Field label="Wobei brauchst du Hilfe?">
+            <select value={topic} onChange={(event) => setTopic(event.target.value)} className={inputClass}>
+              <option>Bescheid oder Schreiben</option>
+              <option>Antrag oder fehlende Unterlagen</option>
+              <option>Zahlung oder Frist</option>
+              <option>Meine Finanzen sortieren</option>
+              <option>Etwas anderes</option>
+            </select>
+          </Field>
+          <Field label="Erzähl mir kurz, worum es geht"><textarea value={message} onChange={(event) => setMessage(event.target.value)} rows={6} placeholder="Zum Beispiel: Ich verstehe diesen Bescheid nicht und weiß nicht, was ich jetzt tun soll." className={`${inputClass} resize-none`} /></Field>
         </section>
 
-        <section className="space-y-3 rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Name"
-            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-semibold outline-none focus:border-violet-500"
-          />
-
-          <input
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            placeholder="Kanzlei / Betrieb"
-            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-semibold outline-none focus:border-violet-500"
-          />
-
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="E-Mail"
-            className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm font-semibold outline-none focus:border-violet-500"
-          />
-
-          <textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder="Was soll Mila für dich vorbereiten?"
-            rows={5}
-            className="w-full resize-none rounded-2xl border border-violet-100 bg-white p-4 text-sm font-semibold outline-none focus:border-violet-500"
-          />
-        </section>
-
-        <section className="rounded-3xl bg-violet-50 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600">
-            Vorschau
-          </p>
-
-          <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-white p-4 text-xs font-semibold leading-relaxed text-slate-600">
-            {requestText}
-          </pre>
-
-          <a
-            href={mailtoHref}
-            className="mt-4 block w-full rounded-2xl bg-violet-600 px-4 py-4 text-center text-sm font-black text-white"
-          >
-            Anfrage per E-Mail senden
-          </a>
-
-          <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
-            Die Anfrage wird als vorbereitete E-Mail an Julia geöffnet. Erst nach
-            dem Absenden im eigenen Mailprogramm wird sie verschickt.
-          </p>
-        </section>
+        <a href={mailtoHref} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white">
+          <Mail className="h-4 w-4" /> Nachricht an Julia öffnen
+        </a>
+        <p className="mt-3 px-3 text-center text-[11px] font-semibold leading-5 text-slate-400">
+          Dein E-Mail-Programm öffnet die fertige Nachricht. Verschickt wird sie erst, wenn du dort auf Senden drückst.
+        </p>
       </section>
     </main>
   )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block text-xs font-black text-slate-600">{label}<span className="mt-2 block">{children}</span></label>
 }
