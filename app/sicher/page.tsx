@@ -1,72 +1,92 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Archive, BriefcaseBusiness, FolderOpen, Inbox, Zap } from 'lucide-react'
+import { ArrowRight, CircleHelp, FileText, HeartHandshake, WalletCards } from 'lucide-react'
+import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { supabase } from '@/lib/supabase'
 
 export default function SafeWorkspaceStart() {
   const router = useRouter()
-  const [name, setName] = useState('')
 
   useEffect(() => {
-    async function loadSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        router.replace('/login')
-        return
-      }
-
-      const storedName = String(
-        session.user.user_metadata?.full_name ||
-          session.user.user_metadata?.name ||
-          ''
-      ).trim()
-      setName(storedName.split(/\s+/)[0] || 'Julia')
+    async function protectPage() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) router.replace('/login')
     }
 
-    void loadSession()
+    void protectPage()
   }, [router])
 
-  return <main className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-white px-5 py-10 text-slate-950">
-    <div className="mx-auto max-w-md">
-      <header className="mb-7">
-        <p className="text-sm font-black uppercase tracking-[0.18em] text-violet-600">Mila · Arbeitsplatz</p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight">Hallo{name ? `, ${name}` : ''} 👋</h1>
-        <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Was möchtest du heute für deine Akte erledigen?</p>
-      </header>
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-violet-50 via-[#fffafd] to-white px-4 py-7 text-slate-950">
+      <div className="mx-auto max-w-md">
+        <MorningBriefing />
 
-      <section className="rounded-[1.8rem] border border-emerald-100 bg-emerald-50/70 p-5 shadow-sm">
-        <p className="text-sm font-black text-emerald-900">Mila ist wieder da.</p>
-        <p className="mt-1 text-sm font-medium leading-6 text-emerald-800/80">Der stabile Arbeitskern ist aktiv. Du kannst direkt dort weitermachen, wo es für die Akte nötig ist.</p>
-      </section>
+        <section className="mt-6">
+          <h2 className="px-1 text-lg font-black">Wobei brauchst du Mila?</h2>
+          <div className="mt-3 grid gap-3">
+            <ActionLink
+              href="/buchungen"
+              icon={<WalletCards className="h-5 w-5" />}
+              title="Meine Finanzen ansehen"
+              text="Was kommt rein, was geht raus und was bleibt noch?"
+              color="violet"
+            />
+            <ActionLink
+              href="/neue-buchungen"
+              icon={<FileText className="h-5 w-5" />}
+              title="Bescheid oder Schreiben hochladen"
+              text="Mila hilft dir, Beträge, Fristen und offene Punkte zu finden."
+              color="amber"
+            />
+            <ActionLink
+              href="/chat"
+              icon={<CircleHelp className="h-5 w-5" />}
+              title="Mila etwas fragen"
+              text="Frag so, wie du es auch einem Menschen erklären würdest."
+              color="pink"
+            />
+          </div>
+        </section>
 
-      <section className="mt-5 grid gap-3">
-        <StartLink href="/neue-buchungen" icon={<Inbox className="h-5 w-5" />} title="Unterlagen hochladen" text="Belege und Originale in Mila aufnehmen." accent="violet" />
-        <StartLink href="/mandanten" icon={<BriefcaseBusiness className="h-5 w-5" />} title="Akte & Übernahme" text="Aktive Akte wählen oder einen Bestand dokumentieren." accent="slate" />
-        <StartLink href="/jetzt" icon={<Zap className="h-5 w-5" />} title="Vorgänge" text="Offene Arbeitsschritte und Rückfragen ansehen." accent="amber" />
-        <div className="grid grid-cols-2 gap-3">
-          <SmallLink href="/dokumente" icon={<FolderOpen className="h-5 w-5" />} label="Mappe" />
-          <SmallLink href="/uebergaben" icon={<Archive className="h-5 w-5" />} label="Übergaben" />
-        </div>
-      </section>
-    </div>
-  </main>
+        <section className="mt-5 rounded-[1.8rem] border border-violet-100 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
+              <HeartHandshake className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-black">Du kommst gerade nicht weiter?</h2>
+              <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                Schreib mir kurz, wobei du Hilfe brauchst. Ich schaue mit dir gemeinsam drauf.
+              </p>
+            </div>
+          </div>
+          <Link href="/kontakt" className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">
+            Julia um Hilfe bitten <ArrowRight className="h-4 w-4" />
+          </Link>
+        </section>
+
+        <p className="mx-auto mt-5 max-w-sm px-3 text-center text-[11px] font-semibold leading-5 text-slate-400">
+          Mila erklärt, sortiert und bereitet vor. Bei einer rechtlichen Prüfung hilft dir eine Beratungsstelle oder ein Anwalt weiter.
+        </p>
+      </div>
+    </main>
+  )
 }
 
-function StartLink({ href, icon, title, text, accent }: { href: string; icon: React.ReactNode; title: string; text: string; accent: 'violet' | 'slate' | 'amber' }) {
-  const color = accent === 'violet' ? 'bg-violet-50 text-violet-600' : accent === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-700'
-  return <Link href={href} className="flex items-center gap-4 rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-[0_8px_25px_rgba(15,23,42,.05)] transition active:scale-[.99]">
-    <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${color}`}>{icon}</span>
-    <span className="min-w-0 flex-1"><span className="block text-base font-black">{title}</span><span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{text}</span></span>
-    <ArrowRight className="h-4 w-4 shrink-0 text-violet-500" />
-  </Link>
-}
+function ActionLink({ href, icon, title, text, color }: { href: string; icon: React.ReactNode; title: string; text: string; color: 'violet' | 'amber' | 'pink' }) {
+  const iconColor = color === 'amber' ? 'bg-amber-50 text-amber-700' : color === 'pink' ? 'bg-pink-50 text-pink-600' : 'bg-violet-50 text-violet-600'
 
-function SmallLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return <Link href={href} className="rounded-[1.4rem] border border-slate-200 bg-white p-5 text-center shadow-sm transition active:scale-[.99]"><span className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">{icon}</span><span className="mt-3 block text-sm font-black">{label}</span></Link>
+  return (
+    <Link href={href} className="flex items-center gap-4 rounded-[1.6rem] border border-slate-100 bg-white p-4 shadow-[0_8px_25px_rgba(15,23,42,.05)] transition active:scale-[.99]">
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${iconColor}`}>{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-black">{title}</span>
+        <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{text}</span>
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-violet-400" />
+    </Link>
+  )
 }

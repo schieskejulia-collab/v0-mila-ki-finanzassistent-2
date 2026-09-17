@@ -1,536 +1,122 @@
 'use client'
 
+import { CalendarDays, CheckCircle2, Heart } from 'lucide-react'
 import { useFinance } from '@/lib/store'
 
-type MorningBriefingProps = {
-  taxReserve?: number
-  financeScore?: number
-  availableAfterObligations?: number
-}
+function money(value: unknown) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return '0,00 €'
 
-function money(value: number) {
-  return Number(value || 0).toLocaleString('de-DE', {
+  return amount.toLocaleString('de-DE', {
     style: 'currency',
     currency: 'EUR',
   })
 }
 
-function number(value: unknown) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function normalizeStatus(value: unknown) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-}
-
 function getGreeting() {
   const hour = new Date().getHours()
-
   if (hour < 11) return 'Guten Morgen'
-  if (hour < 18) return 'Guten Tag'
+  if (hour < 18) return 'Hallo'
   return 'Guten Abend'
 }
 
-function getProfileLabel(userStatus: string) {
-  if (userStatus === 'freiberufler') return 'Freiberufler'
-  if (userStatus === 'kleinunternehmer') return 'Kleinunternehmer'
-  if (userStatus === 'selbststaendig_gewerbe') return 'Selbstständig'
-  if (userStatus === 'angestellt') return 'Angestellt'
-  if (userStatus === 'minijob') return 'Minijob'
-  if (userStatus === 'montagearbeiter') return 'Montage'
-
-  return 'Profil'
+function dueDate(item: any) {
+  return String(item?.dueDate || item?.due_date || item?.paymentDate || item?.payment_date || '')
 }
 
-function getVatLabel(vatStatus: string) {
-  if (vatStatus === 'kleinunternehmer') return 'Kleinunternehmer'
-  if (vatStatus === 'regelbesteuerung_19') return 'Regelbest.'
-  if (vatStatus === 'ermaessigt_7') return '7 % USt.'
-
-  return 'USt. unklar'
-}
-
-function getDueDate(item: any) {
-  return String(
-    item?.dueDate ||
-      item?.due_date ||
-      ''
-  )
-}
-
-function formatDate(value: string) {
-  if (!value) return 'ohne eingetragenes Datum'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleDateString('de-DE')
-}
-
-function daysUntil(value: string) {
+function dayDistance(value: string) {
   if (!value) return null
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
 
-  const due = new Date(value)
-
-  if (Number.isNaN(due.getTime())) {
-    return null
-  }
-
-  due.setHours(0, 0, 0, 0)
-
-  return Math.round(
-    (due.getTime() - today.getTime()) /
-      (1000 * 60 * 60 * 24)
-  )
+  return Math.round((date.getTime() - today.getTime()) / 86_400_000)
 }
 
-function getPriorityWeight(value: unknown) {
-  const priority = normalizeStatus(value)
+function dateLabel(value: string) {
+  const distance = dayDistance(value)
+  if (distance === null) return ''
+  if (distance === 0) return 'heute'
+  if (distance === 1) return 'morgen'
+  if (distance === -1) return 'gestern'
+  if (distance > 1 && distance <= 7) return `in ${distance} Tagen`
 
-  if (priority === 'existenz') return 0
-  if (priority === 'hoch') return 1
-  if (priority === 'wichtig') return 1
-  if (priority === 'normal') return 2
-  if (priority === 'niedrig') return 3
-
-  return 2
+  return new Date(value).toLocaleDateString('de-DE')
 }
 
-export function MorningBriefing({
-  taxReserve = 0,
-  financeScore = 0,
-  availableAfterObligations,
-}: MorningBriefingProps) {
-  const {
-    userName,
-    userStatus,
-    industry,
-    vatStatus,
-    summary,
-    incomes = [],
-    expenses = [],
-    obligations = [],
-  } = useFinance()
+export function MorningBriefing() {
+  const { userName, incomes = [], obligations = [], documents = [] } = useFinance()
+  const name = String(userName || '').trim().split(/\s+/)[0]
 
-  const name = userName?.trim() || ''
-  const greeting = getGreeting()
+  const openObligations = obligations
+    .filter((item: any) => !['bezahlt', 'erledigt', 'paid'].includes(String(item?.status || '').toLowerCase()))
+    .map((item: any) => ({ item, days: dayDistance(dueDate(item)) }))
+    .filter((entry: any) => entry.days !== null)
+    .sort((a: any, b: any) => a.days - b.days)
 
-  const incomeTotal = number(
-    summary?.totalIncomes ??
-      summary?.totalIncome
-  )
+  const nextIncome = incomes
+    .map((item: any) => ({ item, days: dayDistance(dueDate(item)) }))
+    .filter((entry: any) => entry.days !== null && entry.days >= 0)
+    .sort((a: any, b: any) => a.days - b.days)[0]
 
-  const expenseTotal = number(
-    summary?.totalExpenses
-  )
+  const urgent = openObligations.find((entry: any) => entry.days <= 0)
+  const comingUp = openObligations.find((entry: any) => entry.days > 0 && entry.days <= 7)
 
-  const balance = number(
-    summary?.balance ??
-      incomeTotal - expenseTotal
-  )
+  let title = 'Heute musst du nichts erledigen.'
+  let message = 'Deine nächsten Einträge sind im Blick. Du darfst den Kopf für andere Dinge frei haben.'
+  let tone: 'calm' | 'attention' | 'soon' = 'calm'
 
-  const openIncomes = incomes.filter(
-    (item: any) => {
-      const status = normalizeStatus(
-        item.status
-      )
-
-      return (
-        status === 'offen' ||
-        status === 'pending' ||
-        status === 'ueberfaellig' ||
-        status === 'überfällig'
-      )
-    }
-  )
-
-  const overdueIncomes = openIncomes.filter(
-    (item: any) => {
-      const status = normalizeStatus(
-        item.status
-      )
-
-      return (
-        status === 'ueberfaellig' ||
-        status === 'überfällig'
-      )
-    }
-  )
-
-  const openIncomeAmount =
-    openIncomes.reduce(
-      (sum: number, item: any) =>
-        sum + number(item.amount),
-      0
-    )
-
-  const openObligations =
-    obligations.filter((item: any) => {
-      const status = normalizeStatus(
-        item.status || 'offen'
-      )
-
-      return (
-        status !== 'bezahlt' &&
-        status !== 'paid' &&
-        status !== 'erledigt'
-      )
-    })
-
-  const openObligationAmount =
-    openObligations.reduce(
-      (sum: number, item: any) =>
-        sum + number(item.amount),
-      0
-    )
-
-  const realisticAvailable =
-    typeof availableAfterObligations ===
-    'number'
-      ? availableAfterObligations
-      : balance - openObligationAmount
-
-  const afterReserve =
-    realisticAvailable -
-    number(taxReserve)
-
-  const obligationEntries =
-    openObligations
-      .map((item: any) => ({
-        item,
-        days: daysUntil(
-          getDueDate(item)
-        ),
-        priority:
-          getPriorityWeight(
-            item.priority
-          ),
-      }))
-      .filter(
-        (
-          entry
-        ): entry is {
-          item: any
-          days: number
-          priority: number
-        } => entry.days !== null
-      )
-      .sort((a, b) => {
-        if (a.days !== b.days) {
-          return a.days - b.days
-        }
-
-        return (
-          a.priority - b.priority
-        )
-      })
-
-  const obligationsWithoutDate =
-    openObligations.filter(
-      (item: any) =>
-        daysUntil(
-          getDueDate(item)
-        ) === null
-    )
-
-  const overdueObligations =
-    obligationEntries.filter(
-      (entry) => entry.days < 0
-    )
-
-  const dueTodayObligations =
-    obligationEntries.filter(
-      (entry) => entry.days === 0
-    )
-
-  const dueSoonObligations =
-    obligationEntries.filter(
-      (entry) =>
-        entry.days > 0 &&
-        entry.days <= 7
-    )
-
-  const dataQuality =
-    incomes.length +
-    expenses.length +
-    obligations.length
-
-  let title = ''
-  let message = ''
-  let nextStep = ''
-  let insight = ''
-
-  if (overdueObligations.length > 0) {
-    const next =
-      overdueObligations[0].item
-
-    title =
-      '🚨 Eine Zahlung braucht zuerst deine Aufmerksamkeit'
-
-    message = `${
-      next.title ||
-      'Eine Verpflichtung'
-    } über ${money(
-      number(next.amount)
-    )} war am ${formatDate(
-      getDueDate(next)
-    )} fällig.`
-
-    nextStep =
-      'Prüfe heute nur diesen einen Eintrag. Danach musst du nicht sofort alles Weitere lösen.'
-
-    insight = `Nach allen derzeit offenen Verpflichtungen liegt dein verfügbarer Betrag voraussichtlich bei ${money(
-      realisticAvailable
-    )}.`
-  } else if (
-    dueTodayObligations.length > 0
-  ) {
-    const next =
-      dueTodayObligations[0].item
-
-    title =
-      '🧾 Heute ist eine Sache wichtig'
-
-    message = `${
-      next.title ||
-      'Eine Verpflichtung'
-    } über ${money(
-      number(next.amount)
-    )} wird heute fällig.`
-
-    nextStep =
-      'Behalte diese Zahlung heute zuerst im Blick. Alles andere kann danach sortiert werden.'
-
-    insight = `Nach allen offenen Verpflichtungen bleiben voraussichtlich ${money(
-      realisticAvailable
-    )}.`
-  } else if (
-    overdueIncomes.length > 0
-  ) {
-    title =
-      '⚠️ Ein Zahlungseingang braucht Aufmerksamkeit'
-
-    message = `Du wartest auf ${
-      overdueIncomes.length
-    } überfällige Zahlung${
-      overdueIncomes.length === 1
-        ? ''
-        : 'en'
-    }.`
-
-    nextStep =
-      'Prüfe heute genau einen offenen Eingang und entscheide dann, ob ein freundliches Nachfassen sinnvoll ist.'
-
-    insight = `Insgesamt sind aktuell ${money(
-      openIncomeAmount
-    )} als offene Einnahmen erfasst.`
-  } else if (
-    dueSoonObligations.length > 0
-  ) {
-    const next =
-      dueSoonObligations[0]
-
-    const dueText =
-      next.days === 1
-        ? 'morgen'
-        : `in ${next.days} Tagen`
-
-    title =
-      '📅 Die nächste Zahlung ist bereits im Blick'
-
-    message = `${
-      next.item.title ||
-      'Eine Verpflichtung'
-    } über ${money(
-      number(next.item.amount)
-    )} wird ${dueText} fällig.`
-
-    nextStep =
-      'Du musst sie heute noch nicht erledigen. Es reicht, den Betrag rechtzeitig einzuplanen.'
-
-    insight = `Nach allen offenen Verpflichtungen bleiben voraussichtlich ${money(
-      realisticAvailable
-    )}.`
-  } else if (
-    realisticAvailable < 0
-  ) {
-    title =
-      '🧭 Heute zuerst Stabilität schaffen'
-
-    message = `Nach deinen derzeit offenen Verpflichtungen fehlen rechnerisch ${money(
-      Math.abs(realisticAvailable)
-    )}.`
-
-    nextStep =
-      'Sortiere die offenen Einträge zuerst nach Fälligkeit und Wichtigkeit. Nicht alles muss gleichzeitig gelöst werden.'
-
-    insight =
-      'Mila bewertet nur die aktuell eingetragenen Daten. Fehlende oder zukünftige Einnahmen sind darin noch nicht berücksichtigt.'
-  } else if (
-    openIncomes.length > 0
-  ) {
-    title =
-      '💰 Offene Einnahmen sind im Blick'
-
-    message = `Du wartest noch auf ${
-      openIncomes.length
-    } Zahlung${
-      openIncomes.length === 1
-        ? ''
-        : 'en'
-    } über insgesamt ${money(
-      openIncomeAmount
-    )}.`
-
-    nextStep =
-      'Prüfe nur, ob bei einem Eingang bereits ein konkretes Zahlungsdatum hinterlegt ist.'
-
-    insight = `Dein aktuell verfügbarer Betrag nach offenen Verpflichtungen liegt bei ${money(
-      realisticAvailable
-    )}.`
-  } else if (dataQuality < 3) {
-    title =
-      '🌱 Mila lernt deine Finanzen kennen'
-
-    message =
-      'Die ersten Daten sind vorhanden. Für verlässliche Muster und Monatsvergleiche braucht Mila noch ein paar weitere Buchungen.'
-
-    nextStep =
-      'Erfasse als Nächstes einfach die nächste echte Einnahme, Ausgabe oder Verpflichtung.'
-
-    insight =
-      'Schon wenige zusätzliche Buchungen verbessern Kategorien, Vergleiche und Hinweise deutlich.'
-  } else if (
-    taxReserve > 0 &&
-    afterReserve >= 0
-  ) {
-    title =
-      '✨ Deine finanzielle Basis wirkt aktuell ruhig'
-
-    message = `Nach offenen Verpflichtungen und der empfohlenen Steuer-Rücklage bleiben voraussichtlich ${money(
-      afterReserve
-    )} frei verfügbar.`
-
-    nextStep =
-      'Heute ist nichts überfällig oder unmittelbar fällig. Du kannst den Überblick so stehen lassen.'
-
-    insight =
-      financeScore > 0
-        ? `Dein Finanzscore liegt derzeit bei ${financeScore}/100.`
-        : `Dein aktueller Überschuss liegt bei ${money(
-            balance
-          )}.`
-  } else if (balance > 0) {
-    title =
-      '✨ Dein finanzieller Spielraum'
-
-    message = `Dein aktueller Überschuss liegt bei ${money(
-      balance
-    )}. Nach offenen Verpflichtungen bleiben voraussichtlich ${money(
-      realisticAvailable
-    )}.`
-
-    nextStep =
-      'Heute besteht kein akuter Handlungsdruck. Behalte nur die nächsten Fälligkeiten im Blick.'
-
-    insight =
-      taxReserve > 0
-        ? `Als empfohlene Steuer-Rücklage sind derzeit ${money(
-            taxReserve
-          )} eingeplant.`
-        : 'Eine tatsächlich angesparte Notreserve ist aktuell nicht separat erfasst.'
-  } else {
-    title =
-      '🌸 Gemeinsam schaffen wir Überblick'
-
-    message =
-      'Aktuell lässt sich noch kein klarer finanzieller Spielraum erkennen.'
-
-    nextStep =
-      'Erfasse als Nächstes eine echte Einnahme, Ausgabe oder Verpflichtung. Mila ordnet sie anschließend für dich ein.'
-
-    insight =
-      'Du musst nicht alles auf einmal nachtragen. Eine Buchung nach der anderen reicht.'
-  }
-
-  if (
-    obligationsWithoutDate.length > 0 &&
-    overdueObligations.length === 0 &&
-    dueTodayObligations.length === 0
-  ) {
-    insight = `${
-      obligationsWithoutDate.length
-    } offene Verpflichtung${
-      obligationsWithoutDate.length === 1
-        ? ' hat'
-        : 'en haben'
-    } noch kein eingetragenes Fälligkeitsdatum.`
+  if (urgent) {
+    title = 'Eine Sache braucht deine Aufmerksamkeit.'
+    message = `${urgent.item?.title || 'Eine Zahlung'} über ${money(urgent.item?.amount)} war ${dateLabel(dueDate(urgent.item))} fällig.`
+    tone = 'attention'
+  } else if (comingUp) {
+    title = 'Eine Sache kommt bald auf dich zu.'
+    message = `${comingUp.item?.title || 'Eine Zahlung'} über ${money(comingUp.item?.amount)} ist ${dateLabel(dueDate(comingUp.item))} fällig. Heute reicht es, das zu wissen.`
+    tone = 'soon'
+  } else if (incomes.length + obligations.length + documents.length === 0) {
+    title = 'Wir fangen ganz in Ruhe an.'
+    message = 'Trag zuerst nur das ein, was dir gerade am meisten im Kopf herumgeht. Den Rest sortieren wir danach.'
   }
 
   return (
-    <section className="space-y-5 rounded-[2rem] bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.35em] text-purple-600">
-          Heute für dich
-        </p>
+    <section>
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">Dein Morning Briefing</p>
+      <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+        {getGreeting()}{name ? `, ${name}` : ''} 🌸
+      </h1>
+      <p className="mt-2 max-w-lg text-sm font-semibold leading-6 text-slate-500">
+        Du musst nicht alles im Kopf behalten. Mila zeigt dir, was heute wichtig ist.
+      </p>
 
-        <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950">
-          {greeting}
-          {name ? `, ${name}` : ''} 🌸
-        </h1>
-
-        <p className="mt-3 text-sm font-bold text-slate-500">
-          Status:{' '}
-          {getProfileLabel(userStatus)}
-          {industry
-            ? ` (${industry})`
-            : ''}{' '}
-          · {getVatLabel(vatStatus)}
-        </p>
-      </div>
-
-      <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-pink-50 via-white to-violet-50 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-purple-700">
-          🌸 Mila sagt heute
-        </p>
-
-        <h2 className="mt-3 text-xl font-black text-slate-950">
-          {title}
-        </h2>
-
-        <p className="mt-3 text-base font-semibold leading-relaxed text-slate-700">
-          {message}
-        </p>
-
-        <div className="mt-4 rounded-2xl border border-white/80 bg-white/70 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-pink-600">
-            Dein nächster Schritt
-          </p>
-
-          <p className="mt-2 text-sm font-bold leading-relaxed text-slate-700">
-            {nextStep}
-          </p>
-        </div>
-
-        <div className="mt-3 rounded-2xl bg-purple-100/60 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-700">
-            Mila Insight
-          </p>
-
-          <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
-            {insight}
-          </p>
+      <div className={`mt-5 rounded-[1.8rem] border p-5 shadow-sm ${tone === 'attention' ? 'border-rose-100 bg-rose-50/80' : tone === 'soon' ? 'border-amber-100 bg-amber-50/80' : 'border-emerald-100 bg-emerald-50/70'}`}>
+        <div className="flex items-start gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone === 'attention' ? 'bg-rose-100 text-rose-600' : tone === 'soon' ? 'bg-amber-100 text-amber-700' : 'bg-white text-emerald-600'}`}>
+            {tone === 'calm' ? <CheckCircle2 className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
+          </span>
+          <div>
+            <h2 className="text-lg font-black text-slate-950">{title}</h2>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{message}</p>
+          </div>
         </div>
       </div>
+
+      {nextIncome && (
+        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+            <CalendarDays className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-black text-violet-700">Kommt als Nächstes</p>
+            <p className="mt-0.5 text-sm font-semibold text-slate-600">
+              {nextIncome.item?.title || nextIncome.item?.source || 'Eine Zahlung'} · {money(nextIncome.item?.amount)} · {dateLabel(dueDate(nextIncome.item))}
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
