@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+ // The previous Supabase project was retired. Keep a safe fallback so an old
+ // Vercel environment does not leave the login screen stuck on "Bitte warten".
+const ACTIVE_SUPABASE_URL = 'https://yxhllviostywckxoehgf.supabase.co'
+const ACTIVE_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4aGxsdmlvc3R5d2NreG9laGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NzA5NzYsImV4cCI6MjEwMzU0Njk3Nn0.R508R5aihsSX9jzG6v31xTg-FrIUp2J-WoAmJtHrdTk'
+
+const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const configuredAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+const usesRetiredProject = configuredUrl?.includes('fivygrmtgenoiafvfmzk.supabase.co')
+const supabaseUrl = usesRetiredProject ? ACTIVE_SUPABASE_URL : configuredUrl
+const supabaseAnonKey = usesRetiredProject
+  ? ACTIVE_SUPABASE_ANON_KEY
+  : configuredAnonKey
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabaseAnonKey
