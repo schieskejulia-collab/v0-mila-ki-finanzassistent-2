@@ -1,27 +1,25 @@
 import { createClient } from '@supabase/supabase-js'
 
- // The previous Supabase project was retired. Keep a safe fallback so an old
- // Vercel environment does not leave the login screen stuck on "Bitte warten".
-const ACTIVE_SUPABASE_URL = 'https://yxhllviostywckxoehgf.supabase.co'
-const ACTIVE_SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4aGxsdmlvc3R5d2NreG9laGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NzA5NzYsImV4cCI6MjEwMzU0Njk3Nn0.R508R5aihsSX9jzG6v31xTg-FrIUp2J-WoAmJtHrdTk'
+// Mila Mobile uses its own Supabase project. Never fall back to PetraPlan or a
+// retired Mila database when an old Vercel environment is still configured.
+const ACTIVE_SUPABASE_URL = 'https://avzjzxhvoahypwaosifd.supabase.co'
+const ACTIVE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_oN-w7C31Vdn4WRLgOxioIg_IzXEtT6j'
 
 const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-const configuredAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
-const usesRetiredProject = configuredUrl?.includes('fivygrmtgenoiafvfmzk.supabase.co')
-const supabaseUrl = usesRetiredProject ? ACTIVE_SUPABASE_URL : configuredUrl
-const supabaseAnonKey = usesRetiredProject
-  ? ACTIVE_SUPABASE_ANON_KEY
-  : configuredAnonKey
+const configuredKey = (
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)?.trim()
 
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl && supabaseAnonKey
-)
+const configuredForMila = configuredUrl?.includes('avzjzxhvoahypwaosifd.supabase.co')
+const supabaseUrl = configuredForMila ? configuredUrl : ACTIVE_SUPABASE_URL
+const supabaseAnonKey = configuredForMila && configuredKey
+  ? configuredKey
+  : ACTIVE_SUPABASE_PUBLISHABLE_KEY
 
-const baseSupabase = createClient(
-  supabaseUrl || 'https://mila-not-configured.supabase.co',
-  supabaseAnonKey || 'mila-not-configured'
-)
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+const baseSupabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const ACTIVE_CLIENT_KEY = 'mila-active-client-v1'
 const NO_ACTIVE_CLIENT = '__mila_no_active_client__'
@@ -67,10 +65,7 @@ function addClientId(values: any, clientId: string) {
 }
 
 function scopeRead(builder: any, clientId: string) {
-  return builder.eq(
-    'client_id',
-    clientId || NO_ACTIVE_CLIENT
-  )
+  return builder.eq('client_id', clientId || NO_ACTIVE_CLIENT)
 }
 
 function scopeWrite(builder: any, clientId: string) {
@@ -93,58 +88,38 @@ export const supabase = new Proxy(baseSupabase, {
       return new Proxy(builder, {
         get(tableTarget, method, tableReceiver) {
           if (method === 'select') {
-            return (...args: any[]) =>
-              scopeRead(
-                tableTarget.select(...args),
-                getActiveClientId()
-              )
+            return (...args: any[]) => scopeRead(tableTarget.select(...args), getActiveClientId())
           }
 
           if (method === 'insert') {
             return (values: any, options?: any) => {
               const clientId = requireActiveClientId()
-              return tableTarget.insert(
-                addClientId(values, clientId),
-                options
-              )
+              return tableTarget.insert(addClientId(values, clientId), options)
             }
           }
 
           if (method === 'upsert') {
             return (values: any, options?: any) => {
               const clientId = requireActiveClientId()
-              return tableTarget.upsert(
-                addClientId(values, clientId),
-                options
-              )
+              return tableTarget.upsert(addClientId(values, clientId), options)
             }
           }
 
           if (method === 'update') {
             return (values: any, options?: any) => {
               const clientId = requireActiveClientId()
-              return scopeWrite(
-                tableTarget.update(values, options),
-                clientId
-              )
+              return scopeWrite(tableTarget.update(values, options), clientId)
             }
           }
 
           if (method === 'delete') {
             return (options?: any) => {
               const clientId = requireActiveClientId()
-              return scopeWrite(
-                tableTarget.delete(options),
-                clientId
-              )
+              return scopeWrite(tableTarget.delete(options), clientId)
             }
           }
 
-          return Reflect.get(
-            tableTarget,
-            method,
-            tableReceiver
-          )
+          return Reflect.get(tableTarget, method, tableReceiver)
         },
       })
     }
