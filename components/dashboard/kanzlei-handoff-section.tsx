@@ -111,7 +111,7 @@ export function describeHandoffSummary(handoff: any) {
     return 'Noch keine Übergabe-Daten vorhanden.'
   }
 
-  const issues = []
+  const issues: string[] = []
 
   if (handoff.missingReceiptCount > 0) {
     issues.push(
