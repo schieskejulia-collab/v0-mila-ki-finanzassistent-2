@@ -11,13 +11,19 @@ const configuredKey = (
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )?.trim()
 
-const configuredForMila = configuredUrl?.includes('avzjzxhvoahypwaosifd.supabase.co')
-const supabaseUrl = configuredForMila ? configuredUrl : ACTIVE_SUPABASE_URL
-const supabaseAnonKey = configuredForMila && configuredKey
+const configuredForMila = Boolean(
+  configuredUrl?.includes('avzjzxhvoahypwaosifd.supabase.co') && configuredKey
+)
+
+const supabaseUrl: string = configuredForMila && configuredUrl
+  ? configuredUrl
+  : ACTIVE_SUPABASE_URL
+
+const supabaseAnonKey: string = configuredForMila && configuredKey
   ? configuredKey
   : ACTIVE_SUPABASE_PUBLISHABLE_KEY
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+export const isSupabaseConfigured = true
 
 const baseSupabase = createClient(supabaseUrl, supabaseAnonKey)
 
