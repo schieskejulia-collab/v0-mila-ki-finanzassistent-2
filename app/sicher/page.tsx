@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CircleHelp, FileText, HeartHandshake, WalletCards } from 'lucide-react'
+import { ArrowRight, CircleHelp, FileText, HeartHandshake, Ruler, WalletCards } from 'lucide-react'
 import { MorningBriefing } from '@/components/ui/morning-briefing'
 import { supabase } from '@/lib/supabase'
 
@@ -27,6 +27,13 @@ export default function SafeWorkspaceStart() {
         <section className="mt-6">
           <h2 className="px-1 text-lg font-black">Wobei brauchst du Mila?</h2>
           <div className="mt-3 grid gap-3">
+            <ActionLink
+              href="/aufmass"
+              icon={<Ruler className="h-5 w-5" />}
+              title="Aufmaß erfassen"
+              text="Wand messen, Öffnungen abziehen und die Nettofläche nachvollziehbar berechnen."
+              color="emerald"
+            />
             <ActionLink
               href="/buchungen"
               icon={<WalletCards className="h-5 w-5" />}
@@ -69,15 +76,21 @@ export default function SafeWorkspaceStart() {
         </section>
 
         <p className="mx-auto mt-5 max-w-sm px-3 text-center text-[11px] font-semibold leading-5 text-slate-400">
-          Mila erklärt, sortiert und bereitet vor. Bei einer rechtlichen Prüfung hilft dir eine Beratungsstelle oder ein Anwalt weiter.
+          Mila erklärt, sortiert und bereitet vor. Fachliche Entscheidungen und Freigaben bleiben beim Nutzer.
         </p>
       </div>
     </main>
   )
 }
 
-function ActionLink({ href, icon, title, text, color }: { href: string; icon: React.ReactNode; title: string; text: string; color: 'violet' | 'amber' | 'pink' }) {
-  const iconColor = color === 'amber' ? 'bg-amber-50 text-amber-700' : color === 'pink' ? 'bg-pink-50 text-pink-600' : 'bg-violet-50 text-violet-600'
+function ActionLink({ href, icon, title, text, color }: { href: string; icon: React.ReactNode; title: string; text: string; color: 'violet' | 'amber' | 'pink' | 'emerald' }) {
+  const iconColor = color === 'amber'
+    ? 'bg-amber-50 text-amber-700'
+    : color === 'pink'
+      ? 'bg-pink-50 text-pink-600'
+      : color === 'emerald'
+        ? 'bg-emerald-50 text-emerald-700'
+        : 'bg-violet-50 text-violet-600'
 
   return (
     <Link href={href} className="flex items-center gap-4 rounded-[1.6rem] border border-slate-100 bg-white p-4 shadow-[0_8px_25px_rgba(15,23,42,.05)] transition active:scale-[.99]">
